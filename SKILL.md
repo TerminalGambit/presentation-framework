@@ -1,3 +1,9 @@
+---
+title: Presentation Framework
+description: Build branded HTML slide decks from YAML config and JSON metrics using Jinja2 templates
+category: tool
+---
+
 # Skill: Presentation Framework
 
 ## Description
