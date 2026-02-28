@@ -1,0 +1,41 @@
+{% extends "base.html.j2" %}
+{% from "partials/card.html.j2" import insight, value_prop %}
+{% from "partials/stat-box.html.j2" import stat_grid %}
+{% from "partials/bar-chart.html.j2" import data_table, val_bars, section_title %}
+
+{% block content %}
+{% include "partials/header.html.j2" %}
+
+<div class="grid-3col" style="{% if slide.data.column_ratio %}grid-template-columns: {{ slide.data.column_ratio }};{% endif %}">
+  {% for col in slide.data.columns %}
+  <div class="col">
+    {% for item in col %}
+    {% if item.type == "card" %}
+    <div class="card {{ item.extra_class | default('') }}">
+      {% if item.header %}
+      <div class="card-header">
+        {% if item.icon %}<i class="fas fa-{{ item.icon }}"></i>{% endif %}
+        {{ item.header }}
+      </div>
+      {% endif %}
+      {{ item.content | default("") }}
+    </div>
+    {% elif item.type == "stat-grid" %}
+      {{ stat_grid(item.stats, item.cols | default(2)) }}
+    {% elif item.type == "table" %}
+      {% if item.section_title %}{{ section_title(item.section_title, item.section_icon | default("")) }}{% endif %}
+      <div class="table-card">{{ data_table(item.headers, item.rows, item.winner_rows | default([]), item.total_row | default(none)) }}</div>
+    {% elif item.type == "val-bars" %}
+      {{ val_bars(item['items']) }}
+    {% elif item.type == "insight" %}
+      {{ insight(item.text, item.icon | default("lightbulb")) }}
+    {% elif item.type == "image" %}
+      <img src="{{ item.src }}" alt="{{ item.alt | default('') }}" style="width:100%; height:100%; object-fit:contain; border-radius:6px;"/>
+    {% elif item.type == "html" %}
+      {{ item.content }}
+    {% endif %}
+    {% endfor %}
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}

@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>{{ slide_title | default("Slide") }} — {{ meta.title | default("Presentation") }}</title>
+  <link rel="stylesheet" href="theme/variables.css"/>
+  <link rel="stylesheet" href="theme/base.css"/>
+  <link rel="stylesheet" href="theme/components.css"/>
+  <link href="https://fonts.googleapis.com/css2?family={{ theme.fonts.heading | default('Playfair Display') | replace(' ', '+') }}:wght@400;700&family={{ theme.fonts.subheading | default('Montserrat') | replace(' ', '+') }}:wght@300;400;500;600;700&family={{ theme.fonts.body | default('Lato') | replace(' ', '+') }}:wght@300;400;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
+  {% block head_extra %}{% endblock %}
+</head>
+<body>
+  <div class="slide-container{% block container_class %}{% endblock %}">
+    <div class="bg-pattern"></div>
+    {% block decorations %}{% endblock %}
+    {% block content %}{% endblock %}
+    <div class="page-number">{{ page_number | default("") }}</div>
+  </div>
+</body>
+</html>

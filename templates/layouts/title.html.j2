@@ -1,0 +1,48 @@
+{% extends "base.html.j2" %}
+
+{% block container_class %} centered{% endblock %}
+
+{% block decorations %}
+{% include "partials/bg-pattern.html.j2" %}
+{% endblock %}
+
+{% block content %}
+<div class="z-10 text-center" style="max-width: 900px; display: flex; flex-direction: column; align-items: center;">
+  <h1 style="font-family: var(--pf-font-heading); font-size: {{ slide.data.title_size | default('120px') }}; font-weight: 700; color: var(--pf-accent); line-height: 1; margin-bottom: 10px; letter-spacing: -2px; text-shadow: 0 4px 10px rgba(0,0,0,0.3);">{{ slide.data.title }}</h1>
+
+  {% if slide.data.subtitle %}
+  <h2 style="font-family: var(--pf-font-subheading); font-size: 24px; color: var(--pf-white); letter-spacing: 4px; text-transform: uppercase; font-weight: 300; margin-bottom: 30px;">{{ slide.data.subtitle }}</h2>
+  {% endif %}
+
+  <div class="divider"></div>
+
+  {% if slide.data.tagline %}
+  <div style="font-family: var(--pf-font-body); font-size: 18px; color: var(--pf-text); font-weight: 300; margin-bottom: 20px;">
+    <p>{{ slide.data.tagline }}</p>
+  </div>
+  {% endif %}
+
+  {% if slide.data.quote %}
+  <p style="font-family: var(--pf-font-heading); font-style: italic; font-size: 17px; color: var(--pf-accent); opacity: 0.9; margin-bottom: 30px; letter-spacing: 0.3px;">{{ slide.data.quote }}</p>
+  {% endif %}
+
+  {% if slide.data.features %}
+  <div class="features-grid">
+    {% for feat in slide.data.features %}
+    <div class="feature-item">
+      <i class="fas fa-{{ feat.icon }} feature-icon"></i>
+      <div class="feature-text">
+        <p><strong>{{ feat.label }}</strong>{% if feat.sub %}<br/>{{ feat.sub }}{% endif %}</p>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+</div>
+
+{% if slide.data.footer %}
+<div class="footer-branding">
+  <p>{{ slide.data.footer }}</p>
+</div>
+{% endif %}
+{% endblock %}

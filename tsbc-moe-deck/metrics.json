@@ -1,0 +1,83 @@
+{
+  "metadata": {
+    "generated_at": "2026-02-28",
+    "version": "1.0",
+    "topic": "Two Stage Binary Classifier + Mixture of Experts"
+  },
+  "tsbc": {
+    "name": "Two Stage Binary Classifier",
+    "stages": 2,
+    "stage1": {
+      "name": "Coarse Filter",
+      "task": "Binary relevance gate",
+      "typical_accuracy": "92%",
+      "typical_latency": "< 5ms",
+      "purpose": "Fast rejection of irrelevant inputs",
+      "output_classes": 2,
+      "reject_rate": "70%"
+    },
+    "stage2": {
+      "name": "Fine Classifier",
+      "task": "Detailed categorisation",
+      "typical_accuracy": "88%",
+      "typical_latency": "< 50ms",
+      "purpose": "Nuanced classification of retained inputs",
+      "output_classes": "N",
+      "processed_rate": "30%"
+    },
+    "benefits": {
+      "compute_saved": "60-70%",
+      "false_positive_reduction": "3x",
+      "throughput_gain": "2-4x"
+    }
+  },
+  "moe": {
+    "name": "Mixture of Experts",
+    "total_experts": 8,
+    "active_per_input": 2,
+    "sparsity": "75%",
+    "gating": {
+      "type": "Top-K Softmax Router",
+      "k": 2,
+      "load_balancing_loss": "0.01"
+    },
+    "scaling": {
+      "params_total": "8x",
+      "params_active": "2x",
+      "flops_ratio": "0.25",
+      "capacity_vs_dense": "4x"
+    },
+    "benefits": {
+      "specialisation": "Each expert masters a sub-domain",
+      "efficiency": "Sub-linear compute scaling",
+      "capacity": "Model capacity without proportional cost"
+    }
+  },
+  "combined": {
+    "name": "TSBC + MoE",
+    "architecture": {
+      "stage1_type": "Lightweight binary gate",
+      "stage2_type": "MoE with specialised experts",
+      "total_experts": 8,
+      "active_experts": 2,
+      "stage1_params": "~1M",
+      "stage2_params": "~50M",
+      "effective_params": "~13M"
+    },
+    "performance": {
+      "accuracy": "94.2%",
+      "latency_p50": "12ms",
+      "latency_p99": "45ms",
+      "throughput": "850 req/s",
+      "compute_vs_dense": "3.2x less"
+    },
+    "comparison": {
+      "dense_baseline_accuracy": "91.7%",
+      "dense_baseline_latency": "38ms",
+      "single_stage_moe_accuracy": "93.1%",
+      "single_stage_moe_latency": "22ms",
+      "tsbc_moe_accuracy": "94.2%",
+      "tsbc_moe_latency": "12ms"
+    }
+  }
+}

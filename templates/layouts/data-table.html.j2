@@ -1,0 +1,39 @@
+{% extends "base.html.j2" %}
+{% from "partials/card.html.j2" import insight %}
+{% from "partials/bar-chart.html.j2" import data_table, section_title, dist_bars %}
+{% from "partials/stat-box.html.j2" import unit_grid %}
+
+{% block content %}
+{% include "partials/header.html.j2" %}
+
+<div class="grid-2col" style="{% if slide.data.column_ratio %}grid-template-columns: {{ slide.data.column_ratio }};{% endif %}">
+  {% for section in slide.data.sections %}
+  <div class="col">
+    {% if section.section_title %}
+    {{ section_title(section.section_title, section.section_icon | default("")) }}
+    {% endif %}
+
+    {% if section.table %}
+    <div class="table-card">
+      {{ data_table(section.table.headers, section.table.rows, section.table.winner_rows | default([]), section.table.total_row | default(none)) }}
+    </div>
+    {% if section.table.footnote %}
+    <p class="table-footnote">{{ section.table.footnote }}</p>
+    {% endif %}
+    {% endif %}
+
+    {% if section.bars %}
+    {{ dist_bars(section.bars) }}
+    {% endif %}
+
+    {% if section.unit_tiers %}
+    {{ unit_grid(section.unit_tiers) }}
+    {% endif %}
+
+    {% if section.insight %}
+    {{ insight(section.insight.text, section.insight.icon | default("lightbulb")) }}
+    {% endif %}
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}

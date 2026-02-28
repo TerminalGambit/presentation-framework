@@ -1,0 +1,16 @@
+{
+  "description": "Generate branded HTML slide decks from YAML config and JSON metrics using Jinja2 templates, a shared CSS theme, and a CLI.",
+  "folders": ["docs", "templates", "theme"],
+  "excludeFolders": ["tests", "examples/slides", "tsbc-moe-deck/slides", "__pycache__", "*.egg-info", ".pytest_cache"],
+  "excludeFiles": ["CHANGELOG.md"],
+  "rules": [
+    "All dynamic data MUST come from metrics.json — never hardcode numbers or values in presentation.yaml",
+    "Use {{ metrics.path.to.value }} interpolation inside YAML string values to reference metrics",
+    "Available layouts: title, two-column, three-column, data-table, stat-grid, closing",
+    "Set theme.primary (background hex) and theme.accent (accent hex) in presentation.yaml — all CSS variants are auto-derived",
+    "Use FontAwesome icon names without 'fa-' prefix (e.g. icon: gem), except in closing layout info_items which use full FA classes",
+    "Use item['items'] bracket notation in templates to avoid Python dict .items() method clash",
+    "Build command: pf build --config <yaml> --metrics <json> --output <dir> [--open]",
+    "Zip command: pf zip --dir <slides-dir> to create shareable .zip"
+  ]
+}

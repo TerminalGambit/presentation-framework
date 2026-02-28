@@ -1,0 +1,77 @@
+{# Bar chart component macros.
+   Provides: dist_bars, val_bars, data_table
+#}
+
+{# Horizontal distribution bars — pass a list of {label, width, pct, color_class} dicts #}
+{% macro dist_bars(bars) %}
+<div class="dist-bars">
+  {% for bar in bars %}
+  <div class="dist-row">
+    <span class="dist-label">{{ bar.label }}</span>
+    <div class="dist-bar-container">
+      <div class="dist-bar {{ bar.color_class | default('bar-gold') }}" style="width: {{ bar.width }}%;">
+        {% if bar.pct %}<span class="pct">{{ bar.pct }}</span>{% endif %}
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endmacro %}
+
+{# Validation bars with lift badges — pass a list of {label, lift, width} dicts #}
+{% macro val_bars(items) %}
+<div class="validation-bar-container">
+  {% for item in items %}
+  <div class="val-item">
+    <div class="val-header">
+      <span>{{ item.label }}</span>
+      <span class="lift-badge">{{ item.lift }}</span>
+    </div>
+    <div class="val-bar-bg">
+      <div class="val-bar-fill" style="width: {{ item.width }}%;{% if item.color %} background-color: {{ item.color }};{% endif %}"></div>
+    </div>
+    {% if item.note %}
+    <p style="font-size:10px; color:#aaa; margin-top:2px;">{{ item.note }}</p>
+    {% endif %}
+  </div>
+  {% endfor %}
+</div>
+{% endmacro %}
+
+{# Data table — pass headers (list of strings) and rows (list of lists) #}
+{% macro data_table(headers, rows, winner_rows=[], total_row=none) %}
+<table class="data-table">
+  <thead>
+    <tr>
+      {% for h in headers %}
+      <th>{{ h }}</th>
+      {% endfor %}
+    </tr>
+  </thead>
+  <tbody>
+    {% for row in rows %}
+    <tr{% if loop.index0 in winner_rows %} class="winner-row"{% endif %}>
+      {% for cell in row %}
+      <td{% if loop.first %} class="model-name"{% endif %}>{{ cell }}</td>
+      {% endfor %}
+    </tr>
+    {% endfor %}
+    {% if total_row %}
+    <tr class="total-row">
+      {% for cell in total_row %}
+      <td>{{ cell }}</td>
+      {% endfor %}
+    </tr>
+    {% endif %}
+  </tbody>
+</table>
+{% endmacro %}
+
+{# Section title with decorative line #}
+{% macro section_title(text, icon="") %}
+<div class="section-title">
+  {% if icon %}<i class="fas fa-{{ icon }}"></i>{% endif %}
+  <span>{{ text }}</span>
+  <div class="section-title-line"></div>
+</div>
+{% endmacro %}

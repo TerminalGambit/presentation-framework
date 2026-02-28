@@ -1,0 +1,43 @@
+{% extends "base.html.j2" %}
+{% from "partials/card.html.j2" import insight, value_prop %}
+{% from "partials/stat-box.html.j2" import stat_grid %}
+{% from "partials/bar-chart.html.j2" import section_title %}
+
+{% block content %}
+{% include "partials/header.html.j2" %}
+
+<div class="grid-2col" style="{% if slide.data.column_ratio %}grid-template-columns: {{ slide.data.column_ratio }};{% endif %}">
+  {% for col in slide.data.columns %}
+  <div class="col">
+    {% for item in col %}
+    {% if item.type == "stat-grid" %}
+      {{ stat_grid(item.stats, item.cols | default(2)) }}
+    {% elif item.type == "card" %}
+    <div class="card">
+      {% if item.header %}
+      <div class="card-header">
+        {% if item.icon %}<i class="fas fa-{{ item.icon }}"></i>{% endif %}
+        {{ item.header }}
+      </div>
+      {% endif %}
+      {% for li in item['items'] | default([]) %}
+      <div class="list-item">
+        <i class="fas fa-check bullet"></i>
+        <p class="text-content">{{ li }}</p>
+      </div>
+      {% endfor %}
+    </div>
+    {% elif item.type == "insight" %}
+      {{ insight(item.text, item.icon | default("lightbulb")) }}
+    {% elif item.type == "value-prop" %}
+      {{ value_prop(item.title, item.text) }}
+    {% elif item.type == "section-title" %}
+      {{ section_title(item.text, item.icon | default("")) }}
+    {% elif item.type == "html" %}
+      {{ item.content }}
+    {% endif %}
+    {% endfor %}
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}

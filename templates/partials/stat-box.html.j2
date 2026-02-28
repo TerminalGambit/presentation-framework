@@ -1,0 +1,33 @@
+{# Stat box component macros.
+   Provides: stat_box, stat_grid
+#}
+
+{# Single stat display #}
+{% macro stat_box(value, label, compact=false, span=1) %}
+<div class="stat-box{% if compact %} compact{% endif %}"{% if span > 1 %} style="grid-column: span {{ span }};"{% endif %}>
+  <div class="stat-value">{{ value }}</div>
+  <div class="stat-label">{{ label }}</div>
+</div>
+{% endmacro %}
+
+{# Grid of stats — pass a list of {value, label} dicts #}
+{% macro stat_grid(stats, cols=2) %}
+<div class="stat-grid{% if cols == 3 %} cols-3{% elif cols == 4 %} cols-4{% endif %}">
+  {% for stat in stats %}
+  {{ stat_box(stat.value, stat.label, stat.compact | default(false), stat.span | default(1)) }}
+  {% endfor %}
+</div>
+{% endmacro %}
+
+{# Unit economics row — pass a list of {tier, price, unit} dicts #}
+{% macro unit_grid(tiers) %}
+<div class="unit-grid">
+  {% for tier in tiers %}
+  <div class="unit-card">
+    <div class="tier-label">{{ tier.tier }}</div>
+    <div class="tier-price">{{ tier.price }}</div>
+    <div class="tier-unit">{{ tier.unit }}</div>
+  </div>
+  {% endfor %}
+</div>
+{% endmacro %}

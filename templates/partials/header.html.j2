@@ -1,0 +1,18 @@
+{# Slide header partial.
+   Usage: {% include "partials/header.html.j2" %}
+   Expects: slide.data.title, slide.data.subtitle (optional)
+   Options: slide.data.header_split (bool) for split layout
+#}
+<div class="header{% if slide.data.header_split | default(false) %} split{% endif %}">
+  <div>
+    <h1 class="title">{{ slide.data.title }}</h1>
+    {% if slide.data.subtitle %}
+    <p class="subtitle{% if slide.data.subtitle_uppercase | default(false) %} uppercase{% endif %}">{{ slide.data.subtitle }}</p>
+    {% endif %}
+  </div>
+  {% if slide.data.header_right %}
+  <div style="text-align: right;">
+    {{ slide.data.header_right }}
+  </div>
+  {% endif %}
+</div>

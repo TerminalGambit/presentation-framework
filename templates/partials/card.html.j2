@@ -1,0 +1,77 @@
+{# Card component macros.
+   Provides: card, challenge_card, solution_box
+#}
+
+{# Standard card with header icon + title + body content #}
+{% macro card(header, icon="", content="", extra_class="") %}
+<div class="card {{ extra_class }}">
+  {% if header %}
+  <div class="card-header">
+    {% if icon %}<i class="fas fa-{{ icon }}"></i>{% endif %}
+    {{ header }}
+  </div>
+  {% endif %}
+  {{ content }}
+  {{ caller() if caller is defined else "" }}
+</div>
+{% endmacro %}
+
+{# Left-bordered challenge card with icon circle #}
+{% macro challenge_card(icon, title, text, bullets=[]) %}
+<div class="challenge-card">
+  <div class="challenge-icon-box">
+    <i class="fas fa-{{ icon }} challenge-icon"></i>
+  </div>
+  <div class="card-content">
+    <h3 class="card-title">{{ title }}</h3>
+    <p class="card-text">{{ text }}</p>
+    {% for bullet in bullets %}
+    <div class="card-bullet">{{ bullet }}</div>
+    {% endfor %}
+  </div>
+</div>
+{% endmacro %}
+
+{# Solution column with badge, title, and checklist #}
+{% macro solution_box(badge, title, items=[], icon="gem") %}
+<div class="solution-column">
+  <div class="solution-badge">{{ badge }}</div>
+  <h3 class="solution-title">{{ title }}</h3>
+  <ul class="solution-list">
+    {% for item in items %}
+    <li class="solution-item">
+      <i class="fas fa-check solution-check"></i>
+      <span>{{ item }}</span>
+    </li>
+    {% endfor %}
+  </ul>
+  {% if icon %}
+  <div style="text-align: center; margin-top: 20px;">
+    <i class="fas fa-{{ icon }}" style="color: var(--pf-accent); font-size: 40px; opacity: 0.8;"></i>
+  </div>
+  {% endif %}
+</div>
+{% endmacro %}
+
+{# Insight / callout box #}
+{% macro insight(text, icon="lightbulb") %}
+<div class="insight-box">
+  <i class="fas fa-{{ icon }} insight-icon"></i>
+  <div class="insight-text">{{ text }}</div>
+</div>
+{% endmacro %}
+
+{# Value prop / takeaway box #}
+{% macro value_prop(title, text) %}
+<div class="value-prop-box">
+  <div class="value-title">{{ title }}</div>
+  <p class="value-text">{{ text }}</p>
+</div>
+{% endmacro %}
+
+{# Takeaway box (italic) #}
+{% macro takeaway(text) %}
+<div class="takeaway">
+  <p>{{ text }}</p>
+</div>
+{% endmacro %}

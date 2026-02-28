@@ -1,0 +1,66 @@
+{
+  "metadata": {
+    "generated_at": "2026-02-28",
+    "data_source": "JEMA PDFs",
+    "version": "2.1"
+  },
+  "summary": {
+    "total_assets": 128,
+    "total_twitter_accounts": 36,
+    "total_rss_feeds": 17,
+    "total_sources": 53,
+    "total_key_events": 27,
+    "total_guidelines": 10,
+    "categories": 9,
+    "graph_nodes": "340+",
+    "graph_edges": "1300+",
+    "validation_pairs": 87
+  },
+  "pipeline": {
+    "full_latency": "3-5s",
+    "graph_latency": "15ms",
+    "api_calls_per_run": 6,
+    "cost_per_run": "<$0.03",
+    "graph_weight": 0.9,
+    "embedding_weight": 0.1,
+    "embedding_model": "bge-small-en-v1.5",
+    "llm_model": "nemotron-mini",
+    "confidence_threshold": 0.90,
+    "stage2_trigger_rate": "25%"
+  },
+  "benchmarks": {
+    "embedding_models": [
+      {"name": "bge-small-en-v1.5", "mrr": "0.626", "r10": "88.1%", "r15": "93.2%", "winner": true},
+      {"name": "all-MiniLM-L6-v2", "mrr": "0.677", "r10": "88.1%", "r15": "89.8%"},
+      {"name": "all-mpnet-base-v2", "mrr": "0.598", "r10": "83.1%", "r15": "88.1%"},
+      {"name": "paraphrase-MiniLM", "mrr": "0.573", "r10": "79.7%", "r15": "84.7%"}
+    ],
+    "prompt_versions": [
+      {"name": "v1 (original 3-class)", "accuracy": "54.2%", "trait": "Best overall", "winner": true},
+      {"name": "v2 (detailed rubric)", "accuracy": "48.3%", "trait": "Over-specified"},
+      {"name": "v3 (binary)", "accuracy": "41.4%", "trait": "Lost nuance"},
+      {"name": "v4 (chain-of-thought)", "accuracy": "39.1%", "trait": "Reasoning overhead"},
+      {"name": "v5 (skepticism)", "accuracy": "36.8%", "trait": "Too conservative"}
+    ]
+  },
+  "costs": {
+    "tiers": [
+      {"tier": "MVP", "price": "$8", "unit": "per account/month"},
+      {"tier": "Growth", "price": "$6", "unit": "per account/month"},
+      {"tier": "Enterprise", "price": "$21", "unit": "per account/month"}
+    ],
+    "distribution": [
+      {"label": "News data", "width": 55, "pct": "50-55%", "color_class": "bar-gold"},
+      {"label": "Infrastructure", "width": 38, "pct": "35-40%", "color_class": "bar-blue"},
+      {"label": "LLM inference", "width": 6, "pct": "1-6%", "color_class": "bar-green"},
+      {"label": "Vector search", "width": 2, "pct": "", "color_class": "bar-purple"}
+    ]
+  },
+  "graph": {
+    "lift": [
+      {"label": "CREATED_BY", "lift": "8.69x Lift", "width": 100},
+      {"label": "PART_OF_MOVEMENT", "lift": "6.90x Lift", "width": 79},
+      {"label": "IN_CATEGORY", "lift": "1.15x Lift", "width": 13, "color": "#888", "note": "*Near neutral — confirms need for asymmetric dampening"}
+    ]
+  }
+}

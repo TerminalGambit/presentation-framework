@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>{{ meta.title | default("Presentation") }}</title>
+<link href="https://fonts.googleapis.com/css2?family={{ theme.fonts.subheading | default('Montserrat') | replace(' ', '+') }}:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --navy: {{ theme.primary | default('#1C2537') }};
+    --gold: {{ theme.accent | default('#C4A962') }};
+    --gold-dim: rgba(196, 169, 98, 0.4);
+    --gold-glow: rgba(196, 169, 98, 0.15);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #000;
+    overflow: hidden;
+    height: 100vh; width: 100vw;
+    font-family: '{{ theme.fonts.subheading | default("Montserrat") }}', system-ui, sans-serif;
+    cursor: none;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+  body.show-ui { cursor: default; }
+  #slide-frame {
+    width: 1280px; height: 720px;
+    border: none;
+    transform-origin: center center;
+    transition: opacity 0.3s ease, transform 0s;
+    flex-shrink: 0;
+  }
+  #slide-frame.fading { opacity: 0; }
+  .progress-bar {
+    position: fixed; bottom: 0; left: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--gold), #d4b96e);
+    transition: width 0.4s ease;
+    z-index: 200;
+    box-shadow: 0 0 8px var(--gold-glow);
+  }
+  .controls {
+    position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+    display: flex; gap: 12px; align-items: center;
+    z-index: 100;
+    background: rgba(28, 37, 55, 0.95);
+    padding: 10px 28px; border-radius: 30px;
+    border: 1px solid rgba(196, 169, 98, 0.25);
+    backdrop-filter: blur(10px);
+    opacity: 0; transition: opacity 0.3s ease; pointer-events: none;
+  }
+  body.show-ui .controls { opacity: 1; pointer-events: all; }
+  .controls button {
+    background: none; border: 1px solid var(--gold-dim); color: var(--gold);
+    padding: 7px 18px; border-radius: 20px; cursor: pointer;
+    font-size: 13px; font-family: '{{ theme.fonts.subheading | default("Montserrat") }}', system-ui;
+    font-weight: 500; letter-spacing: 0.5px; transition: all 0.2s;
+  }
+  .controls button:hover { background: var(--gold-glow); border-color: var(--gold); }
+  .controls button.active { background: var(--gold); color: var(--navy); border-color: var(--gold); }
+  .counter { color: #888; font-size: 13px; min-width: 60px; text-align: center; font-weight: 400; }
+  .counter .current { color: var(--gold); font-weight: 600; }
+  .hints {
+    position: fixed; top: 20px; right: 24px; color: #444; font-size: 11px;
+    z-index: 100; text-align: right; line-height: 1.8;
+    opacity: 0; transition: opacity 0.3s ease; pointer-events: none;
+  }
+  body.show-ui .hints { opacity: 1; }
+  .hints kbd {
+    background: rgba(196, 169, 98, 0.1); border: 1px solid rgba(196, 169, 98, 0.2);
+    border-radius: 3px; padding: 1px 6px;
+    font-family: '{{ theme.fonts.subheading | default("Montserrat") }}', monospace;
+    font-size: 10px; color: #888;
+  }
+  .slide-number {
+    position: fixed; top: 20px; left: 24px; color: #333; font-size: 11px;
+    z-index: 100; font-weight: 300; letter-spacing: 1px;
+    opacity: 0; transition: opacity 0.3s ease;
+  }
+  body.show-ui .slide-number { opacity: 1; }
+  .grid-overlay {
+    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0, 0, 0, 0.92); z-index: 300;
+    display: none; padding: 40px; overflow-y: auto;
+  }
+  .grid-overlay.visible { display: block; }
+  .grid-overlay h2 {
+    color: var(--gold); font-family: '{{ theme.fonts.subheading | default("Montserrat") }}', sans-serif;
+    font-weight: 300; font-size: 18px; letter-spacing: 3px;
+    text-transform: uppercase; margin-bottom: 30px; text-align: center;
+  }
+  .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; max-width: 1200px; margin: 0 auto; }
+  .thumb {
+    position: relative; aspect-ratio: 16/9;
+    border: 2px solid transparent; border-radius: 6px;
+    overflow: hidden; cursor: pointer; transition: all 0.2s;
+  }
+  .thumb:hover { border-color: var(--gold); transform: scale(1.03); }
+  .thumb.active { border-color: var(--gold); box-shadow: 0 0 20px var(--gold-glow); }
+  .thumb iframe { width: 1280px; height: 720px; transform-origin: top left; pointer-events: none; border: none; }
+  .thumb-label {
+    position: absolute; bottom: 0; left: 0; right: 0;
+    background: linear-gradient(transparent, rgba(0,0,0,0.8));
+    color: #ccc; padding: 20px 10px 8px; font-size: 11px; font-weight: 500;
+  }
+  .thumb-label .num { color: var(--gold); margin-right: 4px; }
+  .click-zone { position: fixed; top: 0; height: 100%; z-index: 50; cursor: pointer; }
+  .click-zone.left { left: 0; width: 15%; }
+  .click-zone.right { right: 0; width: 15%; }
+</style>
+</head>
+<body class="show-ui">
+
+<iframe id="slide-frame" src="{{ slides[0] }}"></iframe>
+<div class="progress-bar" id="progress"></div>
+<div class="slide-number" id="slideNum">SLIDE 01</div>
+
+<div class="controls" id="controls">
+  <button onclick="prev()" title="Previous slide">&#8592; PREV</button>
+  <span class="counter"><span class="current" id="cur">1</span> / <span id="tot">{{ total }}</span></span>
+  <button onclick="next()" title="Next slide">NEXT &#8594;</button>
+  <button onclick="toggleGrid()" title="Slide overview">&#9638; GRID</button>
+  <button onclick="toggleFS()" title="Fullscreen">&#9974; FULL</button>
+</div>
+
+<div class="hints" id="hints">
+  <kbd>&#8592;</kbd> <kbd>&#8594;</kbd> navigate<br/>
+  <kbd>F</kbd> fullscreen<br/>
+  <kbd>G</kbd> grid overview<br/>
+  <kbd>H</kbd> hide UI<br/>
+  <kbd>1</kbd>-<kbd>9</kbd> jump to slide
+</div>
+
+<div class="click-zone left" onclick="prev()"></div>
+<div class="click-zone right" onclick="next()"></div>
+
+<div class="grid-overlay" id="gridOverlay">
+  <h2>Slide Overview</h2>
+  <div class="grid" id="gridContainer"></div>
+</div>
+
+<script>
+const SLIDES = {{ slides_json }};
+const TOTAL = SLIDES.length;
+const TITLES = {{ titles_json }};
+
+let current = 1;
+let uiVisible = true;
+let uiTimeout;
+
+const frame = document.getElementById('slide-frame');
+const progress = document.getElementById('progress');
+const curEl = document.getElementById('cur');
+const slideNumEl = document.getElementById('slideNum');
+const gridOverlay = document.getElementById('gridOverlay');
+
+function resize() {
+  const vw = window.innerWidth, vh = window.innerHeight;
+  const scale = Math.min(vw / 1280, vh / 720);
+  frame.style.transform = 'scale(' + scale + ')';
+}
+window.addEventListener('resize', resize);
+document.addEventListener('fullscreenchange', () => { requestAnimationFrame(resize); setTimeout(resize, 100); });
+resize();
+
+function show(n, instant) {
+  current = Math.max(1, Math.min(TOTAL, n));
+  const file = SLIDES[current - 1];
+  if (instant) { frame.src = file; }
+  else { frame.classList.add('fading'); setTimeout(() => { frame.src = file; frame.classList.remove('fading'); }, 200); }
+  curEl.textContent = current;
+  slideNumEl.textContent = 'SLIDE ' + String(current).padStart(2, '0');
+  progress.style.width = ((current / TOTAL) * 100) + '%';
+  document.querySelectorAll('.thumb').forEach((t, i) => { t.classList.toggle('active', i === current - 1); });
+}
+function next() { show(current + 1); }
+function prev() { show(current - 1); }
+function toggleFS() { if (!document.fullscreenElement) document.documentElement.requestFullscreen(); else document.exitFullscreen(); }
+function toggleGrid() { gridOverlay.classList.toggle('visible'); if (gridOverlay.classList.contains('visible')) buildGrid(); }
+function toggleUI() { uiVisible = !uiVisible; document.body.classList.toggle('show-ui', uiVisible); }
+
+function buildGrid() {
+  const container = document.getElementById('gridContainer');
+  if (container.children.length > 0) { document.querySelectorAll('.thumb').forEach((t, i) => { t.classList.toggle('active', i === current - 1); }); return; }
+  for (let i = 1; i <= TOTAL; i++) {
+    const thumb = document.createElement('div');
+    thumb.className = 'thumb' + (i === current ? ' active' : '');
+    const inner = document.createElement('iframe');
+    inner.src = SLIDES[i - 1]; inner.loading = 'lazy';
+    const containerWidth = (1200 - 48) / 4;
+    const scale = containerWidth / 1280;
+    inner.style.transform = 'scale(' + scale + ')';
+    thumb.style.height = (720 * scale) + 'px';
+    const label = document.createElement('div');
+    label.className = 'thumb-label';
+    label.innerHTML = '<span class="num">' + i + '.</span> ' + TITLES[i-1];
+    thumb.appendChild(inner); thumb.appendChild(label);
+    thumb.addEventListener('click', () => { show(i); gridOverlay.classList.remove('visible'); });
+    container.appendChild(thumb);
+  }
+}
+
+function resetUITimer() {
+  document.body.classList.add('show-ui'); uiVisible = true;
+  clearTimeout(uiTimeout);
+  uiTimeout = setTimeout(() => { if (!gridOverlay.classList.contains('visible')) { document.body.classList.remove('show-ui'); uiVisible = false; } }, 3000);
+}
+document.addEventListener('mousemove', resetUITimer);
+document.addEventListener('click', resetUITimer);
+
+document.addEventListener('keydown', e => {
+  if (gridOverlay.classList.contains('visible')) { if (e.key === 'Escape' || e.key === 'g' || e.key === 'G') { e.preventDefault(); gridOverlay.classList.remove('visible'); } return; }
+  switch(e.key) {
+    case 'ArrowRight': case ' ': case 'PageDown': e.preventDefault(); next(); break;
+    case 'ArrowLeft': case 'PageUp': e.preventDefault(); prev(); break;
+    case 'Home': e.preventDefault(); show(1); break;
+    case 'End': e.preventDefault(); show(TOTAL); break;
+    case 'f': case 'F': toggleFS(); break;
+    case 'g': case 'G': toggleGrid(); break;
+    case 'h': case 'H': toggleUI(); break;
+    case 'Escape': if (document.fullscreenElement) document.exitFullscreen(); break;
+    default: const num = parseInt(e.key); if (num >= 1 && num <= 9) show(num); if (e.key === '0') show(10);
+  }
+});
+
+show(1, true);
+resetUITimer();
+</script>
+</body>
+</html>

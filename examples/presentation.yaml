@@ -1,0 +1,120 @@
+meta:
+  title: "JEMA — Final Presentation"
+  authors: ["Serban Voinea", "Jack Massey"]
+  institution: "Albert School"
+  date: "2026-02-28"
+
+theme:
+  primary: "#1C2537"
+  accent: "#C4A962"
+  fonts:
+    heading: "Playfair Display"
+    subheading: "Montserrat"
+    body: "Lato"
+
+slides:
+  # ── Slide 1: Title ──────────────────────────────────────────
+  - layout: title
+    data:
+      title: "JEMA"
+      subtitle: "Luxury Asset Intelligence System"
+      tagline: "From news noise to actionable alerts for your portfolio"
+      quote: '"The right signal. The right asset. Before traditional media."'
+      features:
+        - icon: gem
+          label: "{{ metrics.summary.total_assets }} Luxury Assets"
+          sub: "Across {{ metrics.summary.categories }} Categories"
+        - icon: chart-line
+          label: "Real-Time Monitoring"
+          sub: "News → Scoring → Notifications"
+        - icon: project-diagram
+          label: "Graph-Powered"
+          sub: "Reasoning & Validation"
+      footer: "Serban Voinea & Jack Massey — Albert School"
+
+  # ── Slide 2: The Problem ────────────────────────────────────
+  - layout: two-column
+    data:
+      title: "The Problem"
+      subtitle: "Your family office manages {{ metrics.summary.total_assets }} luxury assets. How do you know which news matters?"
+      column_ratio: "2fr 1fr"
+      left:
+        - type: card
+          icon: layer-group
+          title: "The Daily Reality"
+          text: "Hundreds of news signals every day: auctions, exhibitions, regulations, earnings, lawsuits."
+          bullets:
+            - "Each signal could affect multiple assets across art, watches, vehicles, yachts, real estate"
+            - "Today, this monitoring is <strong>manual</strong>. Signals are missed. Analysts are overwhelmed."
+        - type: card
+          icon: project-diagram
+          title: "Indirect Impact"
+          text: "Events ripple through the market in non-obvious ways."
+          bullets:
+            - '"LVMH CEO transition" → affects Hermès → affects your <strong>Hermès watch collection</strong>'
+            - "Impact propagates through brands, conglomerates, locations — requires multi-hop reasoning"
+        - type: card
+          icon: filter
+          title: "The PARTIALLY Trap"
+          text: "Most news is subtly relevant — not clearly yes or no."
+          bullets:
+            - "False alerts waste time; subtle relevance is the hardest classification challenge"
+            - "Need high precision AND recall: can't cry wolf, can't miss material events"
+      right:
+        - type: solution-box
+          badge: "What JEMA Delivers"
+          title: "JEMA"
+          icon: gem
+          items:
+            - "Automated collection from <strong>{{ metrics.summary.total_rss_feeds }} RSS feeds</strong> + <strong>{{ metrics.summary.total_twitter_accounts }} X accounts</strong>"
+            - "Intelligent classification: <strong>RELEVANT</strong> / <strong>PARTIALLY</strong> / <strong>NOT RELEVANT</strong>"
+            - "Instant notifications for material events"
+            - "Validated on <strong>{{ metrics.summary.validation_pairs }} curated validation</strong> pairs"
+
+  # ── Slide 3: Benchmark Deep Dive ────────────────────────────
+  - layout: data-table
+    data:
+      title: "Benchmark Deep Dive"
+      subtitle: "Embedding Models & LLM Prompt Engineering"
+      sections:
+        - section_title: "Embedding Model Selection"
+          section_icon: "vector-square"
+          table:
+            headers: ["Model", "MRR", "R@10", "R@15"]
+            rows:
+              - ["bge-small-en-v1.5", "0.626", "88.1%", "93.2%"]
+              - ["all-MiniLM-L6-v2", "0.677", "88.1%", "89.8%"]
+              - ["all-mpnet-base-v2", "0.598", "83.1%", "88.1%"]
+              - ["paraphrase-MiniLM", "0.573", "79.7%", "84.7%"]
+            winner_rows: [0]
+            footnote: "Optimized for recall — missing a material event costs more than false positives."
+        - section_title: "LLM Prompt Engineering"
+          section_icon: "brain"
+          table:
+            headers: ["Prompt", "Accuracy", "Key Trait"]
+            rows:
+              - ["v1 (original 3-class)", "54.2%", "Best overall"]
+              - ["v2 (detailed rubric)", "48.3%", "Over-specified"]
+              - ["v3 (binary)", "41.4%", "Lost nuance"]
+              - ["v4 (chain-of-thought)", "39.1%", "Reasoning overhead"]
+              - ["v5 (skepticism)", "36.8%", "Too conservative"]
+            winner_rows: [0]
+          insight:
+            text: "<strong>Model size > prompt engineering</strong> — nemotron-mini 4B hits a hard capacity ceiling. Prompt iteration cannot compensate for insufficient parameter count."
+
+  # ── Slide 4: Thank You ──────────────────────────────────────
+  - layout: closing
+    data:
+      title: "Thank You"
+      subtitle: "Questions & Discussion"
+      info_items:
+        - type: pill
+          icon: "fa-brands fa-github"
+          text: "github.com/jackmassey/jema"
+        - type: info
+          icon: "fa-solid fa-graduation-cap"
+          text: "Albert School"
+        - type: info
+          icon: "fa-solid fa-users"
+          text: "Serban Voinea & Jack Massey"
+      footer: "JEMA — Luxury Asset Intelligence System"

@@ -1,0 +1,44 @@
+{% extends "base.html.j2" %}
+
+{% block container_class %} centered{% endblock %}
+
+{% block decorations %}
+{% include "partials/bg-pattern.html.j2" %}
+{% endblock %}
+
+{% block content %}
+<div class="z-10" style="display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 60px;">
+  <div style="font-family: var(--pf-font-heading); font-size: {{ slide.data.title_size | default('72px') }}; font-weight: 700; color: var(--pf-accent); line-height: 1.1; text-align: center; letter-spacing: -1px; margin-bottom: 20px;">{{ slide.data.title }}</div>
+
+  {% if slide.data.subtitle %}
+  <div style="font-family: var(--pf-font-subheading); font-size: 24px; font-weight: 300; color: var(--pf-white); text-transform: uppercase; letter-spacing: 4px; text-align: center; margin-bottom: 28px;">{{ slide.data.subtitle }}</div>
+  {% endif %}
+
+  <div class="divider"></div>
+
+  {% if slide.data.info_items %}
+  <div class="info-row">
+    {% for item in slide.data.info_items %}
+    {% if not loop.first %}
+    <div class="sep"></div>
+    {% endif %}
+    {% if item.type == "pill" %}
+    <div class="pill">
+      {% if item.icon %}<i class="{{ item.icon }}"></i>{% endif %}
+      {{ item.text }}
+    </div>
+    {% elif item.type == "info" %}
+    <div class="info-item">
+      {% if item.icon %}<i class="{{ item.icon }}"></i>{% endif %}
+      <span class="label">{{ item.text }}</span>
+    </div>
+    {% endif %}
+    {% endfor %}
+  </div>
+  {% endif %}
+</div>
+
+{% if slide.data.footer %}
+<div style="position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%); font-family: var(--pf-font-subheading); font-size: 14px; font-weight: 300; color: rgba(255,255,255,0.6); letter-spacing: 1.5px; white-space: nowrap; text-align: center;">{{ slide.data.footer }}</div>
+{% endif %}
+{% endblock %}

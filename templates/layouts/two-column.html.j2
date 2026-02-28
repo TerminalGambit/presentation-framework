@@ -1,0 +1,71 @@
+{% extends "base.html.j2" %}
+{% from "partials/card.html.j2" import challenge_card, solution_box, insight, value_prop, takeaway %}
+{% from "partials/stat-box.html.j2" import stat_grid, unit_grid %}
+{% from "partials/bar-chart.html.j2" import dist_bars, data_table, section_title, val_bars %}
+
+{% block content %}
+{% include "partials/header.html.j2" %}
+
+<div class="grid-2col" style="{% if slide.data.column_ratio %}grid-template-columns: {{ slide.data.column_ratio }};{% endif %}">
+  {# ── Left Column ── #}
+  <div class="col">
+    {% for item in slide.data.left %}
+    {% if item.type == "card" %}
+      {{ challenge_card(item.icon, item.title, item.text, item.bullets | default([])) }}
+    {% elif item.type == "solution-box" %}
+      {{ solution_box(item.badge | default(""), item.title, item['items'] | default([]), item.icon | default("gem")) }}
+    {% elif item.type == "stat-grid" %}
+      {{ stat_grid(item.stats, item.cols | default(2)) }}
+    {% elif item.type == "table" %}
+      {% if item.section_title %}{{ section_title(item.section_title, item.section_icon | default("")) }}{% endif %}
+      <div class="table-card">{{ data_table(item.headers, item.rows, item.winner_rows | default([]), item.total_row | default(none)) }}</div>
+      {% if item.footnote %}<p class="table-footnote">{{ item.footnote }}</p>{% endif %}
+    {% elif item.type == "dist-bars" %}
+      {% if item.section_title %}{{ section_title(item.section_title, item.section_icon | default("")) }}{% endif %}
+      {{ dist_bars(item.bars) }}
+    {% elif item.type == "insight" %}
+      {{ insight(item.text, item.icon | default("lightbulb")) }}
+    {% elif item.type == "value-prop" %}
+      {{ value_prop(item.title, item.text) }}
+    {% elif item.type == "takeaway" %}
+      {{ takeaway(item.text) }}
+    {% elif item.type == "html" %}
+      {{ item.content }}
+    {% endif %}
+    {% endfor %}
+  </div>
+
+  {# ── Right Column ── #}
+  <div class="col">
+    {% for item in slide.data.right %}
+    {% if item.type == "card" %}
+      {{ challenge_card(item.icon, item.title, item.text, item.bullets | default([])) }}
+    {% elif item.type == "solution-box" %}
+      {{ solution_box(item.badge | default(""), item.title, item['items'] | default([]), item.icon | default("gem")) }}
+    {% elif item.type == "stat-grid" %}
+      {{ stat_grid(item.stats, item.cols | default(2)) }}
+    {% elif item.type == "table" %}
+      {% if item.section_title %}{{ section_title(item.section_title, item.section_icon | default("")) }}{% endif %}
+      <div class="table-card">{{ data_table(item.headers, item.rows, item.winner_rows | default([]), item.total_row | default(none)) }}</div>
+      {% if item.footnote %}<p class="table-footnote">{{ item.footnote }}</p>{% endif %}
+    {% elif item.type == "dist-bars" %}
+      {% if item.section_title %}{{ section_title(item.section_title, item.section_icon | default("")) }}{% endif %}
+      {{ dist_bars(item.bars) }}
+    {% elif item.type == "unit-grid" %}
+      {% if item.section_title %}{{ section_title(item.section_title, item.section_icon | default("")) }}{% endif %}
+      {{ unit_grid(item.tiers) }}
+    {% elif item.type == "val-bars" %}
+      {{ val_bars(item['items']) }}
+    {% elif item.type == "insight" %}
+      {{ insight(item.text, item.icon | default("lightbulb")) }}
+    {% elif item.type == "value-prop" %}
+      {{ value_prop(item.title, item.text) }}
+    {% elif item.type == "takeaway" %}
+      {{ takeaway(item.text) }}
+    {% elif item.type == "html" %}
+      {{ item.content }}
+    {% endif %}
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

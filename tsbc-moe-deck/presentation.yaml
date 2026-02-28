@@ -1,0 +1,248 @@
+meta:
+  title: "Two Stage Binary Classifier + Mixture of Experts"
+  authors: ["Jack Massey"]
+  institution: "Albert School"
+  date: "2026-02-28"
+
+theme:
+  primary: "#1C2537"
+  accent: "#C4A962"
+  fonts:
+    heading: "Playfair Display"
+    subheading: "Montserrat"
+    body: "Lato"
+
+slides:
+  # ── Slide 1: Title ──────────────────────────────────────────
+  - layout: title
+    data:
+      title: "TSBC + MoE"
+      subtitle: "Two Stage Binary Classifier meets Mixture of Experts"
+      tagline: "Combining sequential gating with sparse expert routing for efficient, high-accuracy classification"
+      features:
+        - icon: filter
+          label: "Two Stage Binary Classifier"
+          sub: "Reject early, classify deep"
+        - icon: brain
+          label: "Mixture of Experts"
+          sub: "Route to specialised sub-networks"
+        - icon: bolt
+          label: "Combined Architecture"
+          sub: "Best of both — accuracy + speed"
+      footer: "Jack Massey — Albert School"
+
+  # ── Slide 2: What is a Two Stage Binary Classifier? ─────────
+  - layout: two-column
+    data:
+      title: "Two Stage Binary Classifier"
+      subtitle: "A sequential approach: decide quickly, then classify deeply"
+      column_ratio: "3fr 2fr"
+      left:
+        - type: card
+          icon: forward
+          title: "Stage 1 — {{ metrics.tsbc.stage1.name }}"
+          text: "A fast, lightweight model performs an initial binary decision: <strong>is this input worth deeper analysis?</strong>"
+          bullets:
+            - "Task: {{ metrics.tsbc.stage1.task }}"
+            - "Rejects ~{{ metrics.tsbc.stage1.reject_rate }} of inputs immediately — the obvious negatives never reach Stage 2"
+            - "Typical accuracy: <strong>{{ metrics.tsbc.stage1.typical_accuracy }}</strong> at <strong>{{ metrics.tsbc.stage1.typical_latency }}</strong> latency"
+        - type: card
+          icon: microscope
+          title: "Stage 2 — {{ metrics.tsbc.stage2.name }}"
+          text: "A heavier, more expressive model classifies only the <strong>retained {{ metrics.tsbc.stage2.processed_rate }}%</strong> of inputs."
+          bullets:
+            - "Task: {{ metrics.tsbc.stage2.task }} across N output classes"
+            - "Handles the <strong>hard cases</strong> — ambiguous, borderline, or multi-label inputs"
+            - "Typical accuracy: <strong>{{ metrics.tsbc.stage2.typical_accuracy }}</strong> on the harder subset"
+      right:
+        - type: solution-box
+          badge: "Core Idea"
+          title: "Why Two Stages?"
+          icon: lightbulb
+          items:
+            - "Most real-world data is <strong>easy to reject</strong> — only a minority requires deep analysis"
+            - "Stage 1 is a cheap gate: small model, few features, fast inference"
+            - "Stage 2 is an expensive specialist: large model, rich features, careful reasoning"
+            - "Net effect: <strong>{{ metrics.tsbc.benefits.compute_saved }}</strong> compute saved while maintaining accuracy"
+        - type: insight
+          text: "The key design choice is the <strong>operating point of Stage 1</strong> — tune for high recall (don't miss positives) at the cost of some false positives leaking to Stage 2."
+          icon: bullseye
+
+  # ── Slide 3: TSBC — How It Works ────────────────────────────
+  - layout: stat-grid
+    data:
+      title: "TSBC in Numbers"
+      subtitle: "What the two-stage cascade delivers"
+      column_ratio: "1fr 1fr"
+      columns:
+        - # Column 1 — Key stats
+          - type: stat-grid
+            cols: 2
+            stats:
+              - { value: "{{ metrics.tsbc.stages }}", label: "Sequential Stages" }
+              - { value: "{{ metrics.tsbc.stage1.output_classes }}", label: "Stage 1 Classes (Binary)" }
+              - { value: "{{ metrics.tsbc.stage1.reject_rate }}", label: "Rejected at Stage 1" }
+              - { value: "{{ metrics.tsbc.stage2.processed_rate }}", label: "Reach Stage 2" }
+          - type: insight
+            text: "<strong>Cascade principle:</strong> Each stage progressively narrows the candidate set. Only the hardest inputs consume expensive compute. This is the same idea behind Viola-Jones face detection (2001) — applied to modern classifiers."
+            icon: sitemap
+        - # Column 2 — Efficiency gains
+          - type: section-title
+            text: "Efficiency Gains"
+            icon: chart-line
+          - type: stat-grid
+            cols: 2
+            stats:
+              - { value: "{{ metrics.tsbc.benefits.compute_saved }}", label: "Compute Saved" }
+              - { value: "{{ metrics.tsbc.benefits.throughput_gain }}", label: "Throughput Gain" }
+              - { value: "{{ metrics.tsbc.benefits.false_positive_reduction }}", label: "FP Reduction" }
+              - { value: "{{ metrics.tsbc.stage1.typical_latency }}", label: "Stage 1 Latency" }
+          - type: card
+            header: "When to Use TSBC"
+            icon: check-circle
+            items:
+              - "High volume streams where most inputs are irrelevant"
+              - "Latency-sensitive systems that need fast rejection"
+              - "Imbalanced datasets (rare positives, abundant negatives)"
+              - "Budget constraints — save GPU time for hard cases"
+
+  # ── Slide 4: What is Mixture of Experts? ────────────────────
+  - layout: two-column
+    data:
+      title: "Mixture of Experts"
+      subtitle: "Scale model capacity without scaling compute — route each input to specialised sub-networks"
+      column_ratio: "3fr 2fr"
+      left:
+        - type: card
+          icon: project-diagram
+          title: "The Gating Network (Router)"
+          text: "A small network that examines each input and decides <strong>which experts should handle it</strong>."
+          bullets:
+            - "Router type: <strong>{{ metrics.moe.gating.type }}</strong> — selects top-{{ metrics.moe.gating.k }} experts per input"
+            - "Load balancing loss ({{ metrics.moe.gating.load_balancing_loss }}) prevents expert collapse — ensures all experts get trained"
+            - "The router is the <em>only</em> component that sees every input"
+        - type: card
+          icon: users-cog
+          title: "The Expert Networks"
+          text: "{{ metrics.moe.total_experts }} independent sub-networks, each specialising in different input patterns."
+          bullets:
+            - "Only <strong>{{ metrics.moe.active_per_input }} of {{ metrics.moe.total_experts }}</strong> experts activate per input ({{ metrics.moe.sparsity }} sparsity)"
+            - "Each expert develops its own internal representations — no weight sharing"
+            - "Expert outputs are <strong>weighted by router scores</strong> and combined"
+        - type: card
+          icon: balance-scale
+          title: "Sparse Activation"
+          text: "The magic of MoE: <strong>{{ metrics.moe.scaling.capacity_vs_dense }} model capacity</strong> at <strong>{{ metrics.moe.scaling.flops_ratio }}x</strong> the FLOPs."
+          bullets:
+            - "Total parameters: {{ metrics.moe.scaling.params_total }} a single expert"
+            - "Active parameters per input: {{ metrics.moe.scaling.params_active }} a single expert"
+            - "Capacity scales with expert count; compute scales with K"
+      right:
+        - type: solution-box
+          badge: "MoE Benefits"
+          title: "Why Experts?"
+          icon: brain
+          items:
+            - "<strong>{{ metrics.moe.benefits.specialisation }}</strong> — the router learns to partition the input space"
+            - "<strong>{{ metrics.moe.benefits.efficiency }}</strong> — adding experts adds capacity, not latency"
+            - "<strong>{{ metrics.moe.benefits.capacity }}</strong> — 8 experts ≈ 8x params, but only 2x compute"
+        - type: insight
+          text: "MoE is how models like <strong>Mixtral 8x7B</strong> and <strong>GPT-4</strong> achieve massive scale. The idea dates back to Jacobs et al. (1991) but became practical with modern hardware and load-balanced routing."
+          icon: history
+
+  # ── Slide 5: MoE Architecture Detail ───────────────────────
+  - layout: stat-grid
+    data:
+      title: "MoE Architecture"
+      subtitle: "How routing and expert selection work in practice"
+      column_ratio: "1fr 1fr"
+      columns:
+        - # Column 1 — Architecture stats
+          - type: stat-grid
+            cols: 2
+            stats:
+              - { value: "{{ metrics.moe.total_experts }}", label: "Total Experts" }
+              - { value: "{{ metrics.moe.active_per_input }}", label: "Active per Input" }
+              - { value: "{{ metrics.moe.sparsity }}", label: "Sparsity Rate" }
+              - { value: "{{ metrics.moe.scaling.flops_ratio }}x", label: "FLOPs vs Dense" }
+          - type: card
+            header: "Routing Mechanism"
+            icon: random
+            items:
+              - "<strong>Input → Router</strong>: Small network produces scores for each expert"
+              - "<strong>Top-K Selection</strong>: Pick the {{ metrics.moe.gating.k }} highest-scoring experts"
+              - "<strong>Softmax Weights</strong>: Normalise selected expert scores"
+              - "<strong>Weighted Sum</strong>: Combine expert outputs by router weights"
+        - # Column 2 — Challenges
+          - type: section-title
+            text: "Key Challenges"
+            icon: exclamation-triangle
+          - type: card
+            header: "Expert Collapse"
+            icon: compress-arrows-alt
+            items:
+              - "Without load balancing, the router may converge to using only 1-2 experts"
+              - "Auxiliary loss term ({{ metrics.moe.gating.load_balancing_loss }}) penalises uneven expert utilisation"
+              - "Ensures all experts receive training signal"
+          - type: card
+            header: "Communication Overhead"
+            icon: network-wired
+            items:
+              - "Distributed MoE requires sending tokens to experts on different devices"
+              - "All-to-all communication can bottleneck at scale"
+              - "Mitigated by expert parallelism and capacity factors"
+
+  # ── Slide 6: Combined Architecture ──────────────────────────
+  - layout: two-column
+    data:
+      title: "Combining TSBC + MoE"
+      subtitle: "Stage 1 gates the input; Stage 2 routes survivors to specialised experts"
+      column_ratio: "1fr 1fr"
+      left:
+        - type: card
+          icon: layer-group
+          title: "The Combined Pipeline"
+          text: "Two complementary ideas fused into a single efficient system."
+          bullets:
+            - "<strong>Stage 1 ({{ metrics.combined.architecture.stage1_type }}):</strong> ~{{ metrics.combined.architecture.stage1_params }} params — fast binary decision"
+            - "<strong>Stage 2 ({{ metrics.combined.architecture.stage2_type }}):</strong> ~{{ metrics.combined.architecture.stage2_params }} total, ~{{ metrics.combined.architecture.effective_params }} effective"
+            - "Only the <strong>{{ metrics.tsbc.stage2.processed_rate }}%</strong> that pass Stage 1 ever hit the expensive MoE"
+            - "Within MoE, only <strong>{{ metrics.combined.architecture.active_experts }}/{{ metrics.combined.architecture.total_experts }}</strong> experts fire"
+        - type: insight
+          text: "<strong>Double sparsity:</strong> Stage 1 sparsifies the <em>inputs</em> (which samples run), MoE sparsifies the <em>model</em> (which parameters activate). Together: fewer samples × fewer parameters = multiplicative efficiency."
+          icon: bolt
+      right:
+        - type: stat-grid
+          cols: 2
+          stats:
+            - { value: "{{ metrics.combined.performance.accuracy }}", label: "Accuracy" }
+            - { value: "{{ metrics.combined.performance.latency_p50 }}", label: "P50 Latency" }
+            - { value: "{{ metrics.combined.performance.throughput }}", label: "Throughput" }
+            - { value: "{{ metrics.combined.performance.compute_vs_dense }}", label: "Compute vs Dense" }
+        - type: table
+          section_title: "Architecture Comparison"
+          section_icon: "chart-bar"
+          headers: ["Approach", "Accuracy", "Latency"]
+          rows:
+            - ["Dense Baseline", "{{ metrics.combined.comparison.dense_baseline_accuracy }}", "{{ metrics.combined.comparison.dense_baseline_latency }}"]
+            - ["MoE Only", "{{ metrics.combined.comparison.single_stage_moe_accuracy }}", "{{ metrics.combined.comparison.single_stage_moe_latency }}"]
+            - ["TSBC + MoE", "{{ metrics.combined.comparison.tsbc_moe_accuracy }}", "{{ metrics.combined.comparison.tsbc_moe_latency }}"]
+          winner_rows: [2]
+          footnote: "TSBC + MoE achieves highest accuracy with lowest latency."
+
+  # ── Slide 7: Closing ────────────────────────────────────────
+  - layout: closing
+    data:
+      title: "Key Takeaways"
+      subtitle: "Reject early. Route smartly. Classify deeply."
+      info_items:
+        - type: info
+          icon: "fa-solid fa-filter"
+          text: "TSBC — cheap gate, expensive specialist"
+        - type: info
+          icon: "fa-solid fa-brain"
+          text: "MoE — scale capacity, not compute"
+        - type: info
+          icon: "fa-solid fa-bolt"
+          text: "Combined — double sparsity, multiplicative gains"
+      footer: "Two Stage Binary Classifier + Mixture of Experts"
