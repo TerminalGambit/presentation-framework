@@ -8,7 +8,7 @@
   background-color: var(--pf-card-bg);
   border: 1px solid var(--pf-card-border);
   border-radius: var(--pf-radius-lg);
-  padding: 20px;
+  padding: var(--pf-card-pad, 20px);
   display: flex;
   flex-direction: column;
 }
@@ -36,7 +36,7 @@
 .challenge-card {
   background-color: var(--pf-card-bg);
   border-left: 4px solid var(--pf-accent);
-  padding: 18px 20px;
+  padding: clamp(12px, var(--pf-card-pad, 18px), 18px) var(--pf-card-pad, 20px);
   border-radius: 0 var(--pf-radius-lg) var(--pf-radius-lg) 0;
   display: flex;
   align-items: flex-start;
@@ -76,7 +76,7 @@
 .card-text {
   font-family: var(--pf-font-body);
   color: var(--pf-text-light);
-  font-size: 14px;
+  font-size: var(--pf-body-size, 14px);
   line-height: 1.5;
   margin: 0;
 }
@@ -84,7 +84,7 @@
 .card-bullet {
   font-family: var(--pf-font-body);
   color: var(--pf-text-muted);
-  font-size: 13px;
+  font-size: clamp(11px, var(--pf-body-size, 13px), 13px);
   margin-top: 5px;
   padding-left: 15px;
   position: relative;
@@ -170,7 +170,7 @@
 
 .stat-box {
   background-color: var(--pf-dark-bg);
-  padding: 15px;
+  padding: clamp(10px, var(--pf-card-pad, 15px), 15px);
   border-radius: var(--pf-radius-md);
   text-align: center;
   border: 1px solid rgba(255, 255, 255, 0.05);
@@ -208,7 +208,7 @@
   width: 100%;
   border-collapse: collapse;
   font-family: var(--pf-font-body);
-  font-size: 13px;
+  font-size: clamp(11px, var(--pf-body-size, 13px), 13px);
 }
 
 .data-table thead th {
@@ -392,7 +392,7 @@
 
 .insight-text {
   font-family: var(--pf-font-subheading);
-  font-size: 13px;
+  font-size: clamp(11px, var(--pf-body-size, 13px), 13px);
   color: var(--pf-text);
   line-height: 1.5;
   font-weight: 400;

@@ -24,6 +24,14 @@ body {
   padding: var(--pf-slide-padding);
 }
 
+/* ── Density-Aware Defaults ────────────────────────────────── */
+.slide-container[data-density="high"] {
+  --pf-body-size: 12px;
+  --pf-card-pad: 14px;
+  --pf-header-size: 36px;
+  --pf-gap: 18px;
+}
+
 /* Centered variant (for title / closing slides) */
 .slide-container.centered {
   justify-content: center;
@@ -97,7 +105,7 @@ body {
 
 .header .title {
   font-family: var(--pf-font-heading);
-  font-size: 42px;
+  font-size: var(--pf-header-size, 42px);
   color: var(--pf-accent);
   margin: 0;
   line-height: 1;
@@ -138,7 +146,7 @@ body {
 .grid-2col {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: var(--pf-gap-lg);
+  gap: var(--pf-gap, var(--pf-gap-lg));
   flex: 1;
   min-height: 0;
   z-index: 10;
@@ -147,7 +155,7 @@ body {
 .grid-3col {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
-  gap: var(--pf-gap-lg);
+  gap: var(--pf-gap, var(--pf-gap-lg));
   flex: 1;
   min-height: 0;
   z-index: 10;
@@ -156,7 +164,7 @@ body {
 .col {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: clamp(6px, var(--pf-gap, 10px), 10px);
 }
 
 /* ── Utility ────────────────────────────────────────────────── */
