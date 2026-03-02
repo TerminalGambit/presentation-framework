@@ -220,6 +220,39 @@ def serve(directory: str, port: int, watch: bool, config: str, metrics: str):
             observer.join()
 
 
+@cli.command()
+@click.option("--config", "-c", default="presentation.yaml", help="Path to presentation.yaml")
+@click.option("--metrics", "-m", default="metrics.json", help="Path to metrics.json")
+@click.option("--output", "-o", default="presentation.pdf", help="Output PDF path")
+@click.option("--notes", is_flag=True, default=False, help="Include speaker notes")
+def pdf(config: str, metrics: str, output: str, notes: bool):
+    """Export slides to PDF (requires: pip install pf[pdf])."""
+    config_path = Path(config)
+    if not config_path.exists():
+        click.echo(f"Error: config file '{config}' not found.", err=True)
+        raise SystemExit(1)
+
+    try:
+        from pf.pdf import export_pdf
+    except ImportError:
+        click.echo("PDF export requires Playwright. Install with:")
+        click.echo("  pip install presentation-framework[pdf]")
+        click.echo("  playwright install chromium")
+        raise SystemExit(1)
+
+    # Build first
+    builder = PresentationBuilder(config_path=config, metrics_path=metrics)
+    out = builder.build(output_dir="slides")
+
+    click.echo("Exporting to PDF...")
+    try:
+        export_pdf(str(out), output, include_notes=notes)
+        click.echo(f"PDF exported \u2192 {output}")
+    except Exception as e:
+        click.echo(click.style(f"PDF export failed: {e}", fg="red"), err=True)
+        raise SystemExit(1)
+
+
 @cli.command(name="zip")
 @click.option("--dir", "-d", "directory", default="slides", help="Slides directory to zip")
 @click.option("--output", "-o", default=None, help="Output zip path (default: <dir>.zip)")
