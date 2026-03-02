@@ -9,6 +9,7 @@ import shutil
 from pathlib import Path
 
 import click
+import jsonschema
 import yaml
 from jinja2 import Environment, FileSystemLoader, TemplateNotFound
 
@@ -109,6 +110,21 @@ class PresentationBuilder:
             for v in data.values():
                 refs.extend(self._find_unresolved(v))
         return refs
+
+    # ── Validation ─────────────────────────────────────────────
+
+    def validate_config(self) -> list[str]:
+        """Validate config against JSON schema. Returns list of error messages."""
+        schema_path = Path(__file__).parent / "schema.json"
+        with open(schema_path, "r", encoding="utf-8") as f:
+            schema = json.load(f)
+
+        validator = jsonschema.Draft202012Validator(schema)
+        errors = []
+        for error in sorted(validator.iter_errors(self.config), key=lambda e: list(e.path)):
+            path = " → ".join(str(p) for p in error.absolute_path) or "root"
+            errors.append(f"{path}: {error.message}")
+        return errors
 
     # ── Rendering ───────────────────────────────────────────────
 
@@ -261,6 +277,13 @@ class PresentationBuilder:
         """
         self.load_config()
         self.load_metrics()
+
+        # Validate config
+        errors = self.validate_config()
+        if errors:
+            for e in errors:
+                click.echo(click.style(f"  ✗ {e}", fg="red"), err=True)
+            raise click.ClickException("Config validation failed. Fix errors above.")
 
         out = Path(output_dir)
         out.mkdir(parents=True, exist_ok=True)
