@@ -17,6 +17,9 @@
     {% block decorations %}{% endblock %}
     {% block content %}{% endblock %}
     <div class="page-number">{{ page_number | default("") }}</div>
+    {% if slide.notes %}
+    <aside class="notes">{{ slide.notes }}</aside>
+    {% endif %}
   </div>
 </body>
 </html>
