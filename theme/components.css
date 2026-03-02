@@ -728,3 +728,240 @@
   color: var(--pf-accent);
   font-weight: 700;
 }
+
+/* ── Image Layout ──────────────────────────────────────────── */
+.image-full {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background-size: cover;
+  background-position: center;
+  z-index: 5;
+}
+
+.image-full-overlay {
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  background: linear-gradient(transparent, rgba(0, 0, 0, 0.85));
+  padding: 60px 50px 50px;
+  z-index: 6;
+}
+
+.image-split {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  gap: 0;
+  z-index: 10;
+  margin: calc(-1 * var(--pf-slide-padding));
+}
+
+.image-split-img {
+  flex: 1;
+  overflow: hidden;
+}
+
+.image-split-img img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.image-split-text {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 50px;
+}
+
+.image-title {
+  font-family: var(--pf-font-heading);
+  font-size: 42px;
+  color: var(--pf-accent);
+  margin-bottom: 15px;
+  line-height: 1.1;
+}
+
+.image-title--overlay {
+  color: var(--pf-white);
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+}
+
+.image-caption {
+  font-family: var(--pf-font-body);
+  font-size: 18px;
+  color: var(--pf-text);
+  line-height: 1.6;
+}
+
+.image-caption--overlay {
+  color: rgba(255, 255, 255, 0.85);
+}
+
+/* ── Section Divider Layout ────────────────────────────────── */
+.section-divider-accent {
+  width: 120px;
+  height: 3px;
+  background: var(--pf-accent);
+  margin-bottom: 30px;
+}
+
+.section-divider-accent--bottom {
+  margin-top: 30px;
+  margin-bottom: 0;
+}
+
+.section-divider-number {
+  font-family: var(--pf-font-heading);
+  font-size: 72px;
+  color: var(--pf-accent);
+  font-weight: 700;
+  line-height: 1;
+  margin-bottom: 15px;
+  opacity: 0.3;
+}
+
+.section-divider-title {
+  font-family: var(--pf-font-heading);
+  font-size: 56px;
+  color: var(--pf-white);
+  font-weight: 700;
+  line-height: 1.1;
+  margin-bottom: 15px;
+  letter-spacing: -1px;
+}
+
+.section-divider-subtitle {
+  font-family: var(--pf-font-subheading);
+  font-size: 22px;
+  color: var(--pf-text-muted);
+  font-weight: 300;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+/* ── Quote Layout ──────────────────────────────────────────── */
+.quote-mark {
+  font-family: var(--pf-font-heading);
+  font-size: 120px;
+  color: var(--pf-accent);
+  line-height: 0.6;
+  margin-bottom: 20px;
+  opacity: 0.4;
+}
+
+.quote-text {
+  font-family: var(--pf-font-heading);
+  font-size: 36px;
+  color: var(--pf-white);
+  font-style: italic;
+  line-height: 1.4;
+  margin: 0 0 30px 0;
+  font-weight: 400;
+}
+
+.quote-divider {
+  width: 60px;
+  height: 2px;
+  background: var(--pf-accent);
+  margin-bottom: 25px;
+}
+
+.quote-attribution {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.quote-author {
+  font-family: var(--pf-font-subheading);
+  font-size: 18px;
+  color: var(--pf-accent);
+  font-weight: 600;
+  letter-spacing: 1px;
+}
+
+.quote-role {
+  font-family: var(--pf-font-subheading);
+  font-size: 14px;
+  color: var(--pf-text-muted);
+  font-weight: 300;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+}
+
+.quote-source {
+  font-family: var(--pf-font-body);
+  font-size: 13px;
+  color: var(--pf-text-dim);
+  font-style: italic;
+}
+
+/* ── Timeline Layout ───────────────────────────────────────── */
+.timeline-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  position: relative;
+  padding: 40px 0;
+}
+
+.timeline-line {
+  position: absolute;
+  top: 50%;
+  left: 40px;
+  right: 40px;
+  height: 2px;
+  background: linear-gradient(90deg, var(--pf-accent-border), var(--pf-accent), var(--pf-accent-border));
+  transform: translateY(-20px);
+}
+
+.timeline-steps {
+  display: flex;
+  justify-content: space-between;
+  position: relative;
+  z-index: 1;
+}
+
+.timeline-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  flex: 1;
+  max-width: 200px;
+}
+
+.timeline-dot {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: var(--pf-primary);
+  border: 2px solid var(--pf-accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 16px;
+  color: var(--pf-accent);
+  font-size: 18px;
+  box-shadow: 0 0 15px var(--pf-accent-glow);
+}
+
+.timeline-step-title {
+  font-family: var(--pf-font-subheading);
+  font-size: 15px;
+  color: var(--pf-white);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 8px;
+}
+
+.timeline-step-desc {
+  font-family: var(--pf-font-body);
+  font-size: 13px;
+  color: var(--pf-text-muted);
+  line-height: 1.4;
+}

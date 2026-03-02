@@ -260,6 +260,15 @@ class PresentationBuilder:
 
         self._warnings = warnings
 
+        # Copy local image assets referenced by image layout slides
+        for slide_cfg in slides:
+            if slide_cfg.get("layout") == "image":
+                img_path = Path(slide_cfg.get("data", {}).get("image", ""))
+                if img_path.exists() and not img_path.is_absolute():
+                    dest = out / img_path
+                    dest.parent.mkdir(parents=True, exist_ok=True)
+                    shutil.copy2(img_path, dest)
+
         # Render and write navigator
         nav_html = self.render_navigator(slide_files, slide_titles)
         (out / "present.html").write_text(nav_html, encoding="utf-8")
