@@ -11,6 +11,8 @@ from pathlib import Path
 import yaml
 from jinja2 import Environment, FileSystemLoader
 
+from pf.analyzer import LayoutAnalyzer
+
 
 def _hex_to_rgb(hex_color: str) -> tuple[int, int, int]:
     """Convert '#RRGGBB' to (r, g, b) ints."""
@@ -96,7 +98,7 @@ class PresentationBuilder:
 
     # ── Rendering ───────────────────────────────────────────────
 
-    def render_slide(self, slide_config: dict, index: int) -> str:
+    def render_slide(self, slide_config: dict, index: int, density: str = "normal") -> str:
         """Render a single slide to HTML string."""
         layout = slide_config.get("layout", "two-column")
         template_name = f"layouts/{layout}.html.j2"
@@ -114,6 +116,7 @@ class PresentationBuilder:
             meta=meta,
             theme=theme,
             page_number=page_number,
+            density=density,
         )
 
     def render_navigator(self, slide_files: list[str], slide_titles: list[str]) -> str:
@@ -237,19 +240,25 @@ class PresentationBuilder:
         slide_files = []
         slide_titles = []
 
+        warnings = []
         for i, slide_cfg in enumerate(slides):
-            # Resolve metrics references in slide data
             slide_cfg["data"] = self.resolve_data(slide_cfg.get("data", {}), self.metrics)
 
-            # Render the slide
-            html = self.render_slide(slide_cfg, i)
+            warning = LayoutAnalyzer.analyze_slide(slide_cfg, i)
+            if warning:
+                warnings.append(warning)
 
-            # Write to file
+            density = LayoutAnalyzer.compute_density(slide_cfg)
+
+            html = self.render_slide(slide_cfg, i, density=density)
+
             filename = f"slide_{i + 1:02d}.html"
             (out / filename).write_text(html, encoding="utf-8")
 
             slide_files.append(filename)
             slide_titles.append(slide_cfg.get("data", {}).get("title", f"Slide {i + 1}"))
+
+        self._warnings = warnings
 
         # Render and write navigator
         nav_html = self.render_navigator(slide_files, slide_titles)

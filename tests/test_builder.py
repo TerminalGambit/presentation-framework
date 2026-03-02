@@ -182,3 +182,29 @@ class TestBuild:
 
             slide_html = (out / "slide_01.html").read_text()
             assert "128 Assets" in slide_html
+
+
+class TestBuildWithAnalyzer:
+    def test_build_injects_density_attribute(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmpdir = Path(tmpdir)
+            config = {
+                "meta": {"title": "Test"},
+                "theme": {"fonts": {"heading": "Playfair Display", "subheading": "Montserrat", "body": "Lato"}},
+                "slides": [
+                    {"layout": "two-column", "data": {
+                        "title": "Light",
+                        "left": [{"type": "html", "content": "<p>Hi</p>"}],
+                        "right": [{"type": "html", "content": "<p>Hi</p>"}],
+                    }},
+                ],
+            }
+            (tmpdir / "presentation.yaml").write_text(yaml.dump(config), encoding="utf-8")
+            (tmpdir / "metrics.json").write_text("{}", encoding="utf-8")
+            builder = PresentationBuilder(
+                config_path=str(tmpdir / "presentation.yaml"),
+                metrics_path=str(tmpdir / "metrics.json"),
+            )
+            out = builder.build(output_dir=str(tmpdir / "slides"))
+            html = (out / "slide_01.html").read_text()
+            assert 'data-density="normal"' in html

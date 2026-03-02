@@ -12,7 +12,7 @@
   {% block head_extra %}{% endblock %}
 </head>
 <body>
-  <div class="slide-container{% block container_class %}{% endblock %}">
+  <div class="slide-container{% block container_class %}{% endblock %}" data-density="{{ density | default('normal') }}" style="{% if density == 'high' %}--pf-body-size: 12px; --pf-card-pad: 14px; --pf-header-size: 36px; --pf-gap: 18px;{% else %}--pf-body-size: 14px; --pf-card-pad: 20px; --pf-header-size: 42px; --pf-gap: 25px;{% endif %}">
     <div class="bg-pattern"></div>
     {% block decorations %}{% endblock %}
     {% block content %}{% endblock %}
