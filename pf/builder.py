@@ -200,6 +200,19 @@ class PresentationBuilder:
         # Derive accent RGBA variants
         ar, ag, ab = _hex_to_rgb(accent)
 
+        # Secondary accent
+        secondary = theme.get("secondary_accent", "#5B8FA8")
+        sr, sg, sb = _hex_to_rgb(secondary)
+
+        # Style presets
+        style = theme.get("style", "modern")
+        style_overrides = {
+            "modern": {"radius_lg": "8px", "shadow": "0 4px 6px rgba(0, 0, 0, 0.2)"},
+            "minimal": {"radius_lg": "2px", "shadow": "none"},
+            "bold": {"radius_lg": "12px", "shadow": "0 8px 16px rgba(0, 0, 0, 0.3)"},
+        }
+        preset = style_overrides.get(style, style_overrides["modern"])
+
         font_heading = fonts.get("heading", "Playfair Display")
         font_subheading = fonts.get("subheading", "Montserrat")
         font_body = fonts.get("body", "Lato")
@@ -249,7 +262,16 @@ class PresentationBuilder:
   --pf-font-heading:    '{font_heading}', serif;
   --pf-font-subheading: '{font_subheading}', sans-serif;
   --pf-font-body:       '{font_body}', sans-serif;
-  --pf-font-mono:       'IBM Plex Mono', monospace;"""
+  --pf-font-mono:       'IBM Plex Mono', monospace;
+
+  /* ── Secondary Accent (generated) ──────────────────────── */
+  --pf-secondary-accent:        {secondary};
+  --pf-secondary-accent-dim:    rgba({sr}, {sg}, {sb}, 0.4);
+  --pf-secondary-accent-bg:     rgba({sr}, {sg}, {sb}, 0.1);
+
+  /* ── Style Preset: {style} ─────────────────────────────── */
+  --pf-radius-lg:     {preset['radius_lg']};
+  --pf-shadow-card:   {preset['shadow']};"""
 
         # Grab everything after the :root color/typography block (spacing, radius, etc.)
         # Find the slide dimensions section onward and append it
