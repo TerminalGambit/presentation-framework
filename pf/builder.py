@@ -8,8 +8,9 @@ import re
 import shutil
 from pathlib import Path
 
+import click
 import yaml
-from jinja2 import Environment, FileSystemLoader
+from jinja2 import Environment, FileSystemLoader, TemplateNotFound
 
 from pf.analyzer import LayoutAnalyzer
 
@@ -96,13 +97,36 @@ class PresentationBuilder:
 
         return re.sub(pattern, replacer, s)
 
+    def _find_unresolved(self, data) -> list[str]:
+        """Find any remaining {{ metrics.x.y }} patterns in resolved data."""
+        refs = []
+        if isinstance(data, str):
+            refs.extend(re.findall(r"\{\{\s*metrics\.[a-zA-Z0-9_.]+\s*\}\}", data))
+        elif isinstance(data, list):
+            for item in data:
+                refs.extend(self._find_unresolved(item))
+        elif isinstance(data, dict):
+            for v in data.values():
+                refs.extend(self._find_unresolved(v))
+        return refs
+
     # ── Rendering ───────────────────────────────────────────────
 
     def render_slide(self, slide_config: dict, index: int, density: str = "normal") -> str:
         """Render a single slide to HTML string."""
         layout = slide_config.get("layout", "two-column")
         template_name = f"layouts/{layout}.html.j2"
-        template = self.env.get_template(template_name)
+
+        try:
+            template = self.env.get_template(template_name)
+        except TemplateNotFound:
+            valid = ", ".join(sorted(
+                p.stem for p in (TEMPLATES_DIR / "layouts").glob("*.html.j2")
+            ))
+            raise click.ClickException(
+                f"slide {index + 1} uses unknown layout '{layout}'. "
+                f"Valid layouts: {valid}"
+            )
 
         meta = self.config.get("meta", {})
         theme = self.config.get("theme", {})
@@ -110,14 +134,19 @@ class PresentationBuilder:
         # Page number formatting
         page_number = slide_config.get("page_number", f"{index + 1:02d}")
 
-        return template.render(
-            slide=slide_config,
-            slide_title=slide_config.get("data", {}).get("title", f"Slide {index + 1}"),
-            meta=meta,
-            theme=theme,
-            page_number=page_number,
-            density=density,
-        )
+        try:
+            return template.render(
+                slide=slide_config,
+                slide_title=slide_config.get("data", {}).get("title", f"Slide {index + 1}"),
+                meta=meta,
+                theme=theme,
+                page_number=page_number,
+                density=density,
+            )
+        except Exception as e:
+            raise click.ClickException(
+                f"slide {index + 1} ({layout}): template error — {e}"
+            )
 
     def render_navigator(self, slide_files: list[str], slide_titles: list[str]) -> str:
         """Render the present.html navigator shell."""
@@ -242,7 +271,14 @@ class PresentationBuilder:
 
         warnings = []
         for i, slide_cfg in enumerate(slides):
-            slide_cfg["data"] = self.resolve_data(slide_cfg.get("data", {}), self.metrics)
+            resolved_data = self.resolve_data(slide_cfg.get("data", {}), self.metrics)
+            unresolved = self._find_unresolved(resolved_data)
+            for ref in unresolved:
+                click.echo(
+                    click.style(f"  ⚠ slide {i+1:02d}: ", fg="yellow")
+                    + f"unresolved reference {ref}"
+                )
+            slide_cfg["data"] = resolved_data
 
             warning = LayoutAnalyzer.analyze_slide(slide_cfg, i)
             if warning:

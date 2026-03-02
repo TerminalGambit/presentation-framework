@@ -4,6 +4,7 @@ import json
 import tempfile
 from pathlib import Path
 
+import click
 import pytest
 import yaml
 
@@ -208,3 +209,15 @@ class TestBuildWithAnalyzer:
             out = builder.build(output_dir=str(tmpdir / "slides"))
             html = (out / "slide_01.html").read_text()
             assert 'data-density="normal"' in html
+
+
+class TestErrorMessages:
+    def test_invalid_layout_raises_clear_error(self):
+        b = PresentationBuilder()
+        b.config = {
+            "meta": {"title": "Test"},
+            "theme": {"fonts": {"heading": "Playfair Display", "subheading": "Montserrat", "body": "Lato"}},
+        }
+        slide = {"layout": "nonexistent", "data": {"title": "Bad"}}
+        with pytest.raises(click.ClickException, match="slide 1.*nonexistent"):
+            b.render_slide(slide, 0)
