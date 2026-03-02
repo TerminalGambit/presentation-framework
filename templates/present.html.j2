@@ -276,6 +276,12 @@ document.addEventListener('keydown', e => {
 
 show(1, true);
 resetUITimer();
+
+// Live-reload via SSE
+if (window.location.protocol !== 'file:') {
+  const evtSource = new EventSource('/__reload');
+  evtSource.onmessage = function() { location.reload(); };
+}
 </script>
 </body>
 </html>

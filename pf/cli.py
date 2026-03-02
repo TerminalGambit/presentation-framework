@@ -10,6 +10,7 @@ Commands:
 import http.server
 import json
 import functools
+import threading
 import webbrowser
 import zipfile
 from pathlib import Path
@@ -146,24 +147,77 @@ def build(config: str, metrics: str, output: str, open_browser: bool):
 @cli.command()
 @click.option("--dir", "-d", "directory", default="slides", help="Directory to serve")
 @click.option("--port", "-p", default=8080, help="Port number")
-def serve(directory: str, port: int):
-    """Start a local HTTP server to preview slides."""
+@click.option("--watch/--no-watch", default=True, help="Watch for changes and auto-rebuild")
+@click.option("--config", "-c", default="presentation.yaml", help="Config for rebuild")
+@click.option("--metrics", "-m", default="metrics.json", help="Metrics for rebuild")
+def serve(directory: str, port: int, watch: bool, config: str, metrics: str):
+    """Start a local HTTP server with optional live-reload."""
     serve_dir = Path(directory)
     if not serve_dir.exists():
         click.echo(f"Error: directory '{directory}' not found. Run 'pf build' first.", err=True)
         raise SystemExit(1)
 
+    # SSE reload event
+    reload_event = threading.Event()
+
+    class ReloadHandler(http.server.SimpleHTTPRequestHandler):
+        def __init__(self, *args, **kwargs):
+            super().__init__(*args, directory=str(serve_dir), **kwargs)
+
+        def do_GET(self):
+            if self.path == '/__reload':
+                self.send_response(200)
+                self.send_header('Content-Type', 'text/event-stream')
+                self.send_header('Cache-Control', 'no-cache')
+                self.send_header('Connection', 'keep-alive')
+                self.end_headers()
+                try:
+                    while True:
+                        if reload_event.wait(timeout=1):
+                            self.wfile.write(b'data: reload\n\n')
+                            self.wfile.flush()
+                            reload_event.clear()
+                except (BrokenPipeError, ConnectionResetError):
+                    pass
+                return
+            super().do_GET()
+
+        def log_message(self, format, *args):
+            pass  # Suppress request logs
+
+    if watch:
+        from watchdog.observers import Observer
+        from watchdog.events import FileSystemEventHandler
+
+        class RebuildHandler(FileSystemEventHandler):
+            def on_modified(self, event):
+                if event.src_path.endswith(('.yaml', '.json', '.j2', '.css')):
+                    click.echo(click.style("  \u21bb Change detected, rebuilding...", fg="cyan"))
+                    try:
+                        b = PresentationBuilder(config_path=config, metrics_path=metrics)
+                        b.build(output_dir=directory)
+                        reload_event.set()
+                        click.echo(click.style("  \u2713 Rebuilt successfully", fg="green"))
+                    except Exception as e:
+                        click.echo(click.style(f"  \u2717 Build error: {e}", fg="red"))
+
+        observer = Observer()
+        observer.schedule(RebuildHandler(), ".", recursive=False)
+        observer.start()
+        click.echo(click.style("  Watching for changes...", fg="cyan"))
+
     click.echo(f"Serving {directory}/ at http://localhost:{port}")
     click.echo(f"Open http://localhost:{port}/present.html to present.")
     click.echo("Press Ctrl+C to stop.\n")
 
-    handler = functools.partial(http.server.SimpleHTTPRequestHandler, directory=str(serve_dir))
-    server = http.server.HTTPServer(("", port), handler)
-
+    server = http.server.HTTPServer(("", port), ReloadHandler)
     try:
         server.serve_forever()
     except KeyboardInterrupt:
         click.echo("\nServer stopped.")
+        if watch:
+            observer.stop()
+            observer.join()
 
 
 @cli.command(name="zip")
