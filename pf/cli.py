@@ -115,6 +115,23 @@ def build(config: str, metrics: str, output: str, open_browser: bool):
     builder = PresentationBuilder(config_path=config, metrics_path=metrics)
     out = builder.build(output_dir=output)
 
+    # Print layout warnings
+    for w in getattr(builder, '_warnings', []):
+        idx = w["slide_index"] + 1
+        layout = w["layout"]
+        col = w["column"]
+        est = w["estimated_px"]
+        usable = w["usable_px"]
+        pct = w["overflow_pct"]
+        click.echo(
+            click.style(f"  ⚠ slide {idx:02d} ({layout}): ", fg="yellow")
+            + f"{col} ~{est}px of {usable}px usable ({pct}% over)"
+        )
+        click.echo(
+            click.style("     → ", fg="yellow")
+            + "Consider: reduce content or split into multiple slides"
+        )
+
     slide_count = len(list(out.glob("slide_*.html")))
     click.echo(f"Built {slide_count} slides → {out}/")
 
