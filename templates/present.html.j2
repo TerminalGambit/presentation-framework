@@ -170,6 +170,7 @@
 const SLIDES = {{ slides_json }};
 const TOTAL = SLIDES.length;
 const TITLES = {{ titles_json }};
+const TRANSITIONS = {{ transitions_json }};
 
 let current = 1;
 let uiVisible = true;
@@ -196,7 +197,8 @@ resize();
 function show(n, instant) {
   current = Math.max(1, Math.min(TOTAL, n));
   const file = SLIDES[current - 1];
-  if (instant) { frame.src = file; }
+  const transition = TRANSITIONS[current - 1] || 'fade';
+  if (instant || transition === 'none') { frame.src = file; }
   else { frame.classList.add('fading'); setTimeout(() => { frame.src = file; frame.classList.remove('fading'); }, 200); }
   curEl.textContent = current;
   slideNumEl.textContent = 'SLIDE ' + String(current).padStart(2, '0');

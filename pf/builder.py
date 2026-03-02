@@ -164,11 +164,13 @@ class PresentationBuilder:
                 f"slide {index + 1} ({layout}): template error — {e}"
             )
 
-    def render_navigator(self, slide_files: list[str], slide_titles: list[str]) -> str:
+    def render_navigator(self, slide_files: list[str], slide_titles: list[str],
+                         slide_transitions: list[str] | None = None) -> str:
         """Render the present.html navigator shell."""
         template = self.env.get_template("present.html.j2")
         meta = self.config.get("meta", {})
         theme = self.config.get("theme", {})
+        transitions = slide_transitions or ["fade"] * len(slide_files)
 
         return template.render(
             meta=meta,
@@ -176,6 +178,7 @@ class PresentationBuilder:
             slides=slide_files,
             slides_json=json.dumps(slide_files),
             titles_json=json.dumps(slide_titles),
+            transitions_json=json.dumps(transitions),
             total=len(slide_files),
         )
 
@@ -291,6 +294,7 @@ class PresentationBuilder:
         slides = self.config.get("slides", [])
         slide_files = []
         slide_titles = []
+        slide_transitions = []
 
         warnings = []
         for i, slide_cfg in enumerate(slides):
@@ -316,6 +320,7 @@ class PresentationBuilder:
 
             slide_files.append(filename)
             slide_titles.append(slide_cfg.get("data", {}).get("title", f"Slide {i + 1}"))
+            slide_transitions.append(slide_cfg.get("transition", "fade"))
 
         self._warnings = warnings
 
@@ -329,7 +334,7 @@ class PresentationBuilder:
                     shutil.copy2(img_path, dest)
 
         # Render and write navigator
-        nav_html = self.render_navigator(slide_files, slide_titles)
+        nav_html = self.render_navigator(slide_files, slide_titles, slide_transitions)
         (out / "present.html").write_text(nav_html, encoding="utf-8")
 
         # Copy theme CSS files (base + components)
