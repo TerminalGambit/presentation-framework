@@ -102,7 +102,47 @@ slides:
           insight:
             text: "<strong>Model size > prompt engineering</strong> — nemotron-mini 4B hits a hard capacity ceiling. Prompt iteration cannot compensate for insufficient parameter count."
 
-  # ── Slide 4: Thank You ──────────────────────────────────────
+  # ── Slide 4: Section Divider ────────────────────────────────
+  - layout: section
+    data:
+      title: "Research Findings"
+      subtitle: "Key insights from our analysis"
+      number: 1
+
+  # ── Slide 5: Quote ────────────────────────────────────────
+  - layout: quote
+    data:
+      text: "Data is the new oil, but like oil, it must be refined to be useful."
+      author: "Clive Humby"
+      role: "Data Science Pioneer"
+
+  # ── Slide 6: Image ────────────────────────────────────────
+  - layout: image
+    data:
+      image: "https://via.placeholder.com/1280x720"
+      position: full
+      title: "Visual Overview"
+      caption: "A comprehensive view of the system"
+
+  # ── Slide 7: Timeline ─────────────────────────────────────
+  - layout: timeline
+    data:
+      title: "Development Roadmap"
+      steps:
+        - icon: search
+          title: "Research"
+          description: "Market analysis and requirements gathering"
+        - icon: pencil
+          title: "Design"
+          description: "Architecture and UI mockups"
+        - icon: code
+          title: "Build"
+          description: "Implementation and testing"
+        - icon: rocket
+          title: "Launch"
+          description: "Deployment and monitoring"
+
+  # ── Slide 8: Thank You ──────────────────────────────────────
   - layout: closing
     data:
       title: "Thank You"

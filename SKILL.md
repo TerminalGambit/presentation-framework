@@ -24,11 +24,14 @@ pf init my-deck
 # Build slides (add --open to auto-launch in browser)
 pf build --config my-deck/presentation.yaml --metrics my-deck/metrics.json --output my-deck/slides --open
 
-# Preview
-pf serve --dir my-deck/slides
+# Preview with live-reload
+pf serve --dir my-deck/slides --watch
 
 # Package for sharing
 pf zip --dir my-deck/slides
+
+# Export to PDF (requires: pip install pf[pdf] && playwright install chromium)
+pf pdf --config my-deck/presentation.yaml --output my-deck/deck.pdf
 ```
 
 ## Core Rule
@@ -79,6 +82,10 @@ To match a company's brand, just change `primary` and `accent`:
 theme:
   primary: "#0D1F0D"
   accent: "#D4AF37"
+  secondary_accent: "#4A90D9"     # Optional second accent
+  style_preset: modern             # modern (default), minimal, or bold
+  transition: fade                 # Default slide transition (fade/slide/zoom/flip)
+  transition_speed: 0.5s           # Transition duration
   fonts:
     heading: "Cormorant Garamond"
     subheading: "Raleway"
@@ -87,6 +94,26 @@ theme:
 The builder derives all CSS custom properties (`--pf-accent-dim`, `--pf-accent-glow`, `--pf-card-border`, etc.) from the hex accent color, so every component automatically adapts.
 
 Fonts are loaded from Google Fonts CDN — use any family name available there.
+
+### Speaker Notes
+Add notes to any slide — press `N` during presentation to toggle:
+```yaml
+slides:
+  - layout: title
+    notes: "Welcome the audience and introduce the team."
+    data:
+      title: "My Deck"
+```
+
+### Per-Slide Transitions
+Override the default transition on individual slides:
+```yaml
+slides:
+  - layout: section
+    transition: zoom
+    data:
+      title: "New Chapter"
+```
 
 ## Metrics Interpolation
 Any string value in `data:` can reference metrics using `{{ metrics.path.to.value }}`:
@@ -280,6 +307,54 @@ Centered layout with decorative frame (same as title).
     footer: "Footer text"
 ```
 
+### 7. `image` — Full-bleed or split image
+```yaml
+- layout: image
+  data:
+    image: "https://example.com/photo.jpg"  # Required — image URL or path
+    position: full                           # full (default) or split
+    title: "Image Title"                     # Optional
+    caption: "Photo description"             # Optional
+```
+
+### 8. `section` — Section divider
+```yaml
+- layout: section
+  data:
+    title: "Part Two"           # Required — large heading
+    subtitle: "Deep Dive"       # Optional
+    number: 2                   # Optional — section number
+```
+
+### 9. `quote` — Centered quotation
+```yaml
+- layout: quote
+  data:
+    text: "The only way to do great work is to love what you do."  # Required
+    author: "Steve Jobs"        # Optional
+    role: "Co-founder, Apple"   # Optional
+```
+
+### 10. `timeline` — Horizontal step visualization
+```yaml
+- layout: timeline
+  data:
+    title: "Project Roadmap"    # Required
+    steps:                      # Required — 2-6 steps
+      - icon: search            # FontAwesome icon name
+        title: "Research"
+        description: "Gather requirements"
+      - icon: pencil
+        title: "Design"
+        description: "Create mockups"
+      - icon: code
+        title: "Build"
+        description: "Implementation"
+      - icon: rocket
+        title: "Launch"
+        description: "Go live"
+```
+
 ## CSS Components Reference
 These CSS classes are available in all layouts:
 
@@ -322,8 +397,9 @@ Any layout that accepts content blocks supports `type: html` for raw HTML:
 ## CLI Reference
 - `pf init <name>` — Scaffold a new project
 - `pf build -c <yaml> -m <json> -o <dir> [--open]` — Build slides; `--open` auto-launches browser
-- `pf serve -d <dir> -p <port>` — Local preview server
+- `pf serve -d <dir> -p <port> [--watch]` — Local preview server with live-reload
 - `pf zip -d <dir> [-o <path>]` — Package slides into a shareable `.zip`
+- `pf pdf -c <yaml> -m <json> -o <path> [--notes]` — Export to PDF (requires Playwright)
 
 ## Example
 See `examples/presentation.yaml` and `examples/metrics.json` for a complete working example.
