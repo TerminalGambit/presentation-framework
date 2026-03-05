@@ -54,7 +54,7 @@ class TestResolveData:
         result = PresentationBuilder.resolve_data(
             "{{ metrics.breakdown.twitter_accounts_by_category.Art }}", metrics
         )
-        assert result == "6"
+        assert result == 6
 
 
 # ── render_slide tests ──────────────────────────────────────────
@@ -221,3 +221,34 @@ class TestErrorMessages:
         slide = {"layout": "nonexistent", "data": {"title": "Bad"}}
         with pytest.raises(click.ClickException, match="slide 1.*nonexistent"):
             b.render_slide(slide, 0)
+
+
+class TestResolveDataObjects:
+    def test_full_reference_returns_dict(self):
+        from pf.builder import PresentationBuilder
+        metrics = {"charts": {"revenue": {"x": ["Q1", "Q2"], "y": [100, 200]}}}
+        data = {"source": "{{ metrics.charts.revenue }}"}
+        resolved = PresentationBuilder.resolve_data(data, metrics)
+        assert isinstance(resolved["source"], dict)
+        assert resolved["source"]["x"] == ["Q1", "Q2"]
+
+    def test_full_reference_returns_list(self):
+        from pf.builder import PresentationBuilder
+        metrics = {"items": [1, 2, 3]}
+        data = {"vals": "{{ metrics.items }}"}
+        resolved = PresentationBuilder.resolve_data(data, metrics)
+        assert isinstance(resolved["vals"], list)
+        assert resolved["vals"] == [1, 2, 3]
+
+    def test_partial_reference_still_string(self):
+        from pf.builder import PresentationBuilder
+        metrics = {"summary": {"total": 1234}}
+        data = {"label": "Total: {{ metrics.summary.total }}"}
+        resolved = PresentationBuilder.resolve_data(data, metrics)
+        assert resolved["label"] == "Total: 1234"
+
+    def test_unresolved_full_reference_returns_original(self):
+        from pf.builder import PresentationBuilder
+        data = {"source": "{{ metrics.nonexistent.path }}"}
+        resolved = PresentationBuilder.resolve_data(data, {})
+        assert resolved["source"] == "{{ metrics.nonexistent.path }}"

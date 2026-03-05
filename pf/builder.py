@@ -73,8 +73,21 @@ class PresentationBuilder:
         """
         Walk a data structure and interpolate {{ metrics.x.y }} references.
         Works on strings, lists, and dicts recursively.
+        Full-string references to non-scalar values return the raw object.
         """
         if isinstance(data, str):
+            full_match = re.fullmatch(
+                r"\{\{\s*metrics\.([a-zA-Z0-9_.]+)\s*\}\}", data
+            )
+            if full_match:
+                path = full_match.group(1)
+                value = metrics
+                for key in path.split("."):
+                    if isinstance(value, dict) and key in value:
+                        value = value[key]
+                    else:
+                        return data
+                return value
             return PresentationBuilder._interpolate_string(data, metrics)
         elif isinstance(data, list):
             return [PresentationBuilder.resolve_data(item, metrics) for item in data]
