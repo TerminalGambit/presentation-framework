@@ -1,0 +1,39 @@
+{% extends "base.html.j2" %}
+
+{% block container_class %} chart-slide{% endblock %}
+
+{% block content %}
+{% if slide.data.title %}
+<div class="chart-header">
+  <h1 class="slide-title">{{ slide.data.title }}</h1>
+  {% if slide.data.subtitle %}
+  <p class="chart-subtitle">{{ slide.data.subtitle }}</p>
+  {% endif %}
+</div>
+{% endif %}
+
+{% if slide.data.source is mapping %}
+  {% set chart_data = slide.data.source %}
+{% else %}
+  {% set _labels = slide.data.get("labels", []) %}
+  {% set _values = slide.data.get("values", []) %}
+  {% set _series = slide.data.get("series", []) %}
+  {% set chart_data = {"labels": _labels, "values": _values, "series": _series} %}
+{% endif %}
+
+<div class="chart-area">
+  <div class="chart-container" id="chart-main"
+       data-chart-type="{{ slide.data.chart_type | default('bar') }}"
+       data-chart-config='{{ chart_data | tojson }}'>
+  </div>
+</div>
+
+{% if theme.charts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  var el = document.getElementById('chart-main');
+  initChart(el, JSON.parse(el.dataset.chartConfig), el.dataset.chartType);
+});
+</script>
+{% endif %}
+{% endblock %}

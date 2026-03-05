@@ -64,3 +64,57 @@ class TestChartCDN:
             [{"layout": "title", "data": {"title": "Hi"}}])
         html = (slides_dir / "slide_01.html").read_text()
         assert "plotly" not in html.lower()
+
+
+class TestChartLayout:
+    def _build_chart_slide(self, tmp_path, slide_data, metrics=None):
+        from pf.builder import PresentationBuilder
+        config = {
+            "meta": {"title": "Test"},
+            "theme": {"primary": "#1C2537", "accent": "#C4A962", "charts": True,
+                      "fonts": {"heading": "Playfair Display", "subheading": "Montserrat", "body": "Lato"}},
+            "slides": [{"layout": "chart", "data": slide_data}],
+        }
+        config_path = tmp_path / "presentation.yaml"
+        config_path.write_text(yaml.dump(config, sort_keys=False), encoding="utf-8")
+        metrics_path = tmp_path / "metrics.json"
+        metrics_path.write_text(json.dumps(metrics or {}), encoding="utf-8")
+        builder = PresentationBuilder(config_path=str(config_path), metrics_path=str(metrics_path))
+        import contextlib, io
+        with contextlib.redirect_stdout(io.StringIO()):
+            out = builder.build(output_dir=str(tmp_path / "slides"))
+        return (Path(out) / "slide_01.html").read_text()
+
+    def test_chart_slide_renders(self, tmp_path):
+        html = self._build_chart_slide(tmp_path, {
+            "title": "Revenue Growth",
+            "chart_type": "bar",
+            "labels": ["Q1", "Q2", "Q3"],
+            "values": [100, 200, 300],
+        })
+        assert "Revenue Growth" in html
+        assert "chart-container" in html
+        assert "initChart" in html
+
+    def test_chart_slide_with_metrics_source(self, tmp_path):
+        html = self._build_chart_slide(tmp_path,
+            {"title": "Revenue", "chart_type": "line", "source": "{{ metrics.charts.revenue }}"},
+            metrics={"charts": {"revenue": {"x": ["Q1", "Q2"], "y": [100, 200]}}})
+        assert "Revenue" in html
+        assert "Q1" in html
+
+    def test_chart_slide_subtitle(self, tmp_path):
+        html = self._build_chart_slide(tmp_path, {
+            "title": "Growth", "subtitle": "Year over Year",
+            "chart_type": "bar", "labels": ["A"], "values": [1],
+        })
+        assert "Year over Year" in html
+        assert "chart-subtitle" in html
+
+    def test_chart_stores_config_for_modal(self, tmp_path):
+        html = self._build_chart_slide(tmp_path, {
+            "title": "Test", "chart_type": "pie",
+            "labels": ["A", "B"], "values": [60, 40],
+        })
+        assert 'data-chart-type="pie"' in html
+        assert "data-chart-config" in html
