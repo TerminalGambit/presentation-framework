@@ -179,12 +179,14 @@ class PresentationBuilder:
             )
 
     def render_navigator(self, slide_files: list[str], slide_titles: list[str],
-                         slide_transitions: list[str] | None = None) -> str:
+                         slide_transitions: list[str] | None = None,
+                         slide_notes: list[str] | None = None) -> str:
         """Render the present.html navigator shell."""
         template = self.env.get_template("present.html.j2")
         meta = self.config.get("meta", {})
         theme = self.config.get("theme", {})
         transitions = slide_transitions or ["fade"] * len(slide_files)
+        notes = slide_notes or [""] * len(slide_files)
 
         return template.render(
             meta=meta,
@@ -193,6 +195,7 @@ class PresentationBuilder:
             slides_json=json.dumps(slide_files),
             titles_json=json.dumps(slide_titles),
             transitions_json=json.dumps(transitions),
+            notes_json=json.dumps(notes),
             total=len(slide_files),
         )
 
@@ -331,6 +334,7 @@ class PresentationBuilder:
         slide_files = []
         slide_titles = []
         slide_transitions = []
+        slide_notes = []
 
         warnings = []
         for i, slide_cfg in enumerate(slides):
@@ -357,6 +361,7 @@ class PresentationBuilder:
             slide_files.append(filename)
             slide_titles.append(slide_cfg.get("data", {}).get("title", f"Slide {i + 1}"))
             slide_transitions.append(slide_cfg.get("transition", "fade"))
+            slide_notes.append(slide_cfg.get("notes", ""))
 
         self._warnings = warnings
 
@@ -382,7 +387,7 @@ class PresentationBuilder:
                     shutil.copy2(img_path, dest)
 
         # Render and write navigator
-        nav_html = self.render_navigator(slide_files, slide_titles, slide_transitions)
+        nav_html = self.render_navigator(slide_files, slide_titles, slide_transitions, slide_notes)
         (out / "present.html").write_text(nav_html, encoding="utf-8")
 
         # Copy theme CSS files (base + components)
