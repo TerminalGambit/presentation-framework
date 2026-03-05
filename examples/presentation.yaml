@@ -7,6 +7,7 @@ meta:
 theme:
   primary: "#1C2537"
   accent: "#C4A962"
+  math: true
   fonts:
     heading: "Playfair Display"
     subheading: "Montserrat"
@@ -142,7 +143,30 @@ slides:
           title: "Launch"
           description: "Deployment and monitoring"
 
-  # ── Slide 8: Thank You ──────────────────────────────────────
+  # ── Slide 8: Math Example ──────────────────────────────────
+  - layout: two-column
+    data:
+      title: "Mathematical Foundation"
+      subtitle: "Core equations driving the scoring model"
+      column_ratio: "1fr 1fr"
+      left:
+        - type: card
+          icon: square-root-variable
+          title: "Relevance Score"
+          text: "$$S = \\frac{\\sum_{i=1}^{n} w_i \\cdot r_i}{\\sum_{i=1}^{n} w_i}$$"
+          bullets:
+            - "$w_i$ — weight for signal $i$"
+            - "$r_i$ — relevance factor from embedding similarity"
+      right:
+        - type: card
+          icon: chart-line
+          title: "Confidence Interval"
+          text: "$$CI = \\bar{x} \\pm z \\cdot \\frac{\\sigma}{\\sqrt{n}}$$"
+          bullets:
+            - "95% confidence: $z = 1.96$"
+            - "Sample size affects precision: $\\frac{1}{\\sqrt{n}}$ decay"
+
+  # ── Slide 9: Thank You ──────────────────────────────────────
   - layout: closing
     data:
       title: "Thank You"
