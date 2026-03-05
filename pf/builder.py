@@ -379,7 +379,6 @@ class PresentationBuilder:
         shutil.copytree(THEME_DIR, theme_out)
 
         # Generate custom variables.css from presentation.yaml theme
-        theme_cfg = self.config.get("theme", {})
         custom_vars = self.generate_variables_css(theme_cfg)
         (theme_out / "variables.css").write_text(custom_vars, encoding="utf-8")
 
