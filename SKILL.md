@@ -494,6 +494,37 @@ Any layout that accepts content blocks supports `type: html` for raw HTML:
 | `{{ metrics }}` with no metrics.json | Build succeeds but references appear as literal text |
 | Huge tables (10+ rows) | Tables overflow. Use 4-6 rows max, or split across sections. |
 
+## MCP Server Tools
+
+When used as an MCP server, the framework exposes these tools:
+
+| Tool | Purpose |
+|------|---------|
+| `build_presentation(config_path, metrics_path, output_dir)` | Build slides, returns count + warnings |
+| `validate_config(config_path)` | Validate YAML against JSON schema |
+| `check_contrast(primary, accent, secondary_accent)` | WCAG 2.1 contrast ratio check |
+| `list_layouts()` | List all layouts with descriptions |
+| `get_layout_example(layout_name)` | Get YAML data shape for a specific layout |
+| `init_presentation(name, directory)` | Scaffold a new project |
+
+### Using MCP Tools
+```bash
+# Start the MCP server
+python -m pf.mcp_server
+```
+
+Configure in `.mcp.json`:
+```json
+{
+  "mcpServers": {
+    "pf": {
+      "command": "python",
+      "args": ["-m", "pf.mcp_server"]
+    }
+  }
+}
+```
+
 ## CLI Reference
 - `pf init <name>` — Scaffold a new project
 - `pf build -c <yaml> -m <json> -o <dir> [--open]` — Build slides; `--open` auto-launches browser
