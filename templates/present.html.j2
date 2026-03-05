@@ -341,7 +341,7 @@ function enableLightbox() {
         openLightbox(img.src, img.alt);
       });
     });
-  } catch(e) { /* cross-origin — lightbox unavailable */ }
+  } catch(e) { /* file:// cross-origin — lightbox requires pf serve */ }
 }
 frame.addEventListener('load', enableLightbox);
 
@@ -380,7 +380,7 @@ function enableChartModals() {
         openChartModal(config, chartType);
       });
     });
-  } catch(e) { /* cross-origin */ }
+  } catch(e) { /* file:// cross-origin — chart modals require pf serve */ }
 }
 frame.addEventListener('load', enableChartModals);
 
