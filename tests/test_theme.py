@@ -83,3 +83,37 @@ class TestMathSupport:
 
             slide_html = (out / "slide_01.html").read_text(encoding="utf-8")
             assert "katex" not in slide_html
+
+    def test_math_in_slide_content(self):
+        """Math delimiters in slide text should pass through to HTML unchanged."""
+        import tempfile, json, yaml
+        from pathlib import Path
+
+        with tempfile.TemporaryDirectory() as tmp:
+            config = {
+                "meta": {"title": "Math"},
+                "theme": {"primary": "#1C2537", "accent": "#C4A962", "math": True,
+                          "fonts": {"heading": "Playfair Display", "subheading": "Montserrat", "body": "Lato"}},
+                "slides": [{
+                    "layout": "closing",
+                    "data": {
+                        "title": "Euler's Identity",
+                        "subtitle": "$e^{i\\pi} + 1 = 0$",
+                    },
+                }],
+            }
+            config_path = Path(tmp) / "presentation.yaml"
+            config_path.write_text(yaml.dump(config), encoding="utf-8")
+            metrics_path = Path(tmp) / "metrics.json"
+            metrics_path.write_text(json.dumps({}), encoding="utf-8")
+
+            builder = PresentationBuilder(
+                config_path=str(config_path), metrics_path=str(metrics_path)
+            )
+            out = builder.build(output_dir=str(Path(tmp) / "slides"))
+
+            slide_html = (out / "slide_01.html").read_text(encoding="utf-8")
+            # Math delimiters should pass through to HTML for KaTeX auto-render
+            assert "$e^{i\\pi} + 1 = 0$" in slide_html
+            # KaTeX should be loaded
+            assert "katex.min.js" in slide_html
