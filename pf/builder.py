@@ -14,6 +14,7 @@ import yaml
 from jinja2 import Environment, FileSystemLoader, TemplateNotFound
 
 from pf.analyzer import LayoutAnalyzer
+from pf.contrast import check_contrast
 
 
 def _hex_to_rgb(hex_color: str) -> tuple[int, int, int]:
@@ -345,6 +346,18 @@ class PresentationBuilder:
             slide_transitions.append(slide_cfg.get("transition", "fade"))
 
         self._warnings = warnings
+
+        # ── Contrast checks ──────────────────────────────────────
+        theme_cfg = self.config.get("theme", {})
+        self._contrast_warnings = check_contrast(
+            primary=theme_cfg.get("primary", "#1C2537"),
+            accent=theme_cfg.get("accent", "#C4A962"),
+            secondary_accent=theme_cfg.get("secondary_accent"),
+        )
+        for cw in self._contrast_warnings:
+            click.echo(
+                click.style("  ⚠ contrast: ", fg="yellow") + cw
+            )
 
         # Copy local image assets referenced by image layout slides
         for slide_cfg in slides:

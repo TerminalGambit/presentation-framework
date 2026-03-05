@@ -114,3 +114,51 @@ class TestMathSupport:
             assert "$e^{i\\pi} + 1 = 0$" in slide_html
             # KaTeX should be loaded
             assert "katex.min.js" in slide_html
+
+
+class TestContrastWarnings:
+    def test_build_emits_contrast_warning_for_bad_colors(self):
+        """Build should warn when accent is too close to primary."""
+        with tempfile.TemporaryDirectory() as tmp:
+            config = {
+                "meta": {"title": "Contrast Test"},
+                "theme": {
+                    "primary": "#1C2537",
+                    "accent": "#1A2030",  # Nearly identical to primary
+                    "fonts": {"heading": "Playfair Display", "subheading": "Montserrat", "body": "Lato"},
+                },
+                "slides": [{"layout": "closing", "data": {"title": "Test"}}],
+            }
+            config_path = Path(tmp) / "presentation.yaml"
+            config_path.write_text(yaml.dump(config), encoding="utf-8")
+            metrics_path = Path(tmp) / "metrics.json"
+            metrics_path.write_text(json.dumps({}), encoding="utf-8")
+
+            builder = PresentationBuilder(
+                config_path=str(config_path), metrics_path=str(metrics_path)
+            )
+            builder.build(output_dir=str(Path(tmp) / "slides"))
+            assert len(builder._contrast_warnings) > 0
+
+    def test_build_no_contrast_warning_for_good_colors(self):
+        """Default colors should not trigger contrast warnings."""
+        with tempfile.TemporaryDirectory() as tmp:
+            config = {
+                "meta": {"title": "Good Contrast"},
+                "theme": {
+                    "primary": "#1C2537",
+                    "accent": "#C4A962",
+                    "fonts": {"heading": "Playfair Display", "subheading": "Montserrat", "body": "Lato"},
+                },
+                "slides": [{"layout": "closing", "data": {"title": "Test"}}],
+            }
+            config_path = Path(tmp) / "presentation.yaml"
+            config_path.write_text(yaml.dump(config), encoding="utf-8")
+            metrics_path = Path(tmp) / "metrics.json"
+            metrics_path.write_text(json.dumps({}), encoding="utf-8")
+
+            builder = PresentationBuilder(
+                config_path=str(config_path), metrics_path=str(metrics_path)
+            )
+            builder.build(output_dir=str(Path(tmp) / "slides"))
+            assert len(builder._contrast_warnings) == 0
