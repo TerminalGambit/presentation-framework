@@ -31,3 +31,55 @@ class TestExpandedTheme:
         theme = {"primary": "#1C2537", "accent": "#C4A962", "style": "minimal"}
         css = b.generate_variables_css(theme)
         assert "--pf-radius-lg" in css
+
+
+class TestMathSupport:
+    def test_math_enabled_loads_katex(self):
+        """When theme.math is true, base template should include KaTeX CDN links."""
+        import tempfile, json, yaml
+        from pathlib import Path
+
+        with tempfile.TemporaryDirectory() as tmp:
+            config = {
+                "meta": {"title": "Math Test"},
+                "theme": {"primary": "#1C2537", "accent": "#C4A962", "math": True, "fonts": {"heading": "Playfair Display", "subheading": "Montserrat", "body": "Lato"}},
+                "slides": [{"layout": "closing", "data": {"title": "Test"}}],
+            }
+            config_path = Path(tmp) / "presentation.yaml"
+            config_path.write_text(yaml.dump(config), encoding="utf-8")
+            metrics_path = Path(tmp) / "metrics.json"
+            metrics_path.write_text(json.dumps({}), encoding="utf-8")
+
+            builder = PresentationBuilder(
+                config_path=str(config_path), metrics_path=str(metrics_path)
+            )
+            out = builder.build(output_dir=str(Path(tmp) / "slides"))
+
+            slide_html = (out / "slide_01.html").read_text(encoding="utf-8")
+            assert "katex.min.css" in slide_html
+            assert "katex.min.js" in slide_html
+            assert "auto-render.min.js" in slide_html
+
+    def test_math_disabled_no_katex(self):
+        """When theme.math is absent/false, no KaTeX should be loaded."""
+        import tempfile, json, yaml
+        from pathlib import Path
+
+        with tempfile.TemporaryDirectory() as tmp:
+            config = {
+                "meta": {"title": "No Math"},
+                "theme": {"primary": "#1C2537", "accent": "#C4A962", "fonts": {"heading": "Playfair Display", "subheading": "Montserrat", "body": "Lato"}},
+                "slides": [{"layout": "closing", "data": {"title": "Test"}}],
+            }
+            config_path = Path(tmp) / "presentation.yaml"
+            config_path.write_text(yaml.dump(config), encoding="utf-8")
+            metrics_path = Path(tmp) / "metrics.json"
+            metrics_path.write_text(json.dumps({}), encoding="utf-8")
+
+            builder = PresentationBuilder(
+                config_path=str(config_path), metrics_path=str(metrics_path)
+            )
+            out = builder.build(output_dir=str(Path(tmp) / "slides"))
+
+            slide_html = (out / "slide_01.html").read_text(encoding="utf-8")
+            assert "katex" not in slide_html
