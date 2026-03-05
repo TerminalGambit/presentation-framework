@@ -40,3 +40,10 @@ class TestPptxCli:
         runner = CliRunner()
         result = runner.invoke(cli, ["pptx", "-c", "/nonexistent/config.yaml"])
         assert result.exit_code != 0
+
+    def test_pptx_editable_flag_exists(self):
+        from click.testing import CliRunner
+        from pf.cli import cli
+        runner = CliRunner()
+        result = runner.invoke(cli, ["pptx", "--help"])
+        assert "--editable" in result.output

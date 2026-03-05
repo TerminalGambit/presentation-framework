@@ -257,7 +257,8 @@ def pdf(config: str, metrics: str, output: str, notes: bool):
 @click.option("--config", "-c", default="presentation.yaml", help="Path to presentation.yaml")
 @click.option("--metrics", "-m", default="metrics.json", help="Path to metrics.json")
 @click.option("--output", "-o", default="presentation.pptx", help="Output PPTX path")
-def pptx(config: str, metrics: str, output: str):
+@click.option("--editable", is_flag=True, default=False, help="Native text/shapes for simple layouts (editable in PowerPoint)")
+def pptx(config: str, metrics: str, output: str, editable: bool):
     """Export slides to PowerPoint (requires: pip install pf[pptx])."""
     config_path = Path(config)
     if not config_path.exists():
@@ -265,7 +266,10 @@ def pptx(config: str, metrics: str, output: str):
         raise SystemExit(1)
 
     try:
-        from pf.pptx import export_pptx
+        if editable:
+            from pf.pptx_native import export_pptx_editable
+        else:
+            from pf.pptx import export_pptx
     except ImportError:
         click.echo("PPTX export requires Playwright and python-pptx. Install with:")
         click.echo("  pip install presentation-framework[pptx]")
@@ -277,9 +281,13 @@ def pptx(config: str, metrics: str, output: str):
     out = builder.build(output_dir="slides")
 
     title = builder.config.get("meta", {}).get("title", "Presentation")
-    click.echo("Exporting to PowerPoint...")
+    mode = "editable" if editable else "image-based"
+    click.echo(f"Exporting to PowerPoint ({mode})...")
     try:
-        export_pptx(str(out), output, title=title)
+        if editable:
+            export_pptx_editable(builder.config, str(out), output)
+        else:
+            export_pptx(str(out), output, title=title)
         click.echo(f"PPTX exported → {output}")
     except Exception as e:
         click.echo(click.style(f"PPTX export failed: {e}", fg="red"), err=True)
