@@ -118,3 +118,40 @@ class TestChartLayout:
         })
         assert 'data-chart-type="pie"' in html
         assert "data-chart-config" in html
+
+
+class TestChartComponent:
+    def _build_two_col(self, tmp_path, left_items, right_items, metrics=None):
+        from pf.builder import PresentationBuilder
+        config = {
+            "meta": {"title": "Test"},
+            "theme": {"primary": "#1C2537", "accent": "#C4A962", "charts": True,
+                      "fonts": {"heading": "Playfair Display", "subheading": "Montserrat", "body": "Lato"}},
+            "slides": [{"layout": "two-column", "data": {
+                "header": {"title": "Test"},
+                "left": left_items,
+                "right": right_items,
+            }}],
+        }
+        config_path = tmp_path / "presentation.yaml"
+        config_path.write_text(yaml.dump(config, sort_keys=False), encoding="utf-8")
+        metrics_path = tmp_path / "metrics.json"
+        metrics_path.write_text(json.dumps(metrics or {}), encoding="utf-8")
+        builder = PresentationBuilder(config_path=str(config_path), metrics_path=str(metrics_path))
+        import contextlib, io
+        with contextlib.redirect_stdout(io.StringIO()):
+            out = builder.build(output_dir=str(tmp_path / "slides"))
+        return (Path(out) / "slide_01.html").read_text()
+
+    def test_chart_in_two_column_left(self, tmp_path):
+        html = self._build_two_col(tmp_path,
+            left_items=[{"type": "plotly-chart", "chart_type": "bar", "labels": ["A", "B"], "values": [10, 20]}],
+            right_items=[{"type": "html", "content": "<p>Text</p>"}])
+        assert "chart-inline" in html
+        assert "initChart" in html
+
+    def test_chart_in_two_column_right(self, tmp_path):
+        html = self._build_two_col(tmp_path,
+            left_items=[{"type": "html", "content": "<p>Text</p>"}],
+            right_items=[{"type": "plotly-chart", "chart_type": "line", "labels": ["X", "Y"], "values": [5, 15]}])
+        assert "chart-inline" in html

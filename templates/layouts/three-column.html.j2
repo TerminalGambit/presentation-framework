@@ -2,6 +2,7 @@
 {% from "partials/card.html.j2" import insight, value_prop %}
 {% from "partials/stat-box.html.j2" import stat_grid %}
 {% from "partials/bar-chart.html.j2" import data_table, val_bars, section_title %}
+{% from "partials/plotly-chart.html.j2" import plotly_chart %}
 
 {% block content %}
 {% include "partials/header.html.j2" %}
@@ -33,6 +34,8 @@
       <img src="{{ item.src }}" alt="{{ item.alt | default('') }}" style="width:100%; height:100%; object-fit:contain; border-radius:6px;"/>
     {% elif item.type == "html" %}
       {{ item.content }}
+    {% elif item.type == "plotly-chart" %}
+      {{ plotly_chart(item, "col" ~ loop.index0 ~ "-" ~ loop.index) }}
     {% endif %}
     {% endfor %}
   </div>

@@ -2,6 +2,7 @@
 {% from "partials/card.html.j2" import challenge_card, solution_box, insight, value_prop, takeaway %}
 {% from "partials/stat-box.html.j2" import stat_grid, unit_grid %}
 {% from "partials/bar-chart.html.j2" import dist_bars, data_table, section_title, val_bars %}
+{% from "partials/plotly-chart.html.j2" import plotly_chart %}
 
 {% block content %}
 {% include "partials/header.html.j2" %}
@@ -31,6 +32,8 @@
       {{ takeaway(item.text) }}
     {% elif item.type == "html" %}
       {{ item.content }}
+    {% elif item.type == "plotly-chart" %}
+      {{ plotly_chart(item, "left-" ~ loop.index) }}
     {% endif %}
     {% endfor %}
   </div>
@@ -64,6 +67,8 @@
       {{ takeaway(item.text) }}
     {% elif item.type == "html" %}
       {{ item.content }}
+    {% elif item.type == "plotly-chart" %}
+      {{ plotly_chart(item, "right-" ~ loop.index) }}
     {% endif %}
     {% endfor %}
   </div>

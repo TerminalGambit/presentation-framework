@@ -1,0 +1,19 @@
+{% macro plotly_chart(item, uid) %}
+{% if item.source is mapping %}
+  {% set chart_data = item.source %}
+{% else %}
+  {% set chart_data = {"labels": item["labels"] | default([]), "values": item["values"] | default([]), "series": item["series"] | default([])} %}
+{% endif %}
+<div class="chart-inline" id="chart-inline-{{ uid }}"
+     data-chart-type="{{ item.chart_type | default('bar') }}"
+     data-chart-config='{{ chart_data | tojson }}'>
+</div>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  var el = document.getElementById('chart-inline-{{ uid }}');
+  if (el && typeof initChart === 'function') {
+    initChart(el, JSON.parse(el.dataset.chartConfig), el.dataset.chartType);
+  }
+});
+</script>
+{% endmacro %}
