@@ -72,3 +72,51 @@ class TestSectionLayout:
         _render_section(slide, {"title": "Test", "number": 3}, theme)
         texts = [s.text_frame.text for s in slide.shapes if s.has_text_frame]
         assert "03" in texts
+
+
+class TestQuoteLayout:
+    def test_renders_quote_text(self):
+        from pf.pptx_native import _render_quote, _pptx_theme, SLIDE_WIDTH, SLIDE_HEIGHT
+        prs = PptxPresentation()
+        prs.slide_width = SLIDE_WIDTH
+        prs.slide_height = SLIDE_HEIGHT
+        slide = prs.slides.add_slide(prs.slide_layouts[6])
+        theme = _pptx_theme({"primary": "#1C2537", "accent": "#C4A962"})
+        _render_quote(slide, {"text": "The best way to predict the future is to invent it.", "author": "Alan Kay"}, theme)
+        texts = [s.text_frame.text for s in slide.shapes if s.has_text_frame]
+        assert any("predict the future" in t for t in texts)
+
+    def test_renders_attribution(self):
+        from pf.pptx_native import _render_quote, _pptx_theme, SLIDE_WIDTH, SLIDE_HEIGHT
+        prs = PptxPresentation()
+        prs.slide_width = SLIDE_WIDTH
+        prs.slide_height = SLIDE_HEIGHT
+        slide = prs.slides.add_slide(prs.slide_layouts[6])
+        theme = _pptx_theme({"primary": "#1C2537", "accent": "#C4A962"})
+        _render_quote(slide, {"text": "Quote", "author": "Author", "role": "Scientist"}, theme)
+        texts = [s.text_frame.text for s in slide.shapes if s.has_text_frame]
+        assert any("Author" in t for t in texts)
+
+
+class TestClosingLayout:
+    def test_renders_title(self):
+        from pf.pptx_native import _render_closing, _pptx_theme, SLIDE_WIDTH, SLIDE_HEIGHT
+        prs = PptxPresentation()
+        prs.slide_width = SLIDE_WIDTH
+        prs.slide_height = SLIDE_HEIGHT
+        slide = prs.slides.add_slide(prs.slide_layouts[6])
+        theme = _pptx_theme({"primary": "#1C2537", "accent": "#C4A962"})
+        _render_closing(slide, {"title": "Thank You", "subtitle": "Questions?"}, theme)
+        texts = [s.text_frame.text for s in slide.shapes if s.has_text_frame]
+        assert "Thank You" in texts
+
+    def test_renders_subtitle(self):
+        from pf.pptx_native import _render_closing, _pptx_theme, SLIDE_WIDTH, SLIDE_HEIGHT
+        prs = PptxPresentation()
+        prs.slide_width = SLIDE_WIDTH
+        prs.slide_height = SLIDE_HEIGHT
+        slide = prs.slides.add_slide(prs.slide_layouts[6])
+        theme = _pptx_theme({"primary": "#1C2537", "accent": "#C4A962"})
+        _render_closing(slide, {"title": "Thanks", "subtitle": "Q&A"}, theme)
+        texts = [s.text_frame.text for s in slide.shapes if s.has_text_frame]
+        assert "Q&A" in texts

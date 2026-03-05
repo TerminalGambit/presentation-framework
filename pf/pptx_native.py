@@ -110,3 +110,63 @@ def _render_section(slide, data: dict, theme: dict):
 
     # Bottom accent bar
     _add_rect(slide, center_x - bar_w // 2, y_cursor, bar_w, bar_h, theme["accent"])
+
+
+def _render_quote(slide, data: dict, theme: dict):
+    """Render quote: quotation mark + text + divider + attribution."""
+    _add_bg(slide, theme["primary"])
+    center_x = SLIDE_WIDTH // 2
+    y_cursor = Inches(1.5)
+
+    # Quotation mark
+    box_w, box_h = Inches(2), Inches(1.2)
+    txBox = slide.shapes.add_textbox(center_x - box_w // 2, y_cursor, box_w, box_h)
+    _set_text(txBox.text_frame, "\u201C", theme["font_heading"], 96, theme["accent"])
+    y_cursor += Inches(1.0)
+
+    # Quote text
+    box_w, box_h = Inches(9), Inches(2.0)
+    txBox = slide.shapes.add_textbox(center_x - box_w // 2, y_cursor, box_w, box_h)
+    _set_text(txBox.text_frame, data["text"], theme["font_heading"], 28, theme["white"])
+    txBox.text_frame.word_wrap = True
+    y_cursor += Inches(1.8)
+
+    # Divider
+    bar_w, bar_h = Inches(0.8), Inches(0.03)
+    _add_rect(slide, center_x - bar_w // 2, y_cursor, bar_w, bar_h, theme["accent"])
+    y_cursor += Inches(0.4)
+
+    # Attribution
+    parts = []
+    if data.get("author"):
+        parts.append(data["author"])
+    if data.get("role"):
+        parts.append(data["role"])
+    if parts:
+        box_w, box_h = Inches(8), Inches(0.8)
+        txBox = slide.shapes.add_textbox(center_x - box_w // 2, y_cursor, box_w, box_h)
+        _set_text(txBox.text_frame, " — ".join(parts), theme["font_subheading"], 16, theme["text_muted"])
+
+
+def _render_closing(slide, data: dict, theme: dict):
+    """Render closing: title + subtitle + divider."""
+    _add_bg(slide, theme["primary"])
+    center_x = SLIDE_WIDTH // 2
+    y_cursor = Inches(2.2)
+
+    # Title
+    box_w, box_h = Inches(10), Inches(1.5)
+    txBox = slide.shapes.add_textbox(center_x - box_w // 2, y_cursor, box_w, box_h)
+    _set_text(txBox.text_frame, data["title"], theme["font_heading"], 60, theme["accent"], bold=True)
+    y_cursor += Inches(1.5)
+
+    # Divider
+    bar_w, bar_h = Inches(1.5), Inches(0.03)
+    _add_rect(slide, center_x - bar_w // 2, y_cursor, bar_w, bar_h, theme["accent"])
+    y_cursor += Inches(0.5)
+
+    # Subtitle
+    if data.get("subtitle"):
+        box_w, box_h = Inches(10), Inches(0.8)
+        txBox = slide.shapes.add_textbox(center_x - box_w // 2, y_cursor, box_w, box_h)
+        _set_text(txBox.text_frame, data["subtitle"], theme["font_subheading"], 20, theme["text_muted"])
