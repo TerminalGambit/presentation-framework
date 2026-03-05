@@ -34,6 +34,30 @@ pf zip --dir my-deck/slides
 pf pdf --config my-deck/presentation.yaml --output my-deck/deck.pdf
 ```
 
+## Agent Workflow
+
+When a user asks you to build a presentation:
+
+1. **Understand the content** — Ask what the presentation is about, who the audience is, and what data they have
+2. **Structure metrics.json first** — Organize all data (numbers, lists, tables) into a clean JSON structure
+3. **Plan the slide sequence** — Choose layouts that match the content:
+   - Start with `title`, end with `closing`
+   - Use `section` dividers between major topics
+   - Use `two-column` for detailed content with cards, tables, stats
+   - Use `data-table` for benchmarks and comparisons
+   - Use `stat-grid` for KPI dashboards
+   - Use `chart` for interactive data visualization
+   - Use `quote`, `image`, `timeline` for variety and pacing
+4. **Write presentation.yaml** — Reference `{{ metrics.path }}` for all dynamic values
+5. **Build and iterate** — Fix warnings, adjust content density, verify rendering
+
+### Content Density Guidelines
+- **Cards**: 2-3 per column in two-column layout. Each card: title + 1-2 sentences + 2-3 bullets max
+- **Tables**: 4-6 rows max per table section
+- **Stats**: 2-4 stat boxes per stat-grid
+- **Timeline**: 3-5 steps (more gets cramped)
+- If a slide has overflow warnings, split it into two slides rather than shrinking content
+
 ## Core Rule
 **All data must flow from `metrics.json`**. Use `{{ metrics.path.to.value }}` interpolation in YAML strings — never hardcode numbers, counts, or dynamic values.
 
@@ -456,6 +480,19 @@ Any layout that accepts content blocks supports `type: html` for raw HTML:
 4. **Verify** — Browser opens automatically. Use arrow keys to navigate, `G` for grid overview, `F` for fullscreen
 5. **Iterate** — Edit YAML, rebuild, refresh browser
 6. **Share** — `pf zip --dir slides` creates a `.zip` file that anyone can extract and open
+
+## Common Pitfalls
+
+| Mistake | Fix |
+|---------|-----|
+| Hardcoding data in YAML | Put all data in `metrics.json`, reference with `{{ metrics.x }}` |
+| Overfilling two-column slides | Max 3 cards per column. Split into multiple slides. |
+| Using `columns` in two-column layout | `two-column` uses `left`/`right`. Only `three-column` and `stat-grid` use `columns`. |
+| Missing `theme.math: true` | LaTeX won't render without enabling KaTeX |
+| Missing `theme.charts: true` | Chart layout needs Plotly enabled |
+| Full FA classes in regular layouts | Only `closing` info_items use `"fa-brands fa-github"`. Other layouts use just `icon: github`. |
+| `{{ metrics }}` with no metrics.json | Build succeeds but references appear as literal text |
+| Huge tables (10+ rows) | Tables overflow. Use 4-6 rows max, or split across sections. |
 
 ## CLI Reference
 - `pf init <name>` — Scaffold a new project
