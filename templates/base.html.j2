@@ -19,6 +19,61 @@
     .katex { color: var(--pf-white); }
   </style>
   {% endif %}
+  {% if theme.charts %}
+  <script src="https://cdn.plot.ly/plotly-2.35.2.min.js" charset="utf-8"></script>
+  <script>
+  window.__PF_CHART_THEME = {
+    accent: '{{ theme.accent | default("#C4A962") }}',
+    secondaryAccent: '{{ theme.secondary_accent | default("#5B8FA8") }}',
+    fontBody: '{{ theme.fonts.body | default("Lato") }}',
+  };
+  function _pfBuildTrace(chartType, labels, values, name, color, palette) {
+    switch (chartType) {
+      case 'line':
+        return {type:'scatter',mode:'lines+markers',x:labels,y:values,name:name,line:{color:color,width:3},marker:{color:color,size:8}};
+      case 'area':
+        return {type:'scatter',mode:'lines',fill:'tozeroy',x:labels,y:values,name:name,line:{color:color},fillcolor:color+'33'};
+      case 'scatter':
+        return {type:'scatter',mode:'markers',x:labels,y:values,name:name,marker:{color:color,size:10}};
+      case 'pie':
+        return {type:'pie',labels:labels,values:values,name:name,hole:0,marker:{colors:palette}};
+      case 'donut':
+        return {type:'pie',labels:labels,values:values,name:name,hole:0.4,marker:{colors:palette}};
+      default:
+        return {type:'bar',x:labels,y:values,name:name,marker:{color:color}};
+    }
+  }
+  function initChart(el, config, chartType) {
+    var t = window.__PF_CHART_THEME;
+    var palette = [t.accent, t.secondaryAccent, '#E8D5A3', '#7FC8A8', '#D4A5A5', '#B8A9C9', '#F4978E'];
+    var labels = config.labels || config.x || [];
+    var values = config.values || config.y || [];
+    var series = config.series || [];
+    var traces = [];
+    if (series.length > 0) {
+      for (var i = 0; i < series.length; i++) {
+        var s = series[i];
+        traces.push(_pfBuildTrace(chartType, labels, s.values || s.y || [], s.name || 'Series '+(i+1), palette[i % palette.length], palette));
+      }
+    } else {
+      traces.push(_pfBuildTrace(chartType, labels, values, '', palette[0], palette));
+    }
+    var isPie = chartType === 'pie' || chartType === 'donut';
+    var layout = {
+      paper_bgcolor:'transparent', plot_bgcolor:'transparent',
+      font:{family:t.fontBody, color:'#ffffff', size:14},
+      margin:{l:60,r:30,t:10,b:50},
+      showlegend: series.length > 1 || isPie,
+      legend:{font:{color:'#ffffff'}},
+    };
+    if (!isPie) {
+      layout.xaxis = {gridcolor:'rgba(255,255,255,0.1)', zerolinecolor:'rgba(255,255,255,0.2)', tickfont:{color:'#aaa'}};
+      layout.yaxis = {gridcolor:'rgba(255,255,255,0.1)', zerolinecolor:'rgba(255,255,255,0.2)', tickfont:{color:'#aaa'}};
+    }
+    Plotly.newPlot(el, traces, layout, {responsive:true, displayModeBar:false});
+  }
+  </script>
+  {% endif %}
   {% block head_extra %}{% endblock %}
 </head>
 <body>

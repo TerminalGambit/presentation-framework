@@ -965,3 +965,42 @@
   color: var(--pf-text-muted);
   line-height: 1.4;
 }
+
+/* ── Chart ──────────────────────────────────────────────────── */
+.chart-slide {
+  display: flex;
+  flex-direction: column;
+}
+.chart-header {
+  text-align: center;
+  padding: var(--pf-card-pad) var(--pf-card-pad) 0;
+}
+.chart-header h1 {
+  font-family: var(--pf-font-heading);
+  font-size: var(--pf-header-size);
+  color: var(--pf-white);
+  font-weight: 700;
+}
+.chart-subtitle {
+  font-family: var(--pf-font-subheading);
+  font-size: 16px;
+  color: var(--pf-accent);
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  margin-top: 8px;
+}
+.chart-area {
+  flex: 1;
+  min-height: 0;
+  padding: 10px var(--pf-card-pad) var(--pf-card-pad);
+}
+.chart-container {
+  width: 100%;
+  height: 100%;
+  cursor: zoom-in;
+}
+.chart-inline {
+  width: 100%;
+  min-height: 200px;
+  cursor: zoom-in;
+}

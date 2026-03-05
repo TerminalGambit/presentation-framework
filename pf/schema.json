@@ -20,6 +20,7 @@
         "secondary_accent": {"type": "string"},
         "style": {"type": "string", "enum": ["modern", "minimal", "bold"]},
         "math": {"type": "boolean"},
+        "charts": {"type": "boolean"},
         "fonts": {
           "type": "object",
           "properties": {
@@ -39,7 +40,7 @@
         "properties": {
           "layout": {
             "type": "string",
-            "enum": ["title", "two-column", "three-column", "data-table", "stat-grid", "closing", "image", "section", "quote", "timeline"]
+            "enum": ["title", "two-column", "three-column", "data-table", "stat-grid", "closing", "image", "section", "quote", "timeline", "chart"]
           },
           "data": {"type": "object"},
           "notes": {"type": "string"},
