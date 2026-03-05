@@ -3,7 +3,6 @@
 import json
 import struct
 import zlib
-import tempfile
 from pathlib import Path
 
 import pytest
