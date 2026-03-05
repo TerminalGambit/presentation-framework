@@ -199,7 +199,7 @@
 <div class="click-zone left" onclick="prev()"></div>
 <div class="click-zone right" onclick="next()"></div>
 
-<div class="notes-panel{{ ' visible' if theme.notes_visible }}" id="notesPanel">
+<div class="notes-panel" id="notesPanel">
   <div class="notes-panel-header">
     <span>SPEAKER NOTES</span>
     <button onclick="toggleNotes()" style="background:none;border:none;color:var(--gold);cursor:pointer;font-size:18px;">&times;</button>
@@ -239,7 +239,7 @@ const NOTES = {{ notes_json }};
 let current = 1;
 let uiVisible = true;
 let uiTimeout;
-let notesVisible = {{ 'true' if theme.notes_visible else 'false' }};
+let notesVisible = false;
 let lightboxActive = false;
 
 const frame = document.getElementById('slide-frame');
@@ -341,7 +341,7 @@ function enableLightbox() {
         openLightbox(img.src, img.alt);
       });
     });
-  } catch(e) { /* file:// cross-origin — lightbox requires pf serve */ }
+  } catch(e) { /* cross-origin — lightbox unavailable */ }
 }
 frame.addEventListener('load', enableLightbox);
 
@@ -380,7 +380,7 @@ function enableChartModals() {
         openChartModal(config, chartType);
       });
     });
-  } catch(e) { /* file:// cross-origin — chart modals require pf serve */ }
+  } catch(e) { /* cross-origin */ }
 }
 frame.addEventListener('load', enableChartModals);
 

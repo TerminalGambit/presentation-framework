@@ -14,7 +14,7 @@ import yaml
 from jinja2 import Environment, FileSystemLoader, TemplateNotFound
 
 from pf.analyzer import LayoutAnalyzer
-from pf.contrast import check_contrast, relative_luminance
+from pf.contrast import check_contrast
 
 
 def _hex_to_rgb(hex_color: str) -> tuple[int, int, int]:
@@ -27,11 +27,6 @@ def _darken_hex(hex_color: str, factor: float = 0.4) -> str:
     """Darken a hex color by a factor (0 = black, 1 = unchanged)."""
     r, g, b = _hex_to_rgb(hex_color)
     return f"#{int(r * factor):02x}{int(g * factor):02x}{int(b * factor):02x}"
-
-
-def _is_light_background(hex_color: str) -> bool:
-    """Return True if the color is light enough to need dark text."""
-    return relative_luminance(hex_color) > 0.5
 
 # Root of the presentation-framework package
 PACKAGE_ROOT = Path(__file__).resolve().parent.parent
@@ -242,32 +237,6 @@ class PresentationBuilder:
         # Read the stock variables.css as a base, then replace the :root block
         stock = (THEME_DIR / "variables.css").read_text(encoding="utf-8")
 
-        # Detect light vs dark background
-        light_bg = _is_light_background(primary)
-
-        if light_bg:
-            text_main = "#1a1a1a"
-            text_light = "#333333"
-            text_muted = "#555555"
-            text_dim = "#666666"
-            text_faint = "rgba(0, 0, 0, 0.3)"
-            contrast_text = "#111111"
-            card_bg = "rgba(0, 0, 0, 0.03)"
-            card_bg_hover = "rgba(0, 0, 0, 0.06)"
-            dark_bg = "rgba(0, 0, 0, 0.05)"
-            darker_bg = "rgba(0, 0, 0, 0.08)"
-        else:
-            text_main = "#e0e0e0"
-            text_light = "#cccccc"
-            text_muted = "#aaaaaa"
-            text_dim = "#888888"
-            text_faint = "rgba(255, 255, 255, 0.3)"
-            contrast_text = "#ffffff"
-            card_bg = "rgba(255, 255, 255, 0.03)"
-            card_bg_hover = "rgba(255, 255, 255, 0.06)"
-            dark_bg = "rgba(0, 0, 0, 0.2)"
-            darker_bg = "rgba(0, 0, 0, 0.25)"
-
         # Build the custom :root block
         custom_root = f""":root {{
   /* ── Colors (generated from presentation.yaml) ──────────── */
@@ -281,18 +250,17 @@ class PresentationBuilder:
   --pf-accent-bg-subtle: rgba({ar}, {ag}, {ab}, 0.06);
 
   --pf-white:         #ffffff;
-  --pf-contrast-text: {contrast_text};
-  --pf-text:          {text_main};
-  --pf-text-light:    {text_light};
-  --pf-text-muted:    {text_muted};
-  --pf-text-dim:      {text_dim};
-  --pf-text-faint:    {text_faint};
+  --pf-text:          #e0e0e0;
+  --pf-text-light:    #cccccc;
+  --pf-text-muted:    #aaaaaa;
+  --pf-text-dim:      #888888;
+  --pf-text-faint:    rgba(255, 255, 255, 0.3);
 
-  --pf-card-bg:       {card_bg};
-  --pf-card-bg-hover: {card_bg_hover};
+  --pf-card-bg:       rgba(255, 255, 255, 0.03);
+  --pf-card-bg-hover: rgba(255, 255, 255, 0.06);
   --pf-card-border:   rgba({ar}, {ag}, {ab}, 0.2);
-  --pf-dark-bg:       {dark_bg};
-  --pf-darker-bg:     {darker_bg};
+  --pf-dark-bg:       rgba(0, 0, 0, 0.2);
+  --pf-darker-bg:     rgba(0, 0, 0, 0.25);
 
   /* Category accent colors */
   --pf-cat-art:       #e74c3c;

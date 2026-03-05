@@ -34,30 +34,6 @@ pf zip --dir my-deck/slides
 pf pdf --config my-deck/presentation.yaml --output my-deck/deck.pdf
 ```
 
-## Agent Workflow
-
-When a user asks you to build a presentation:
-
-1. **Understand the content** — Ask what the presentation is about, who the audience is, and what data they have
-2. **Structure metrics.json first** — Organize all data (numbers, lists, tables) into a clean JSON structure
-3. **Plan the slide sequence** — Choose layouts that match the content:
-   - Start with `title`, end with `closing`
-   - Use `section` dividers between major topics
-   - Use `two-column` for detailed content with cards, tables, stats
-   - Use `data-table` for benchmarks and comparisons
-   - Use `stat-grid` for KPI dashboards
-   - Use `chart` for interactive data visualization
-   - Use `quote`, `image`, `timeline` for variety and pacing
-4. **Write presentation.yaml** — Reference `{{ metrics.path }}` for all dynamic values
-5. **Build and iterate** — Fix warnings, adjust content density, verify rendering
-
-### Content Density Guidelines
-- **Cards**: 2-3 per column in two-column layout. Each card: title + 1-2 sentences + 2-3 bullets max
-- **Tables**: 4-6 rows max per table section
-- **Stats**: 2-4 stat boxes per stat-grid
-- **Timeline**: 3-5 steps (more gets cramped)
-- If a slide has overflow warnings, split it into two slides rather than shrinking content
-
 ## Core Rule
 **All data must flow from `metrics.json`**. Use `{{ metrics.path.to.value }}` interpolation in YAML strings — never hardcode numbers, counts, or dynamic values.
 
@@ -145,19 +121,11 @@ Enable KaTeX rendering in `theme`:
 theme:
   math: true
 ```
-
 Use `$...$` for inline math and `$$...$$` for display math in any text field:
 ```yaml
 - type: card
   title: "Loss Function"
   text: "Cross-entropy: $L = -\\sum y_i \\log(\\hat{y}_i)$"
-```
-
-### Interactive Charts
-Enable Plotly.js for the `chart` layout:
-```yaml
-theme:
-  charts: true   # Enable Plotly.js for chart layout
 ```
 
 ## Metrics Interpolation
@@ -400,48 +368,6 @@ Centered layout with decorative frame (same as title).
         description: "Go live"
 ```
 
-### 11. `chart` — Interactive Plotly chart
-Renders an interactive Plotly.js chart. Requires `theme.charts: true`.
-```yaml
-- layout: chart
-  data:
-    title: "Revenue by Quarter"        # Optional
-    subtitle: "FY 2025-2026"           # Optional
-    chart_type: bar                     # bar (default), line, pie, scatter
-    source: "{{ metrics.revenue }}"     # Metrics ref to object with labels/values
-```
-
-The `source` object (or direct `labels`/`values`/`series` fields) should have:
-```yaml
-# Option A: source as metrics reference (recommended)
-# metrics.json: {"revenue": {"labels": ["Q1","Q2","Q3","Q4"], "values": [10,20,30,40]}}
-- layout: chart
-  data:
-    title: "Revenue"
-    chart_type: bar
-    source: "{{ metrics.revenue }}"
-
-# Option B: inline data
-- layout: chart
-  data:
-    title: "Revenue"
-    chart_type: line
-    labels: ["Q1", "Q2", "Q3", "Q4"]
-    values: [10, 20, 30, 40]
-
-# Option C: multi-series
-- layout: chart
-  data:
-    title: "Comparison"
-    chart_type: bar
-    labels: ["Q1", "Q2", "Q3", "Q4"]
-    series:
-      - name: "Product A"
-        values: [10, 20, 30, 40]
-      - name: "Product B"
-        values: [5, 15, 25, 35]
-```
-
 ## CSS Components Reference
 These CSS classes are available in all layouts:
 
@@ -480,50 +406,6 @@ Any layout that accepts content blocks supports `type: html` for raw HTML:
 4. **Verify** — Browser opens automatically. Use arrow keys to navigate, `G` for grid overview, `F` for fullscreen
 5. **Iterate** — Edit YAML, rebuild, refresh browser
 6. **Share** — `pf zip --dir slides` creates a `.zip` file that anyone can extract and open
-
-## Common Pitfalls
-
-| Mistake | Fix |
-|---------|-----|
-| Hardcoding data in YAML | Put all data in `metrics.json`, reference with `{{ metrics.x }}` |
-| Overfilling two-column slides | Max 3 cards per column. Split into multiple slides. |
-| Using `columns` in two-column layout | `two-column` uses `left`/`right`. Only `three-column` and `stat-grid` use `columns`. |
-| Missing `theme.math: true` | LaTeX won't render without enabling KaTeX |
-| Missing `theme.charts: true` | Chart layout needs Plotly enabled |
-| Full FA classes in regular layouts | Only `closing` info_items use `"fa-brands fa-github"`. Other layouts use just `icon: github`. |
-| `{{ metrics }}` with no metrics.json | Build succeeds but references appear as literal text |
-| Huge tables (10+ rows) | Tables overflow. Use 4-6 rows max, or split across sections. |
-
-## MCP Server Tools
-
-When used as an MCP server, the framework exposes these tools:
-
-| Tool | Purpose |
-|------|---------|
-| `build_presentation(config_path, metrics_path, output_dir)` | Build slides, returns count + warnings |
-| `validate_config(config_path)` | Validate YAML against JSON schema |
-| `check_contrast(primary, accent, secondary_accent)` | WCAG 2.1 contrast ratio check |
-| `list_layouts()` | List all layouts with descriptions |
-| `get_layout_example(layout_name)` | Get YAML data shape for a specific layout |
-| `init_presentation(name, directory)` | Scaffold a new project |
-
-### Using MCP Tools
-```bash
-# Start the MCP server
-python -m pf.mcp_server
-```
-
-Configure in `.mcp.json`:
-```json
-{
-  "mcpServers": {
-    "pf": {
-      "command": "python",
-      "args": ["-m", "pf.mcp_server"]
-    }
-  }
-}
-```
 
 ## CLI Reference
 - `pf init <name>` — Scaffold a new project
