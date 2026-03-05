@@ -115,6 +115,19 @@ slides:
       title: "New Chapter"
 ```
 
+### Math Equations (LaTeX)
+Enable KaTeX rendering in `theme`:
+```yaml
+theme:
+  math: true
+```
+Use `$...$` for inline math and `$$...$$` for display math in any text field:
+```yaml
+- type: card
+  title: "Loss Function"
+  text: "Cross-entropy: $L = -\\sum y_i \\log(\\hat{y}_i)$"
+```
+
 ## Metrics Interpolation
 Any string value in `data:` can reference metrics using `{{ metrics.path.to.value }}`:
 ```yaml

@@ -166,6 +166,31 @@ slides:
     data: ...
 ```
 
+### Math Equations (LaTeX)
+Enable KaTeX math rendering:
+```yaml
+theme:
+  math: true
+```
+
+Then use LaTeX syntax in any text field:
+```yaml
+slides:
+  - layout: two-column
+    data:
+      title: "Key Equations"
+      left:
+        - type: card
+          title: "Euler's Identity"
+          text: "$e^{i\\pi} + 1 = 0$"
+        - type: card
+          title: "Quadratic Formula"
+          text: "$$x = \\frac{-b \\pm \\sqrt{b^2 - 4ac}}{2a}$$"
+```
+
+- `$...$` — inline math (within text)
+- `$$...$$` — display math (centered, larger)
+
 ## Theme Customization
 
 Edit `presentation.yaml` theme section:
