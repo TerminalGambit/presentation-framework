@@ -19,6 +19,7 @@
         "accent": {"type": "string"},
         "secondary_accent": {"type": "string"},
         "style": {"type": "string", "enum": ["modern", "minimal", "bold"]},
+        "math": {"type": "boolean"},
         "fonts": {
           "type": "object",
           "properties": {

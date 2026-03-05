@@ -28,3 +28,26 @@ class TestSchemaValidation:
         }
         errors = b.validate_config()
         assert errors == []
+
+
+class TestMathSchema:
+    def test_math_theme_option_valid(self):
+        """theme.math: true should pass schema validation."""
+        import tempfile, json, yaml
+        from pathlib import Path
+        from pf.builder import PresentationBuilder
+
+        with tempfile.TemporaryDirectory() as tmp:
+            config = {
+                "theme": {"primary": "#000", "accent": "#fff", "math": True},
+                "slides": [{"layout": "closing", "data": {"title": "X"}}],
+            }
+            config_path = Path(tmp) / "presentation.yaml"
+            config_path.write_text(yaml.dump(config), encoding="utf-8")
+            metrics_path = Path(tmp) / "metrics.json"
+            metrics_path.write_text(json.dumps({}), encoding="utf-8")
+
+            builder = PresentationBuilder(str(config_path), str(metrics_path))
+            builder.load_config()
+            errors = builder.validate_config()
+            assert not errors, f"Unexpected validation errors: {errors}"
