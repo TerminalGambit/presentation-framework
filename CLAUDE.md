@@ -54,6 +54,7 @@ You help users build branded HTML slide decks. Your primary workflow:
 5. **Missing `theme.charts: true`** — Chart layout needs Plotly enabled in theme config
 6. **Wrong icon format in closing layout** — `closing` info_items use full FA classes (`"fa-brands fa-github"`), not just icon names
 7. **Forgetting metrics.json** — Build succeeds but `{{ metrics.x }}` appears as literal text
+8. **`pf` command not found** — The `pf` console script may not be on PATH in agent subshells. Use `python3 -m pf` as a reliable alternative.
 
 ## MCP Server
 
@@ -81,6 +82,8 @@ pf pdf                # Export to PDF (requires pip install pf[pdf])
 pf pptx               # Export to PowerPoint (requires pip install pf[pptx])
 pf zip                # Package slides into .zip
 ```
+
+> **Agent note:** If `pf` is not on PATH (exit code 127 / "command not found"), use `python3 -m pf` instead. This works from any directory without PATH configuration. Example: `python3 -m pf build -c presentation.yaml -m metrics.json -o slides`
 
 ## Key Files
 
