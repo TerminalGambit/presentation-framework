@@ -155,3 +155,22 @@ class TestChartComponent:
             left_items=[{"type": "html", "content": "<p>Text</p>"}],
             right_items=[{"type": "plotly-chart", "chart_type": "line", "labels": ["X", "Y"], "values": [5, 15]}])
         assert "chart-inline" in html
+
+
+class TestChartModal:
+    def test_chart_modal_markup_exists(self):
+        template_path = Path(__file__).parent.parent / "templates" / "present.html.j2"
+        html = template_path.read_text()
+        assert "chartModalOverlay" in html
+        assert "chartModalContainer" in html
+
+    def test_chart_modal_js_functions(self):
+        template_path = Path(__file__).parent.parent / "templates" / "present.html.j2"
+        html = template_path.read_text()
+        assert "openChartModal" in html
+        assert "closeChartModal" in html
+
+    def test_chart_modal_keyboard_escape(self):
+        template_path = Path(__file__).parent.parent / "templates" / "present.html.j2"
+        html = template_path.read_text()
+        assert "chartModalActive" in html

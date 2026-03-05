@@ -149,7 +149,29 @@
     font-size: 32px; cursor: pointer; transition: transform 0.2s;
   }
   .lightbox-close:hover { transform: scale(1.2); }
+  /* ── Chart Modal ──────────────────────────── */
+  .chart-modal-overlay {
+    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0, 0, 0, 0.95); z-index: 400;
+    display: none; justify-content: center; align-items: center;
+    backdrop-filter: blur(5px);
+  }
+  .chart-modal-overlay.active { display: flex; }
+  .chart-modal-container {
+    width: 90vw; height: 80vh;
+    position: relative;
+  }
+  .chart-modal-close {
+    position: absolute; top: -40px; right: 0;
+    background: none; border: none; color: var(--gold);
+    font-size: 32px; cursor: pointer; transition: transform 0.2s;
+    z-index: 410;
+  }
+  .chart-modal-close:hover { transform: scale(1.2); }
 </style>
+{% if theme.charts %}
+<script src="https://cdn.plot.ly/plotly-2.35.2.min.js" charset="utf-8"></script>
+{% endif %}
 </head>
 <body class="show-ui">
 
@@ -194,6 +216,12 @@
     <img id="lightboxImage" class="lightbox-image" src="" alt=""/>
     <div class="lightbox-caption" id="lightboxCaption"></div>
   </div>
+</div>
+
+<!-- Chart Modal -->
+<div class="chart-modal-overlay" id="chartModalOverlay" onclick="if(event.target===this)closeChartModal()">
+  <button class="chart-modal-close" onclick="closeChartModal()">&times;</button>
+  <div class="chart-modal-container" id="chartModalContainer"></div>
 </div>
 
 <div class="grid-overlay" id="gridOverlay">
@@ -320,7 +348,47 @@ function enableLightbox() {
 }
 frame.addEventListener('load', enableLightbox);
 
+let chartModalActive = false;
+
+function openChartModal(chartConfig, chartType) {
+  var container = document.getElementById('chartModalContainer');
+  container.innerHTML = '';
+  document.getElementById('chartModalOverlay').classList.add('active');
+  chartModalActive = true;
+  try {
+    var iframeWindow = frame.contentWindow;
+    if (iframeWindow && iframeWindow.initChart) {
+      iframeWindow.initChart(container, chartConfig, chartType);
+    }
+  } catch(e) { console.warn('Chart modal render failed', e); }
+}
+
+function closeChartModal() {
+  document.getElementById('chartModalOverlay').classList.remove('active');
+  document.getElementById('chartModalContainer').innerHTML = '';
+  chartModalActive = false;
+}
+
+function enableChartModals() {
+  try {
+    var charts = frame.contentDocument.querySelectorAll('.chart-container, .chart-inline');
+    charts.forEach(function(chart) {
+      if (chart.dataset.modalBound) return;
+      chart.dataset.modalBound = '1';
+      chart.style.cursor = 'zoom-in';
+      chart.addEventListener('click', function(e) {
+        e.stopPropagation();
+        var config = JSON.parse(chart.dataset.chartConfig);
+        var chartType = chart.dataset.chartType;
+        openChartModal(config, chartType);
+      });
+    });
+  } catch(e) { /* cross-origin */ }
+}
+frame.addEventListener('load', enableChartModals);
+
 document.addEventListener('keydown', e => {
+  if (chartModalActive) { if (e.key === 'Escape') { e.preventDefault(); closeChartModal(); } return; }
   if (lightboxActive) { if (e.key === 'Escape') { e.preventDefault(); closeLightbox(); } return; }
   if (gridOverlay.classList.contains('visible')) { if (e.key === 'Escape' || e.key === 'g' || e.key === 'G') { e.preventDefault(); gridOverlay.classList.remove('visible'); } return; }
   switch(e.key) {
