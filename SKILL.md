@@ -121,11 +121,19 @@ Enable KaTeX rendering in `theme`:
 theme:
   math: true
 ```
+
 Use `$...$` for inline math and `$$...$$` for display math in any text field:
 ```yaml
 - type: card
   title: "Loss Function"
   text: "Cross-entropy: $L = -\\sum y_i \\log(\\hat{y}_i)$"
+```
+
+### Interactive Charts
+Enable Plotly.js for the `chart` layout:
+```yaml
+theme:
+  charts: true   # Enable Plotly.js for chart layout
 ```
 
 ## Metrics Interpolation
@@ -366,6 +374,48 @@ Centered layout with decorative frame (same as title).
       - icon: rocket
         title: "Launch"
         description: "Go live"
+```
+
+### 11. `chart` — Interactive Plotly chart
+Renders an interactive Plotly.js chart. Requires `theme.charts: true`.
+```yaml
+- layout: chart
+  data:
+    title: "Revenue by Quarter"        # Optional
+    subtitle: "FY 2025-2026"           # Optional
+    chart_type: bar                     # bar (default), line, pie, scatter
+    source: "{{ metrics.revenue }}"     # Metrics ref to object with labels/values
+```
+
+The `source` object (or direct `labels`/`values`/`series` fields) should have:
+```yaml
+# Option A: source as metrics reference (recommended)
+# metrics.json: {"revenue": {"labels": ["Q1","Q2","Q3","Q4"], "values": [10,20,30,40]}}
+- layout: chart
+  data:
+    title: "Revenue"
+    chart_type: bar
+    source: "{{ metrics.revenue }}"
+
+# Option B: inline data
+- layout: chart
+  data:
+    title: "Revenue"
+    chart_type: line
+    labels: ["Q1", "Q2", "Q3", "Q4"]
+    values: [10, 20, 30, 40]
+
+# Option C: multi-series
+- layout: chart
+  data:
+    title: "Comparison"
+    chart_type: bar
+    labels: ["Q1", "Q2", "Q3", "Q4"]
+    series:
+      - name: "Product A"
+        values: [10, 20, 30, 40]
+      - name: "Product B"
+        values: [5, 15, 25, 35]
 ```
 
 ## CSS Components Reference
