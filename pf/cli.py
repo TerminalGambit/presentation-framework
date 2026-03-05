@@ -253,6 +253,39 @@ def pdf(config: str, metrics: str, output: str, notes: bool):
         raise SystemExit(1)
 
 
+@cli.command()
+@click.option("--config", "-c", default="presentation.yaml", help="Path to presentation.yaml")
+@click.option("--metrics", "-m", default="metrics.json", help="Path to metrics.json")
+@click.option("--output", "-o", default="presentation.pptx", help="Output PPTX path")
+def pptx(config: str, metrics: str, output: str):
+    """Export slides to PowerPoint (requires: pip install pf[pptx])."""
+    config_path = Path(config)
+    if not config_path.exists():
+        click.echo(f"Error: config file '{config}' not found.", err=True)
+        raise SystemExit(1)
+
+    try:
+        from pf.pptx import export_pptx
+    except ImportError:
+        click.echo("PPTX export requires Playwright and python-pptx. Install with:")
+        click.echo("  pip install presentation-framework[pptx]")
+        click.echo("  playwright install chromium")
+        raise SystemExit(1)
+
+    # Build first
+    builder = PresentationBuilder(config_path=config, metrics_path=metrics)
+    out = builder.build(output_dir="slides")
+
+    title = builder.config.get("meta", {}).get("title", "Presentation")
+    click.echo("Exporting to PowerPoint...")
+    try:
+        export_pptx(str(out), output, title=title)
+        click.echo(f"PPTX exported → {output}")
+    except Exception as e:
+        click.echo(click.style(f"PPTX export failed: {e}", fg="red"), err=True)
+        raise SystemExit(1)
+
+
 @cli.command(name="zip")
 @click.option("--dir", "-d", "directory", default="slides", help="Slides directory to zip")
 @click.option("--output", "-o", default=None, help="Output zip path (default: <dir>.zip)")
