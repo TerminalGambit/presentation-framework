@@ -120,3 +120,59 @@ class TestClosingLayout:
         _render_closing(slide, {"title": "Thanks", "subtitle": "Q&A"}, theme)
         texts = [s.text_frame.text for s in slide.shapes if s.has_text_frame]
         assert "Q&A" in texts
+
+
+import json
+import yaml
+from pathlib import Path
+
+
+class TestExportEditable:
+    def _write_config(self, tmp_path, slides):
+        config = {
+            "meta": {"title": "Test", "authors": ["Tester"]},
+            "theme": {
+                "primary": "#1C2537", "accent": "#C4A962",
+                "fonts": {"heading": "Playfair Display", "subheading": "Montserrat", "body": "Lato"},
+            },
+            "slides": slides,
+        }
+        config_path = tmp_path / "presentation.yaml"
+        config_path.write_text(yaml.dump(config, sort_keys=False), encoding="utf-8")
+        metrics_path = tmp_path / "metrics.json"
+        metrics_path.write_text(json.dumps({"metadata": {}, "summary": {}}), encoding="utf-8")
+        return config_path, metrics_path
+
+    def test_section_slide_native(self, tmp_path):
+        from pf.pptx_native import export_pptx_editable
+        from pf.builder import PresentationBuilder
+        config_path, metrics_path = self._write_config(tmp_path, [
+            {"layout": "section", "data": {"title": "Hello", "number": 1}},
+        ])
+        builder = PresentationBuilder(config_path=str(config_path), metrics_path=str(metrics_path))
+        import contextlib, io as _io
+        with contextlib.redirect_stdout(_io.StringIO()):
+            out = builder.build(output_dir=str(tmp_path / "slides"))
+        output_pptx = str(tmp_path / "out.pptx")
+        export_pptx_editable(builder.config, str(out), output_pptx)
+        prs = PptxPresentation(output_pptx)
+        assert len(prs.slides) == 1
+        texts = [s.text_frame.text for s in prs.slides[0].shapes if s.has_text_frame]
+        assert "Hello" in texts
+
+    def test_fallback_uses_image(self, tmp_path):
+        """Non-native layouts should still produce a slide (via image fallback)."""
+        from pf.pptx_native import export_pptx_editable
+        from pf.builder import PresentationBuilder
+        config_path, metrics_path = self._write_config(tmp_path, [
+            {"layout": "section", "data": {"title": "Native"}},
+            {"layout": "closing", "data": {"title": "Also Native"}},
+        ])
+        builder = PresentationBuilder(config_path=str(config_path), metrics_path=str(metrics_path))
+        import contextlib, io as _io
+        with contextlib.redirect_stdout(_io.StringIO()):
+            out = builder.build(output_dir=str(tmp_path / "slides"))
+        output_pptx = str(tmp_path / "out.pptx")
+        export_pptx_editable(builder.config, str(out), output_pptx)
+        prs = PptxPresentation(output_pptx)
+        assert len(prs.slides) == 2

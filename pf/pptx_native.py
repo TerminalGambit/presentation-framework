@@ -170,3 +170,74 @@ def _render_closing(slide, data: dict, theme: dict):
         box_w, box_h = Inches(10), Inches(0.8)
         txBox = slide.shapes.add_textbox(center_x - box_w // 2, y_cursor, box_w, box_h)
         _set_text(txBox.text_frame, data["subtitle"], theme["font_subheading"], 20, theme["text_muted"])
+
+
+# ── Layout dispatch ──────────────────────────────────────────────
+
+NATIVE_RENDERERS = {
+    "section": _render_section,
+    "quote": _render_quote,
+    "closing": _render_closing,
+}
+
+
+def _render_image_fallback(slide, slide_file: Path):
+    """Fall back to screenshot for complex layouts (requires Playwright)."""
+    try:
+        from playwright.sync_api import sync_playwright
+    except ImportError:
+        return  # Skip if Playwright unavailable
+
+    with sync_playwright() as p:
+        browser = p.chromium.launch()
+        page = browser.new_page(viewport={"width": 1280, "height": 720})
+        page.goto(f"file://{slide_file.resolve()}")
+        page.wait_for_load_state("networkidle")
+        png_bytes = page.screenshot(full_page=False)
+        page.close()
+        browser.close()
+
+    slide.shapes.add_picture(
+        io.BytesIO(png_bytes),
+        left=Emu(0), top=Emu(0),
+        width=SLIDE_WIDTH, height=SLIDE_HEIGHT,
+    )
+
+
+def export_pptx_editable(
+    config: dict,
+    slides_dir: str,
+    output_path: str,
+):
+    """Export slides to an editable .pptx file.
+
+    Native text/shapes for supported layouts (section, quote, closing).
+    Image fallback via Playwright for complex layouts.
+    """
+    prs = Presentation()
+    prs.slide_width = SLIDE_WIDTH
+    prs.slide_height = SLIDE_HEIGHT
+    blank_layout = prs.slide_layouts[6]
+
+    theme = _pptx_theme(config.get("theme", {}))
+    slides_path = Path(slides_dir)
+    slides_cfg = config.get("slides", [])
+
+    for i, slide_cfg in enumerate(slides_cfg):
+        layout = slide_cfg.get("layout", "two-column")
+        data = slide_cfg.get("data", {})
+        slide = prs.slides.add_slide(blank_layout)
+
+        renderer = NATIVE_RENDERERS.get(layout)
+        if renderer:
+            renderer(slide, data, theme)
+        else:
+            slide_file = slides_path / f"slide_{i + 1:02d}.html"
+            if slide_file.exists():
+                _render_image_fallback(slide, slide_file)
+
+        # Speaker notes
+        if slide_cfg.get("notes"):
+            slide.notes_slide.notes_text_frame.text = slide_cfg["notes"]
+
+    prs.save(output_path)
