@@ -108,6 +108,21 @@
   .click-zone { position: fixed; top: 0; height: 100%; z-index: 50; cursor: pointer; }
   .click-zone.left { left: 0; width: 15%; }
   .click-zone.right { right: 0; width: 15%; }
+  .notes-panel {
+    position: fixed; right: 0; top: 0; bottom: 0; width: 320px;
+    background: rgba(20, 28, 40, 0.97); border-left: 1px solid var(--gold-dim);
+    z-index: 250; display: none; flex-direction: column;
+    font-family: '{{ theme.fonts.subheading | default("Montserrat") }}', system-ui; backdrop-filter: blur(10px);
+  }
+  .notes-panel.visible { display: flex; }
+  .notes-panel-header {
+    padding: 16px 20px; border-bottom: 1px solid var(--gold-dim);
+    color: var(--gold); font-size: 12px; font-weight: 600; letter-spacing: 2px;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .notes-panel-body {
+    padding: 20px; flex: 1; overflow-y: auto; color: #ccc; font-size: 14px; line-height: 1.6;
+  }
 </style>
 </head>
 <body class="show-ui">
@@ -128,12 +143,23 @@
   <kbd>&#8592;</kbd> <kbd>&#8594;</kbd> navigate<br/>
   <kbd>F</kbd> fullscreen<br/>
   <kbd>G</kbd> grid overview<br/>
+  <kbd>N</kbd> speaker notes<br/>
   <kbd>H</kbd> hide UI<br/>
   <kbd>1</kbd>-<kbd>9</kbd> jump to slide
 </div>
 
 <div class="click-zone left" onclick="prev()"></div>
 <div class="click-zone right" onclick="next()"></div>
+
+<div class="notes-panel" id="notesPanel">
+  <div class="notes-panel-header">
+    <span>SPEAKER NOTES</span>
+    <button onclick="toggleNotes()" style="background:none;border:none;color:var(--gold);cursor:pointer;font-size:18px;">&times;</button>
+  </div>
+  <div class="notes-panel-body" id="notesPanelBody">
+    <p style="color:#666;font-style:italic;">No notes for this slide.</p>
+  </div>
+</div>
 
 <div class="grid-overlay" id="gridOverlay">
   <h2>Slide Overview</h2>
@@ -144,16 +170,20 @@
 const SLIDES = {{ slides_json }};
 const TOTAL = SLIDES.length;
 const TITLES = {{ titles_json }};
+const TRANSITIONS = {{ transitions_json }};
 
 let current = 1;
 let uiVisible = true;
 let uiTimeout;
+let notesVisible = false;
 
 const frame = document.getElementById('slide-frame');
 const progress = document.getElementById('progress');
 const curEl = document.getElementById('cur');
 const slideNumEl = document.getElementById('slideNum');
 const gridOverlay = document.getElementById('gridOverlay');
+const notesPanel = document.getElementById('notesPanel');
+const notesPanelBody = document.getElementById('notesPanelBody');
 
 function resize() {
   const vw = window.innerWidth, vh = window.innerHeight;
@@ -167,15 +197,34 @@ resize();
 function show(n, instant) {
   current = Math.max(1, Math.min(TOTAL, n));
   const file = SLIDES[current - 1];
-  if (instant) { frame.src = file; }
+  const transition = TRANSITIONS[current - 1] || 'fade';
+  if (instant || transition === 'none') { frame.src = file; }
   else { frame.classList.add('fading'); setTimeout(() => { frame.src = file; frame.classList.remove('fading'); }, 200); }
   curEl.textContent = current;
   slideNumEl.textContent = 'SLIDE ' + String(current).padStart(2, '0');
   progress.style.width = ((current / TOTAL) * 100) + '%';
   document.querySelectorAll('.thumb').forEach((t, i) => { t.classList.toggle('active', i === current - 1); });
+  if (notesVisible) loadNotes();
 }
 function next() { show(current + 1); }
 function prev() { show(current - 1); }
+
+function toggleNotes() {
+  notesVisible = !notesVisible;
+  notesPanel.classList.toggle('visible', notesVisible);
+  if (notesVisible) loadNotes();
+}
+
+function loadNotes() {
+  try {
+    const aside = frame.contentDocument.querySelector('aside.notes');
+    notesPanelBody.innerHTML = aside
+      ? '<p>' + aside.textContent + '</p>'
+      : '<p style="color:#666;font-style:italic;">No notes for this slide.</p>';
+  } catch(e) {
+    notesPanelBody.innerHTML = '<p style="color:#666;">Cannot load notes (cross-origin).</p>';
+  }
+}
 function toggleFS() { if (!document.fullscreenElement) document.documentElement.requestFullscreen(); else document.exitFullscreen(); }
 function toggleGrid() { gridOverlay.classList.toggle('visible'); if (gridOverlay.classList.contains('visible')) buildGrid(); }
 function toggleUI() { uiVisible = !uiVisible; document.body.classList.toggle('show-ui', uiVisible); }
@@ -218,6 +267,7 @@ document.addEventListener('keydown', e => {
     case 'End': e.preventDefault(); show(TOTAL); break;
     case 'f': case 'F': toggleFS(); break;
     case 'g': case 'G': toggleGrid(); break;
+    case 'n': case 'N': toggleNotes(); break;
     case 'h': case 'H': toggleUI(); break;
     case 'Escape': if (document.fullscreenElement) document.exitFullscreen(); break;
     default: const num = parseInt(e.key); if (num >= 1 && num <= 9) show(num); if (e.key === '0') show(10);
@@ -226,6 +276,12 @@ document.addEventListener('keydown', e => {
 
 show(1, true);
 resetUITimer();
+
+// Live-reload via SSE
+if (window.location.protocol !== 'file:') {
+  const evtSource = new EventSource('/__reload');
+  evtSource.onmessage = function() { location.reload(); };
+}
 </script>
 </body>
 </html>

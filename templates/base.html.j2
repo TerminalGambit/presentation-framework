@@ -9,14 +9,27 @@
   <link rel="stylesheet" href="theme/components.css"/>
   <link href="https://fonts.googleapis.com/css2?family={{ theme.fonts.heading | default('Playfair Display') | replace(' ', '+') }}:wght@400;700&family={{ theme.fonts.subheading | default('Montserrat') | replace(' ', '+') }}:wght@300;400;500;600;700&family={{ theme.fonts.body | default('Lato') | replace(' ', '+') }}:wght@300;400;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet"/>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
+  {% if theme.math %}
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" crossorigin="anonymous"/>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" crossorigin="anonymous"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js" crossorigin="anonymous"
+    onload="renderMathInElement(document.body, {delimiters: [{left: '$$', right: '$$', display: true}, {left: '$', right: '$', display: false}]});"></script>
+  <style>
+    .katex-display { margin: 0.8em 0; color: var(--pf-white); }
+    .katex { color: var(--pf-white); }
+  </style>
+  {% endif %}
   {% block head_extra %}{% endblock %}
 </head>
 <body>
-  <div class="slide-container{% block container_class %}{% endblock %}">
+  <div class="slide-container{% block container_class %}{% endblock %}" data-density="{{ density | default('normal') }}" style="{% if density == 'high' %}--pf-body-size: 12px; --pf-card-pad: 14px; --pf-header-size: 36px; --pf-gap: 18px;{% else %}--pf-body-size: 14px; --pf-card-pad: 20px; --pf-header-size: 42px; --pf-gap: 25px;{% endif %}">
     <div class="bg-pattern"></div>
     {% block decorations %}{% endblock %}
     {% block content %}{% endblock %}
     <div class="page-number">{{ page_number | default("") }}</div>
+    {% if slide.notes %}
+    <aside class="notes">{{ slide.notes }}</aside>
+    {% endif %}
   </div>
 </body>
 </html>

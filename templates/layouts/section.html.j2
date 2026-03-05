@@ -1,0 +1,21 @@
+{% extends "base.html.j2" %}
+
+{% block container_class %} centered{% endblock %}
+
+{% block decorations %}
+{% include "partials/bg-pattern.html.j2" %}
+{% endblock %}
+
+{% block content %}
+<div class="z-10 text-center" style="display: flex; flex-direction: column; align-items: center;">
+  <div class="section-divider-accent"></div>
+  {% if slide.data.number %}
+  <div class="section-divider-number">{{ "%02d"|format(slide.data.number) }}</div>
+  {% endif %}
+  <h1 class="section-divider-title">{{ slide.data.title }}</h1>
+  {% if slide.data.subtitle %}
+  <p class="section-divider-subtitle">{{ slide.data.subtitle }}</p>
+  {% endif %}
+  <div class="section-divider-accent section-divider-accent--bottom"></div>
+</div>
+{% endblock %}

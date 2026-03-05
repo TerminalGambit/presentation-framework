@@ -1,0 +1,29 @@
+{% extends "base.html.j2" %}
+
+{% block container_class %} centered{% endblock %}
+
+{% block decorations %}
+{% include "partials/bg-pattern.html.j2" %}
+{% endblock %}
+
+{% block head_extra %}
+{% if slide.data.background_image %}
+<style>
+  .slide-container { background-image: url('{{ slide.data.background_image }}'); background-size: cover; background-position: center; }
+  .slide-container::before { content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); z-index: 1; }
+</style>
+{% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="z-10 text-center" style="max-width: 900px; display: flex; flex-direction: column; align-items: center;">
+  <div class="quote-mark">&ldquo;</div>
+  <blockquote class="quote-text">{{ slide.data.text }}</blockquote>
+  <div class="quote-divider"></div>
+  <div class="quote-attribution">
+    {% if slide.data.author %}<span class="quote-author">{{ slide.data.author }}</span>{% endif %}
+    {% if slide.data.role %}<span class="quote-role">{{ slide.data.role }}</span>{% endif %}
+    {% if slide.data.source %}<span class="quote-source">{{ slide.data.source }}</span>{% endif %}
+  </div>
+</div>
+{% endblock %}

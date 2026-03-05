@@ -10,6 +10,7 @@ Commands:
 import http.server
 import json
 import functools
+import threading
 import webbrowser
 import zipfile
 from pathlib import Path
@@ -115,6 +116,23 @@ def build(config: str, metrics: str, output: str, open_browser: bool):
     builder = PresentationBuilder(config_path=config, metrics_path=metrics)
     out = builder.build(output_dir=output)
 
+    # Print layout warnings
+    for w in getattr(builder, '_warnings', []):
+        idx = w["slide_index"] + 1
+        layout = w["layout"]
+        col = w["column"]
+        est = w["estimated_px"]
+        usable = w["usable_px"]
+        pct = w["overflow_pct"]
+        click.echo(
+            click.style(f"  ⚠ slide {idx:02d} ({layout}): ", fg="yellow")
+            + f"{col} ~{est}px of {usable}px usable ({pct}% over)"
+        )
+        click.echo(
+            click.style("     → ", fg="yellow")
+            + "Consider: reduce content or split into multiple slides"
+        )
+
     slide_count = len(list(out.glob("slide_*.html")))
     click.echo(f"Built {slide_count} slides → {out}/")
 
@@ -129,24 +147,110 @@ def build(config: str, metrics: str, output: str, open_browser: bool):
 @cli.command()
 @click.option("--dir", "-d", "directory", default="slides", help="Directory to serve")
 @click.option("--port", "-p", default=8080, help="Port number")
-def serve(directory: str, port: int):
-    """Start a local HTTP server to preview slides."""
+@click.option("--watch/--no-watch", default=True, help="Watch for changes and auto-rebuild")
+@click.option("--config", "-c", default="presentation.yaml", help="Config for rebuild")
+@click.option("--metrics", "-m", default="metrics.json", help="Metrics for rebuild")
+def serve(directory: str, port: int, watch: bool, config: str, metrics: str):
+    """Start a local HTTP server with optional live-reload."""
     serve_dir = Path(directory)
     if not serve_dir.exists():
         click.echo(f"Error: directory '{directory}' not found. Run 'pf build' first.", err=True)
         raise SystemExit(1)
 
+    # SSE reload event
+    reload_event = threading.Event()
+
+    class ReloadHandler(http.server.SimpleHTTPRequestHandler):
+        def __init__(self, *args, **kwargs):
+            super().__init__(*args, directory=str(serve_dir), **kwargs)
+
+        def do_GET(self):
+            if self.path == '/__reload':
+                self.send_response(200)
+                self.send_header('Content-Type', 'text/event-stream')
+                self.send_header('Cache-Control', 'no-cache')
+                self.send_header('Connection', 'keep-alive')
+                self.end_headers()
+                try:
+                    while True:
+                        if reload_event.wait(timeout=1):
+                            self.wfile.write(b'data: reload\n\n')
+                            self.wfile.flush()
+                            reload_event.clear()
+                except (BrokenPipeError, ConnectionResetError):
+                    pass
+                return
+            super().do_GET()
+
+        def log_message(self, format, *args):
+            pass  # Suppress request logs
+
+    if watch:
+        from watchdog.observers import Observer
+        from watchdog.events import FileSystemEventHandler
+
+        class RebuildHandler(FileSystemEventHandler):
+            def on_modified(self, event):
+                if event.src_path.endswith(('.yaml', '.json', '.j2', '.css')):
+                    click.echo(click.style("  \u21bb Change detected, rebuilding...", fg="cyan"))
+                    try:
+                        b = PresentationBuilder(config_path=config, metrics_path=metrics)
+                        b.build(output_dir=directory)
+                        reload_event.set()
+                        click.echo(click.style("  \u2713 Rebuilt successfully", fg="green"))
+                    except Exception as e:
+                        click.echo(click.style(f"  \u2717 Build error: {e}", fg="red"))
+
+        observer = Observer()
+        observer.schedule(RebuildHandler(), ".", recursive=False)
+        observer.start()
+        click.echo(click.style("  Watching for changes...", fg="cyan"))
+
     click.echo(f"Serving {directory}/ at http://localhost:{port}")
     click.echo(f"Open http://localhost:{port}/present.html to present.")
     click.echo("Press Ctrl+C to stop.\n")
 
-    handler = functools.partial(http.server.SimpleHTTPRequestHandler, directory=str(serve_dir))
-    server = http.server.HTTPServer(("", port), handler)
-
+    server = http.server.HTTPServer(("", port), ReloadHandler)
     try:
         server.serve_forever()
     except KeyboardInterrupt:
         click.echo("\nServer stopped.")
+        if watch:
+            observer.stop()
+            observer.join()
+
+
+@cli.command()
+@click.option("--config", "-c", default="presentation.yaml", help="Path to presentation.yaml")
+@click.option("--metrics", "-m", default="metrics.json", help="Path to metrics.json")
+@click.option("--output", "-o", default="presentation.pdf", help="Output PDF path")
+@click.option("--notes", is_flag=True, default=False, help="Include speaker notes")
+def pdf(config: str, metrics: str, output: str, notes: bool):
+    """Export slides to PDF (requires: pip install pf[pdf])."""
+    config_path = Path(config)
+    if not config_path.exists():
+        click.echo(f"Error: config file '{config}' not found.", err=True)
+        raise SystemExit(1)
+
+    try:
+        from pf.pdf import export_pdf
+    except ImportError:
+        click.echo("PDF export requires Playwright. Install with:")
+        click.echo("  pip install presentation-framework[pdf]")
+        click.echo("  playwright install chromium")
+        raise SystemExit(1)
+
+    # Build first
+    builder = PresentationBuilder(config_path=config, metrics_path=metrics)
+    out = builder.build(output_dir="slides")
+
+    click.echo("Exporting to PDF...")
+    try:
+        export_pdf(str(out), output, include_notes=notes)
+        click.echo(f"PDF exported \u2192 {output}")
+    except Exception as e:
+        click.echo(click.style(f"PDF export failed: {e}", fg="red"), err=True)
+        raise SystemExit(1)
 
 
 @cli.command(name="zip")

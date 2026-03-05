@@ -4,6 +4,7 @@ import json
 import tempfile
 from pathlib import Path
 
+import click
 import pytest
 import yaml
 
@@ -182,3 +183,41 @@ class TestBuild:
 
             slide_html = (out / "slide_01.html").read_text()
             assert "128 Assets" in slide_html
+
+
+class TestBuildWithAnalyzer:
+    def test_build_injects_density_attribute(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmpdir = Path(tmpdir)
+            config = {
+                "meta": {"title": "Test"},
+                "theme": {"fonts": {"heading": "Playfair Display", "subheading": "Montserrat", "body": "Lato"}},
+                "slides": [
+                    {"layout": "two-column", "data": {
+                        "title": "Light",
+                        "left": [{"type": "html", "content": "<p>Hi</p>"}],
+                        "right": [{"type": "html", "content": "<p>Hi</p>"}],
+                    }},
+                ],
+            }
+            (tmpdir / "presentation.yaml").write_text(yaml.dump(config), encoding="utf-8")
+            (tmpdir / "metrics.json").write_text("{}", encoding="utf-8")
+            builder = PresentationBuilder(
+                config_path=str(tmpdir / "presentation.yaml"),
+                metrics_path=str(tmpdir / "metrics.json"),
+            )
+            out = builder.build(output_dir=str(tmpdir / "slides"))
+            html = (out / "slide_01.html").read_text()
+            assert 'data-density="normal"' in html
+
+
+class TestErrorMessages:
+    def test_invalid_layout_raises_clear_error(self):
+        b = PresentationBuilder()
+        b.config = {
+            "meta": {"title": "Test"},
+            "theme": {"fonts": {"heading": "Playfair Display", "subheading": "Montserrat", "body": "Lato"}},
+        }
+        slide = {"layout": "nonexistent", "data": {"title": "Bad"}}
+        with pytest.raises(click.ClickException, match="slide 1.*nonexistent"):
+            b.render_slide(slide, 0)

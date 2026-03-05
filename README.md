@@ -4,11 +4,16 @@ A reusable HTML presentation framework that generates branded slide decks from Y
 
 ## Features
 
-- **6 layout templates** — title, two-column, three-column, data-table, stat-grid, closing
+- **10 layout templates** — title, two-column, three-column, data-table, stat-grid, closing, image, section, quote, timeline
 - **Metrics interpolation** — `{{ metrics.x.y }}` references in YAML pull live data from JSON
-- **Shared CSS theme** — Navy + gold design system with cards, stat boxes, tables, bar charts, pills, and more
-- **Navigator** — Keyboard nav (← → arrows), grid overview (G), fullscreen (F), progress bar
-- **CLI tooling** — `pf init`, `pf build`, `pf serve`
+- **Shared CSS theme** — Customizable design system with secondary accent and style presets (modern/minimal/bold)
+- **Navigator** — Keyboard nav, grid overview (G), fullscreen (F), speaker notes (N), progress bar
+- **Live-reload** — `pf serve --watch` auto-rebuilds and refreshes the browser on file changes
+- **CSS transitions** — Slide transitions (fade, slide, zoom, flip) with per-slide configuration
+- **Layout warnings** — Build-time overflow detection with density-aware CSS adaptive sizing
+- **YAML validation** — Schema validation with clear, actionable error messages
+- **PDF export** — Optional Playwright-based PDF export via `pf pdf`
+- **CLI tooling** — `pf init`, `pf build`, `pf serve`, `pf zip`, `pf pdf`
 - **AI-ready** — `SKILL.md` teaches AI agents to build presentations autonomously
 
 ## Installation
@@ -48,16 +53,30 @@ pf serve --dir my-deck/slides --port 8080
 |---------|-------------|
 | `pf init <name>` | Scaffold a new presentation project with starter files |
 | `pf build` | Build slides from `presentation.yaml` + `metrics.json` |
-| `pf serve` | Start local HTTP server to preview slides |
+| `pf serve` | Start local HTTP server with live-reload |
+| `pf zip` | Package built slides into a shareable `.zip` |
+| `pf pdf` | Export slides to PDF (requires Playwright) |
 
 ### `pf build` Options
 - `--config / -c` — Path to presentation.yaml (default: `presentation.yaml`)
 - `--metrics / -m` — Path to metrics.json (default: `metrics.json`)
 - `--output / -o` — Output directory (default: `slides`)
+- `--open` — Open in browser after build
 
 ### `pf serve` Options
 - `--dir / -d` — Directory to serve (default: `slides`)
 - `--port / -p` — Port number (default: `8080`)
+- `--watch / --no-watch` — Watch for changes and auto-rebuild (default: on)
+- `--config / -c` — Config file for rebuild (default: `presentation.yaml`)
+- `--metrics / -m` — Metrics file for rebuild (default: `metrics.json`)
+
+### `pf pdf` Options
+- `--config / -c` — Path to presentation.yaml (default: `presentation.yaml`)
+- `--metrics / -m` — Path to metrics.json (default: `metrics.json`)
+- `--output / -o` — Output PDF path (default: `presentation.pdf`)
+- `--notes` — Include speaker notes
+
+Requires: `pip install presentation-framework[pdf]` and `playwright install chromium`
 
 ## Project Structure
 
@@ -102,8 +121,75 @@ data:
 4. **`data-table`** — Benchmark/comparison tables with insights
 5. **`stat-grid`** — KPI dashboard with stat boxes and cards
 6. **`closing`** — Thank you / Q&A with pills and info items
+7. **`image`** — Full-bleed or split image with optional title and caption
+8. **`section`** — Section divider with large title, subtitle, and optional number
+9. **`quote`** — Centered quote with decorative marks and attribution
+10. **`timeline`** — Horizontal step visualization with icons and descriptions
 
 See `SKILL.md` for complete data shapes and examples for each layout.
+
+## Theme Options
+
+### Style Presets
+```yaml
+theme:
+  style_preset: modern  # modern (default), minimal, or bold
+```
+
+### Secondary Accent
+```yaml
+theme:
+  accent: "#C4A962"
+  secondary_accent: "#4A90D9"  # Optional second accent color
+```
+
+### Speaker Notes
+Add notes to any slide:
+```yaml
+slides:
+  - layout: title
+    notes: "Remember to introduce the team before this slide."
+    data:
+      title: "My Title"
+```
+Press **N** during presentation to toggle the notes panel.
+
+### Slide Transitions
+```yaml
+theme:
+  transition: fade         # Default transition for all slides (fade/slide/zoom/flip)
+  transition_speed: 0.5s   # Duration
+
+slides:
+  - layout: title
+    transition: zoom       # Override per-slide
+    data: ...
+```
+
+### Math Equations (LaTeX)
+Enable KaTeX math rendering:
+```yaml
+theme:
+  math: true
+```
+
+Then use LaTeX syntax in any text field:
+```yaml
+slides:
+  - layout: two-column
+    data:
+      title: "Key Equations"
+      left:
+        - type: card
+          title: "Euler's Identity"
+          text: "$e^{i\\pi} + 1 = 0$"
+        - type: card
+          title: "Quadratic Formula"
+          text: "$$x = \\frac{-b \\pm \\sqrt{b^2 - 4ac}}{2a}$$"
+```
+
+- `$...$` — inline math (within text)
+- `$$...$$` — display math (centered, larger)
 
 ## Theme Customization
 
@@ -168,4 +254,7 @@ pytest tests/
 - **← →** — Previous / next slide
 - **G** — Grid overview (click to jump)
 - **F** — Toggle fullscreen
+- **N** — Toggle speaker notes
+- **H** — Toggle UI (hide controls)
 - **Esc** — Exit grid / fullscreen
+- **1-9, 0** — Jump to slide 1-10

@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": ["slides"],
+  "properties": {
+    "meta": {
+      "type": "object",
+      "properties": {
+        "title": {"type": "string"},
+        "authors": {"type": "array", "items": {"type": "string"}},
+        "institution": {"type": "string"},
+        "date": {"type": "string"}
+      }
+    },
+    "theme": {
+      "type": "object",
+      "properties": {
+        "primary": {"type": "string"},
+        "accent": {"type": "string"},
+        "secondary_accent": {"type": "string"},
+        "style": {"type": "string", "enum": ["modern", "minimal", "bold"]},
+        "math": {"type": "boolean"},
+        "fonts": {
+          "type": "object",
+          "properties": {
+            "heading": {"type": "string"},
+            "subheading": {"type": "string"},
+            "body": {"type": "string"}
+          }
+        }
+      }
+    },
+    "slides": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["layout", "data"],
+        "properties": {
+          "layout": {
+            "type": "string",
+            "enum": ["title", "two-column", "three-column", "data-table", "stat-grid", "closing", "image", "section", "quote", "timeline"]
+          },
+          "data": {"type": "object"},
+          "notes": {"type": "string"},
+          "transition": {"type": "string", "enum": ["fade", "slide-left", "slide-up", "none"]}
+        }
+      }
+    }
+  }
+}

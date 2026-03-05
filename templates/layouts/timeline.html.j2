@@ -1,0 +1,20 @@
+{% extends "base.html.j2" %}
+
+{% block content %}
+{% include "partials/header.html.j2" %}
+
+<div class="timeline-container z-10">
+  <div class="timeline-line"></div>
+  <div class="timeline-steps">
+    {% for step in slide.data.steps %}
+    <div class="timeline-step">
+      <div class="timeline-dot">
+        <i class="fas fa-{{ step.icon }}"></i>
+      </div>
+      <div class="timeline-step-title">{{ step.title }}</div>
+      <div class="timeline-step-desc">{{ step.description }}</div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

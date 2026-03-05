@@ -8,8 +8,12 @@ import re
 import shutil
 from pathlib import Path
 
+import click
+import jsonschema
 import yaml
-from jinja2 import Environment, FileSystemLoader
+from jinja2 import Environment, FileSystemLoader, TemplateNotFound
+
+from pf.analyzer import LayoutAnalyzer
 
 
 def _hex_to_rgb(hex_color: str) -> tuple[int, int, int]:
@@ -94,13 +98,51 @@ class PresentationBuilder:
 
         return re.sub(pattern, replacer, s)
 
+    def _find_unresolved(self, data) -> list[str]:
+        """Find any remaining {{ metrics.x.y }} patterns in resolved data."""
+        refs = []
+        if isinstance(data, str):
+            refs.extend(re.findall(r"\{\{\s*metrics\.[a-zA-Z0-9_.]+\s*\}\}", data))
+        elif isinstance(data, list):
+            for item in data:
+                refs.extend(self._find_unresolved(item))
+        elif isinstance(data, dict):
+            for v in data.values():
+                refs.extend(self._find_unresolved(v))
+        return refs
+
+    # ── Validation ─────────────────────────────────────────────
+
+    def validate_config(self) -> list[str]:
+        """Validate config against JSON schema. Returns list of error messages."""
+        schema_path = Path(__file__).parent / "schema.json"
+        with open(schema_path, "r", encoding="utf-8") as f:
+            schema = json.load(f)
+
+        validator = jsonschema.Draft202012Validator(schema)
+        errors = []
+        for error in sorted(validator.iter_errors(self.config), key=lambda e: list(e.path)):
+            path = " → ".join(str(p) for p in error.absolute_path) or "root"
+            errors.append(f"{path}: {error.message}")
+        return errors
+
     # ── Rendering ───────────────────────────────────────────────
 
-    def render_slide(self, slide_config: dict, index: int) -> str:
+    def render_slide(self, slide_config: dict, index: int, density: str = "normal") -> str:
         """Render a single slide to HTML string."""
         layout = slide_config.get("layout", "two-column")
         template_name = f"layouts/{layout}.html.j2"
-        template = self.env.get_template(template_name)
+
+        try:
+            template = self.env.get_template(template_name)
+        except TemplateNotFound:
+            valid = ", ".join(sorted(
+                p.stem for p in (TEMPLATES_DIR / "layouts").glob("*.html.j2")
+            ))
+            raise click.ClickException(
+                f"slide {index + 1} uses unknown layout '{layout}'. "
+                f"Valid layouts: {valid}"
+            )
 
         meta = self.config.get("meta", {})
         theme = self.config.get("theme", {})
@@ -108,19 +150,27 @@ class PresentationBuilder:
         # Page number formatting
         page_number = slide_config.get("page_number", f"{index + 1:02d}")
 
-        return template.render(
-            slide=slide_config,
-            slide_title=slide_config.get("data", {}).get("title", f"Slide {index + 1}"),
-            meta=meta,
-            theme=theme,
-            page_number=page_number,
-        )
+        try:
+            return template.render(
+                slide=slide_config,
+                slide_title=slide_config.get("data", {}).get("title", f"Slide {index + 1}"),
+                meta=meta,
+                theme=theme,
+                page_number=page_number,
+                density=density,
+            )
+        except Exception as e:
+            raise click.ClickException(
+                f"slide {index + 1} ({layout}): template error — {e}"
+            )
 
-    def render_navigator(self, slide_files: list[str], slide_titles: list[str]) -> str:
+    def render_navigator(self, slide_files: list[str], slide_titles: list[str],
+                         slide_transitions: list[str] | None = None) -> str:
         """Render the present.html navigator shell."""
         template = self.env.get_template("present.html.j2")
         meta = self.config.get("meta", {})
         theme = self.config.get("theme", {})
+        transitions = slide_transitions or ["fade"] * len(slide_files)
 
         return template.render(
             meta=meta,
@@ -128,6 +178,7 @@ class PresentationBuilder:
             slides=slide_files,
             slides_json=json.dumps(slide_files),
             titles_json=json.dumps(slide_titles),
+            transitions_json=json.dumps(transitions),
             total=len(slide_files),
         )
 
@@ -148,6 +199,19 @@ class PresentationBuilder:
 
         # Derive accent RGBA variants
         ar, ag, ab = _hex_to_rgb(accent)
+
+        # Secondary accent
+        secondary = theme.get("secondary_accent", "#5B8FA8")
+        sr, sg, sb = _hex_to_rgb(secondary)
+
+        # Style presets
+        style = theme.get("style", "modern")
+        style_overrides = {
+            "modern": {"radius_lg": "8px", "shadow": "0 4px 6px rgba(0, 0, 0, 0.2)"},
+            "minimal": {"radius_lg": "2px", "shadow": "none"},
+            "bold": {"radius_lg": "12px", "shadow": "0 8px 16px rgba(0, 0, 0, 0.3)"},
+        }
+        preset = style_overrides.get(style, style_overrides["modern"])
 
         font_heading = fonts.get("heading", "Playfair Display")
         font_subheading = fonts.get("subheading", "Montserrat")
@@ -198,7 +262,16 @@ class PresentationBuilder:
   --pf-font-heading:    '{font_heading}', serif;
   --pf-font-subheading: '{font_subheading}', sans-serif;
   --pf-font-body:       '{font_body}', sans-serif;
-  --pf-font-mono:       'IBM Plex Mono', monospace;"""
+  --pf-font-mono:       'IBM Plex Mono', monospace;
+
+  /* ── Secondary Accent (generated) ──────────────────────── */
+  --pf-secondary-accent:        {secondary};
+  --pf-secondary-accent-dim:    rgba({sr}, {sg}, {sb}, 0.4);
+  --pf-secondary-accent-bg:     rgba({sr}, {sg}, {sb}, 0.1);
+
+  /* ── Style Preset: {style} ─────────────────────────────── */
+  --pf-radius-lg:     {preset['radius_lg']};
+  --pf-shadow-card:   {preset['shadow']};"""
 
         # Grab everything after the :root color/typography block (spacing, radius, etc.)
         # Find the slide dimensions section onward and append it
@@ -230,29 +303,60 @@ class PresentationBuilder:
         self.load_config()
         self.load_metrics()
 
+        # Validate config
+        errors = self.validate_config()
+        if errors:
+            for e in errors:
+                click.echo(click.style(f"  ✗ {e}", fg="red"), err=True)
+            raise click.ClickException("Config validation failed. Fix errors above.")
+
         out = Path(output_dir)
         out.mkdir(parents=True, exist_ok=True)
 
         slides = self.config.get("slides", [])
         slide_files = []
         slide_titles = []
+        slide_transitions = []
 
+        warnings = []
         for i, slide_cfg in enumerate(slides):
-            # Resolve metrics references in slide data
-            slide_cfg["data"] = self.resolve_data(slide_cfg.get("data", {}), self.metrics)
+            resolved_data = self.resolve_data(slide_cfg.get("data", {}), self.metrics)
+            unresolved = self._find_unresolved(resolved_data)
+            for ref in unresolved:
+                click.echo(
+                    click.style(f"  ⚠ slide {i+1:02d}: ", fg="yellow")
+                    + f"unresolved reference {ref}"
+                )
+            slide_cfg["data"] = resolved_data
 
-            # Render the slide
-            html = self.render_slide(slide_cfg, i)
+            warning = LayoutAnalyzer.analyze_slide(slide_cfg, i)
+            if warning:
+                warnings.append(warning)
 
-            # Write to file
+            density = LayoutAnalyzer.compute_density(slide_cfg)
+
+            html = self.render_slide(slide_cfg, i, density=density)
+
             filename = f"slide_{i + 1:02d}.html"
             (out / filename).write_text(html, encoding="utf-8")
 
             slide_files.append(filename)
             slide_titles.append(slide_cfg.get("data", {}).get("title", f"Slide {i + 1}"))
+            slide_transitions.append(slide_cfg.get("transition", "fade"))
+
+        self._warnings = warnings
+
+        # Copy local image assets referenced by image layout slides
+        for slide_cfg in slides:
+            if slide_cfg.get("layout") == "image":
+                img_path = Path(slide_cfg.get("data", {}).get("image", ""))
+                if img_path.exists() and not img_path.is_absolute():
+                    dest = out / img_path
+                    dest.parent.mkdir(parents=True, exist_ok=True)
+                    shutil.copy2(img_path, dest)
 
         # Render and write navigator
-        nav_html = self.render_navigator(slide_files, slide_titles)
+        nav_html = self.render_navigator(slide_files, slide_titles, slide_transitions)
         (out / "present.html").write_text(nav_html, encoding="utf-8")
 
         # Copy theme CSS files (base + components)
