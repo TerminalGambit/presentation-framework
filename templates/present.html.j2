@@ -123,6 +123,32 @@
   .notes-panel-body {
     padding: 20px; flex: 1; overflow-y: auto; color: #ccc; font-size: 14px; line-height: 1.6;
   }
+  /* ── Lightbox ───────────────────────────────── */
+  .lightbox-overlay {
+    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0, 0, 0, 0.95); z-index: 400;
+    display: none; justify-content: center; align-items: center;
+    backdrop-filter: blur(5px);
+  }
+  .lightbox-overlay.active { display: flex; }
+  .lightbox-container {
+    position: relative; max-width: 90vw; max-height: 90vh;
+    display: flex; flex-direction: column; align-items: center;
+  }
+  .lightbox-image {
+    max-width: 100%; max-height: calc(90vh - 60px);
+    object-fit: contain; border-radius: 8px;
+    box-shadow: 0 0 30px var(--gold-glow);
+  }
+  .lightbox-caption {
+    color: var(--gold); margin-top: 16px; font-size: 14px; text-align: center;
+  }
+  .lightbox-close {
+    position: absolute; top: -40px; right: 0;
+    background: none; border: none; color: var(--gold);
+    font-size: 32px; cursor: pointer; transition: transform 0.2s;
+  }
+  .lightbox-close:hover { transform: scale(1.2); }
 </style>
 </head>
 <body class="show-ui">
@@ -161,6 +187,15 @@
   </div>
 </div>
 
+<!-- Lightbox -->
+<div class="lightbox-overlay" id="lightboxOverlay" onclick="if(event.target===this)closeLightbox()">
+  <button class="lightbox-close" onclick="closeLightbox()">&times;</button>
+  <div class="lightbox-container">
+    <img id="lightboxImage" class="lightbox-image" src="" alt=""/>
+    <div class="lightbox-caption" id="lightboxCaption"></div>
+  </div>
+</div>
+
 <div class="grid-overlay" id="gridOverlay">
   <h2>Slide Overview</h2>
   <div class="grid" id="gridContainer"></div>
@@ -176,6 +211,7 @@ let current = 1;
 let uiVisible = true;
 let uiTimeout;
 let notesVisible = false;
+let lightboxActive = false;
 
 const frame = document.getElementById('slide-frame');
 const progress = document.getElementById('progress');
@@ -258,7 +294,34 @@ function resetUITimer() {
 document.addEventListener('mousemove', resetUITimer);
 document.addEventListener('click', resetUITimer);
 
+function openLightbox(src, alt) {
+  document.getElementById('lightboxImage').src = src;
+  document.getElementById('lightboxCaption').textContent = alt || '';
+  document.getElementById('lightboxOverlay').classList.add('active');
+  lightboxActive = true;
+}
+function closeLightbox() {
+  document.getElementById('lightboxOverlay').classList.remove('active');
+  lightboxActive = false;
+}
+function enableLightbox() {
+  try {
+    const imgs = frame.contentDocument.querySelectorAll('img');
+    imgs.forEach(img => {
+      if (img.dataset.lightbox) return;
+      img.dataset.lightbox = '1';
+      img.style.cursor = 'zoom-in';
+      img.addEventListener('click', e => {
+        e.stopPropagation();
+        openLightbox(img.src, img.alt);
+      });
+    });
+  } catch(e) { /* cross-origin — lightbox unavailable */ }
+}
+frame.addEventListener('load', enableLightbox);
+
 document.addEventListener('keydown', e => {
+  if (lightboxActive) { if (e.key === 'Escape') { e.preventDefault(); closeLightbox(); } return; }
   if (gridOverlay.classList.contains('visible')) { if (e.key === 'Escape' || e.key === 'g' || e.key === 'G') { e.preventDefault(); gridOverlay.classList.remove('visible'); } return; }
   switch(e.key) {
     case 'ArrowRight': case ' ': case 'PageDown': e.preventDefault(); next(); break;
