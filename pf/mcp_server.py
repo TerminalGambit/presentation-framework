@@ -131,6 +131,7 @@ LAYOUT_DESCRIPTIONS = {
     "section": "Section divider with large heading and optional subtitle",
     "quote": "Blockquote display with attribution",
     "timeline": "Chronological sequence of events or milestones",
+    "chart": "Interactive Plotly chart (requires theme.charts: true)",
 }
 
 LAYOUT_EXAMPLES = {

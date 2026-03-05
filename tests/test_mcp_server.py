@@ -115,9 +115,9 @@ class TestCheckContrast:
 # ── list_layouts ─────────────────────────────────────────────────
 
 class TestListLayouts:
-    def test_returns_ten_layouts(self):
+    def test_returns_all_layouts(self):
         layouts = list_layouts()
-        assert len(layouts) == 10
+        assert len(layouts) == 11
 
     def test_each_has_name_and_description(self):
         layouts = list_layouts()
