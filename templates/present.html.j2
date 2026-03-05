@@ -199,7 +199,7 @@
 <div class="click-zone left" onclick="prev()"></div>
 <div class="click-zone right" onclick="next()"></div>
 
-<div class="notes-panel" id="notesPanel">
+<div class="notes-panel{{ ' visible' if theme.notes_visible }}" id="notesPanel">
   <div class="notes-panel-header">
     <span>SPEAKER NOTES</span>
     <button onclick="toggleNotes()" style="background:none;border:none;color:var(--gold);cursor:pointer;font-size:18px;">&times;</button>
@@ -234,11 +234,12 @@ const SLIDES = {{ slides_json }};
 const TOTAL = SLIDES.length;
 const TITLES = {{ titles_json }};
 const TRANSITIONS = {{ transitions_json }};
+const NOTES = {{ notes_json }};
 
 let current = 1;
 let uiVisible = true;
 let uiTimeout;
-let notesVisible = false;
+let notesVisible = {{ 'true' if theme.notes_visible else 'false' }};
 let lightboxActive = false;
 
 const frame = document.getElementById('slide-frame');
@@ -280,14 +281,10 @@ function toggleNotes() {
 }
 
 function loadNotes() {
-  try {
-    const aside = frame.contentDocument.querySelector('aside.notes');
-    notesPanelBody.innerHTML = aside
-      ? '<p>' + aside.textContent + '</p>'
-      : '<p style="color:#666;font-style:italic;">No notes for this slide.</p>';
-  } catch(e) {
-    notesPanelBody.innerHTML = '<p style="color:#666;">Cannot load notes (cross-origin).</p>';
-  }
+  const note = NOTES[current - 1];
+  notesPanelBody.innerHTML = note
+    ? '<p>' + note.replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</p>'
+    : '<p style="color:#666;font-style:italic;">No notes for this slide.</p>';
 }
 function toggleFS() { if (!document.fullscreenElement) document.documentElement.requestFullscreen(); else document.exitFullscreen(); }
 function toggleGrid() { gridOverlay.classList.toggle('visible'); if (gridOverlay.classList.contains('visible')) buildGrid(); }
