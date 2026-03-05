@@ -72,3 +72,41 @@ def _add_rect(slide, left, top, width, height, color):
     shape.fill.fore_color.rgb = color
     shape.line.fill.background()  # No border
     return shape
+
+
+# ── Layout renderers ─────────────────────────────────────────────
+
+def _render_section(slide, data: dict, theme: dict):
+    """Render section divider: number + title + subtitle + accent bars."""
+    _add_bg(slide, theme["primary"])
+
+    center_x = SLIDE_WIDTH // 2
+    y_cursor = Inches(2.0)
+
+    # Top accent bar
+    bar_w, bar_h = Inches(1.25), Inches(0.03)
+    _add_rect(slide, center_x - bar_w // 2, y_cursor, bar_w, bar_h, theme["accent"])
+    y_cursor += Inches(0.5)
+
+    # Number (optional)
+    if data.get("number") is not None:
+        box_w, box_h = Inches(4), Inches(0.9)
+        txBox = slide.shapes.add_textbox(center_x - box_w // 2, y_cursor, box_w, box_h)
+        _set_text(txBox.text_frame, f"{data['number']:02d}", theme["font_heading"], 60, theme["accent"], bold=True)
+        y_cursor += Inches(0.9)
+
+    # Title
+    box_w, box_h = Inches(10), Inches(1.2)
+    txBox = slide.shapes.add_textbox(center_x - box_w // 2, y_cursor, box_w, box_h)
+    _set_text(txBox.text_frame, data["title"], theme["font_heading"], 48, theme["white"], bold=True)
+    y_cursor += Inches(1.2)
+
+    # Subtitle (optional)
+    if data.get("subtitle"):
+        box_w, box_h = Inches(10), Inches(0.6)
+        txBox = slide.shapes.add_textbox(center_x - box_w // 2, y_cursor, box_w, box_h)
+        _set_text(txBox.text_frame, data["subtitle"].upper(), theme["font_subheading"], 18, theme["text_muted"])
+        y_cursor += Inches(0.7)
+
+    # Bottom accent bar
+    _add_rect(slide, center_x - bar_w // 2, y_cursor, bar_w, bar_h, theme["accent"])

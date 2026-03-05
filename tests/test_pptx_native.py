@@ -34,3 +34,41 @@ class TestPptxTheme:
         t = _pptx_theme({})
         assert t["primary"] == RGBColor(0x1C, 0x25, 0x37)
         assert t["font_heading"] == "Playfair Display"
+
+
+from pptx import Presentation as PptxPresentation
+
+
+class TestSectionLayout:
+    def test_renders_title(self):
+        from pf.pptx_native import _render_section, _pptx_theme, SLIDE_WIDTH, SLIDE_HEIGHT
+        prs = PptxPresentation()
+        prs.slide_width = SLIDE_WIDTH
+        prs.slide_height = SLIDE_HEIGHT
+        slide = prs.slides.add_slide(prs.slide_layouts[6])
+        theme = _pptx_theme({"primary": "#1C2537", "accent": "#C4A962"})
+        _render_section(slide, {"title": "New Layouts", "subtitle": "Four new types", "number": 1}, theme)
+        texts = [s.text_frame.text for s in slide.shapes if s.has_text_frame]
+        assert "New Layouts" in texts
+
+    def test_renders_subtitle(self):
+        from pf.pptx_native import _render_section, _pptx_theme, SLIDE_WIDTH, SLIDE_HEIGHT
+        prs = PptxPresentation()
+        prs.slide_width = SLIDE_WIDTH
+        prs.slide_height = SLIDE_HEIGHT
+        slide = prs.slides.add_slide(prs.slide_layouts[6])
+        theme = _pptx_theme({"primary": "#1C2537", "accent": "#C4A962"})
+        _render_section(slide, {"title": "Test", "subtitle": "Sub text"}, theme)
+        texts = [s.text_frame.text for s in slide.shapes if s.has_text_frame]
+        assert "SUB TEXT" in texts  # uppercase
+
+    def test_renders_number(self):
+        from pf.pptx_native import _render_section, _pptx_theme, SLIDE_WIDTH, SLIDE_HEIGHT
+        prs = PptxPresentation()
+        prs.slide_width = SLIDE_WIDTH
+        prs.slide_height = SLIDE_HEIGHT
+        slide = prs.slides.add_slide(prs.slide_layouts[6])
+        theme = _pptx_theme({"primary": "#1C2537", "accent": "#C4A962"})
+        _render_section(slide, {"title": "Test", "number": 3}, theme)
+        texts = [s.text_frame.text for s in slide.shapes if s.has_text_frame]
+        assert "03" in texts
