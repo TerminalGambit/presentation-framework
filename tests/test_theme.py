@@ -1,4 +1,10 @@
 """Tests for expanded theme options."""
+import json
+import tempfile
+from pathlib import Path
+
+import yaml
+
 from pf.builder import PresentationBuilder
 
 
@@ -36,9 +42,6 @@ class TestExpandedTheme:
 class TestMathSupport:
     def test_math_enabled_loads_katex(self):
         """When theme.math is true, base template should include KaTeX CDN links."""
-        import tempfile, json, yaml
-        from pathlib import Path
-
         with tempfile.TemporaryDirectory() as tmp:
             config = {
                 "meta": {"title": "Math Test"},
@@ -62,9 +65,6 @@ class TestMathSupport:
 
     def test_math_disabled_no_katex(self):
         """When theme.math is absent/false, no KaTeX should be loaded."""
-        import tempfile, json, yaml
-        from pathlib import Path
-
         with tempfile.TemporaryDirectory() as tmp:
             config = {
                 "meta": {"title": "No Math"},
@@ -86,9 +86,6 @@ class TestMathSupport:
 
     def test_math_in_slide_content(self):
         """Math delimiters in slide text should pass through to HTML unchanged."""
-        import tempfile, json, yaml
-        from pathlib import Path
-
         with tempfile.TemporaryDirectory() as tmp:
             config = {
                 "meta": {"title": "Math"},
