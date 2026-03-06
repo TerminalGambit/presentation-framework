@@ -40,7 +40,7 @@ Requirements for v1.0 release. Each maps to roadmap phases.
 - [ ] **LLM-03**: MCP server provides slide suggestion tool (given partial deck, suggests next slides based on content flow)
 - [ ] **LLM-04**: Multi-agent workflow (researcher → data → layout → review) is documented and tested
 - [ ] **LLM-05**: Content density optimizer auto-splits overflowing slides and redistributes content across layouts
-- [ ] **LLM-06**: Accessibility checker validates ARIA labels, generates alt text, and supports high-contrast mode
+- [x] **LLM-06**: Accessibility checker validates ARIA labels, generates alt text, and supports high-contrast mode
 - [ ] **LLM-07**: Jinja2 templates use selective autoescaping for LLM-generated content to prevent XSS
 
 ### Platform
@@ -113,7 +113,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | LLM-03 | Phase 3 | Pending |
 | LLM-04 | Phase 3 | Pending |
 | LLM-05 | Phase 3 | Pending |
-| LLM-06 | Phase 3 | Pending |
+| LLM-06 | Phase 3 | Complete |
 | LLM-07 | Phase 3 | Pending |
 | PLAT-01 | Phase 4 | Pending |
 | PLAT-02 | Phase 4 | Pending |
