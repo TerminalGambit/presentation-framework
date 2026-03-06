@@ -38,7 +38,7 @@ Plans:
 - [x] 01-04-PLAN.md — Mermaid diagrams, video embeds, interactive maps (3 layout + block types)
 - [x] 01-05-PLAN.md — Auto-generated TOC slide + per-slide CSS tests
 - [x] 01-06-PLAN.md — Export pipeline (sentinel waiting, native PPTX expansion, PDF notes, shared browser context)
-- [ ] 01-07-PLAN.md — Gap closure: native PPTX renderers for data-table, image, timeline (closes EXPORT-02)
+- [x] 01-07-PLAN.md — Gap closure: native PPTX renderers for data-table, image, timeline (closes EXPORT-02)
 
 ### Phase 2: Plugin Ecosystem
 **Goal**: Developers can create, distribute, and install custom layout, theme, and data source plugins without modifying the core engine
