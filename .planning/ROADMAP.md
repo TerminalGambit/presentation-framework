@@ -32,7 +32,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Plans**: 6 plans
 
 Plans:
-- [ ] 01-01-PLAN.md — Foundation infrastructure (schema, CDN auto-detect, sentinel, per-slide CSS, block dispatch stubs)
+- [x] 01-01-PLAN.md — Foundation infrastructure (schema, CDN auto-detect, sentinel, per-slide CSS, block dispatch stubs)
 - [ ] 01-02-PLAN.md — Code syntax highlighting (Highlight.js, code layout + block type)
 - [ ] 01-03-PLAN.md — Fragment reveal system (CSS + navigator JS state machine)
 - [ ] 01-04-PLAN.md — Mermaid diagrams, video embeds, interactive maps (3 layout + block types)
@@ -104,7 +104,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Rich Media + Export Polish | 0/6 | Planning complete | - |
+| 1. Rich Media + Export Polish | 1/6 | Executing | - |
 | 2. Plugin Ecosystem | 0/5 | Not started | - |
 | 3. LLM Integration | 0/5 | Not started | - |
 | 4. Hosted Platform | 0/6 | Not started | - |
