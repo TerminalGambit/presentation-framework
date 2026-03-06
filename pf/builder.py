@@ -152,6 +152,21 @@ class PresentationBuilder:
             errors.append(f"{path}: {error.message}")
         return errors
 
+    # ── TOC Generation ──────────────────────────────────────────
+
+    def _generate_toc(self, slides: list[dict]) -> list[dict]:
+        """Scan slides for section dividers and return TOC entries."""
+        items = []
+        for slide in slides:
+            if slide.get("layout") == "section":
+                data = slide.get("data", {})
+                items.append({
+                    "number": data.get("number", ""),
+                    "title": data.get("title", ""),
+                    "subtitle": data.get("subtitle", ""),
+                })
+        return items
+
     # ── Feature Scanning ─────────────────────────────────────────
 
     def _scan_features(self, slides: list[dict]) -> dict:
@@ -188,6 +203,48 @@ class PresentationBuilder:
                             elif t == "map": features["map"] = True
                             elif t == "video": features["video"] = True
         return features
+
+    # ── Video Preprocessing ─────────────────────────────────────
+
+    def _preprocess_video(self, slide_cfg: dict) -> None:
+        """Enrich video data with _video_type, _video_id, _thumbnail."""
+        data = slide_cfg.get("data", {})
+
+        # Full-slide video layout
+        if data.get("url"):
+            self._enrich_video_data(data)
+
+        # Block types in columnar layouts (left/right)
+        for key in ("left", "right"):
+            for block in data.get(key, []):
+                if isinstance(block, dict) and block.get("type") == "video" and block.get("url"):
+                    self._enrich_video_data(block)
+
+        # Block types in columns (three-column, stat-grid)
+        for col in data.get("columns", []):
+            if isinstance(col, list):
+                for block in col:
+                    if isinstance(block, dict) and block.get("type") == "video" and block.get("url"):
+                        self._enrich_video_data(block)
+
+    @staticmethod
+    def _enrich_video_data(data: dict) -> None:
+        """Extract video type, ID, and thumbnail URL from video URL into the data dict."""
+        url = data.get("url", "")
+        if "youtube.com" in url or "youtu.be" in url:
+            data["_video_type"] = "youtube"
+            match = re.search(r"(?:v=|youtu\.be/)([A-Za-z0-9_-]{11})", url)
+            data["_video_id"] = match.group(1) if match else ""
+            data["_thumbnail"] = f"https://img.youtube.com/vi/{data['_video_id']}/hqdefault.jpg"
+        elif "vimeo.com" in url:
+            data["_video_type"] = "vimeo"
+            match = re.search(r"vimeo\.com/(\d+)", url)
+            data["_video_id"] = match.group(1) if match else ""
+            data["_thumbnail"] = ""  # Vimeo needs oEmbed — placeholder
+        else:
+            data["_video_type"] = "mp4"
+            data["_video_id"] = ""
+            data["_thumbnail"] = data.get("poster", "")
 
     # ── Rendering ───────────────────────────────────────────────
 
@@ -417,6 +474,12 @@ class PresentationBuilder:
 
         # Scan all slides to determine which CDN libraries are needed
         features = self._scan_features(slides)
+
+        # Preprocess TOC slides — inject section entries
+        toc_items = self._generate_toc(slides)
+        for slide_cfg in slides:
+            if slide_cfg.get("layout") == "toc":
+                slide_cfg.setdefault("data", {})["items"] = toc_items
 
         warnings = []
         for i, slide_cfg in enumerate(slides):

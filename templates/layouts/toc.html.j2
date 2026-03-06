@@ -1,19 +1,27 @@
 {% extends "base.html.j2" %}
 
+{% block container_class %} centered{% endblock %}
+
+{% block decorations %}
+{% include "partials/bg-pattern.html.j2" %}
+{% endblock %}
+
 {% block content %}
 {% include "partials/header.html.j2" %}
 
-<div class="pf-toc-layout">
-  {% if slide.data.items %}
-  <ol class="pf-toc-list">
-    {% for item in slide.data.items %}
-    <li class="pf-toc-item">
-      {% if item.number %}<span class="pf-toc-number">{{ item.number }}</span>{% endif %}
-      <span class="pf-toc-label">{{ item.label }}</span>
-      {% if item.description %}<span class="pf-toc-desc">{{ item.description }}</span>{% endif %}
-    </li>
-    {% endfor %}
-  </ol>
-  {% endif %}
+<div class="pf-toc">
+  {% for item in (slide.data.get('items') or []) %}
+  <div class="pf-toc-entry {% if item.fragment is defined and item.fragment %}pf-fragment{% endif %}">
+    {% if item.number %}
+    <div class="pf-toc-number">{{ "%02d"|format(item.number) if item.number is number else item.number }}</div>
+    {% endif %}
+    <div class="pf-toc-text">
+      <div class="pf-toc-title">{{ item.title }}</div>
+      {% if item.subtitle %}
+      <div class="pf-toc-subtitle">{{ item.subtitle }}</div>
+      {% endif %}
+    </div>
+  </div>
+  {% endfor %}
 </div>
 {% endblock %}
