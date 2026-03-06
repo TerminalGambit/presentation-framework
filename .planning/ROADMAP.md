@@ -12,7 +12,7 @@ Starting from a solid v0.2.0 baseline (11 layouts, MCP server, PDF/PPTX export),
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [x] **Phase 1: Rich Media + Export Polish** - Close developer credibility gaps (code highlighting, fragments, Mermaid, video, maps) and finish the export pipeline (all-layout PPTX, PDF notes, async sentinel, browser context fix) (completed 2026-03-06)
+- [ ] **Phase 1: Rich Media + Export Polish** - Close developer credibility gaps (code highlighting, fragments, Mermaid, video, maps) and finish the export pipeline (all-layout PPTX, PDF notes, async sentinel, browser context fix) — gap closure in progress (EXPORT-02)
 - [ ] **Phase 2: Plugin Ecosystem** - Open the extension model with layout, theme, and data source plugins discoverable via entry points and a `pf plugins` CLI
 - [ ] **Phase 3: LLM Integration** - Add generation-constrained layout schemas, a content density optimizer, and `generate_presentation` MCP tool with XSS-hardened template rendering
 - [ ] **Phase 4: Hosted Platform** - Ship a FastAPI service with shareable URLs, embed codes, REST API, analytics, and presenter WebSocket sync
@@ -29,15 +29,16 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. User can define a Mermaid.js diagram in YAML and it renders correctly in both the HTML viewer and PDF/PPTX exports (no raw `<pre>` text in exports)
   4. User can embed a YouTube, Vimeo, or MP4 video with a thumbnail preview in HTML and a static frame in PDF/PPTX exports
   5. `pf pptx` produces fully editable native shapes (text, tables, bars) for all 11 layouts, not image screenshots
-**Plans**: 6 plans
+**Plans**: 7 plans
 
 Plans:
 - [x] 01-01-PLAN.md — Foundation infrastructure (schema, CDN auto-detect, sentinel, per-slide CSS, block dispatch stubs)
-- [ ] 01-02-PLAN.md — Code syntax highlighting (Highlight.js, code layout + block type)
-- [ ] 01-03-PLAN.md — Fragment reveal system (CSS + navigator JS state machine)
-- [ ] 01-04-PLAN.md — Mermaid diagrams, video embeds, interactive maps (3 layout + block types)
-- [ ] 01-05-PLAN.md — Auto-generated TOC slide + per-slide CSS tests
-- [ ] 01-06-PLAN.md — Export pipeline (sentinel waiting, native PPTX expansion, PDF notes, shared browser context)
+- [x] 01-02-PLAN.md — Code syntax highlighting (Highlight.js, code layout + block type)
+- [x] 01-03-PLAN.md — Fragment reveal system (CSS + navigator JS state machine)
+- [x] 01-04-PLAN.md — Mermaid diagrams, video embeds, interactive maps (3 layout + block types)
+- [x] 01-05-PLAN.md — Auto-generated TOC slide + per-slide CSS tests
+- [x] 01-06-PLAN.md — Export pipeline (sentinel waiting, native PPTX expansion, PDF notes, shared browser context)
+- [ ] 01-07-PLAN.md — Gap closure: native PPTX renderers for data-table, image, timeline (closes EXPORT-02)
 
 ### Phase 2: Plugin Ecosystem
 **Goal**: Developers can create, distribute, and install custom layout, theme, and data source plugins without modifying the core engine
@@ -104,7 +105,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Rich Media + Export Polish | 6/6 | Complete   | 2026-03-06 |
+| 1. Rich Media + Export Polish | 6/7 | Gap closure in progress | - |
 | 2. Plugin Ecosystem | 0/5 | Not started | - |
 | 3. LLM Integration | 0/5 | Not started | - |
 | 4. Hosted Platform | 0/6 | Not started | - |
