@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.2
 milestone_name: milestone
 status: executing
-stopped_at: Completed 01-06-PLAN.md
-last_updated: "2026-03-06T09:12:27.784Z"
+stopped_at: Completed 01-07-PLAN.md
+last_updated: "2026-03-06T09:30:27.781Z"
 last_activity: 2026-03-06 — Completed plan 01-04 (Mermaid, video, and map rich media layouts)
 progress:
   total_phases: 4
   completed_phases: 1
-  total_plans: 6
-  completed_plans: 6
+  total_plans: 7
+  completed_plans: 7
   percent: 83
 ---
 
@@ -54,6 +54,7 @@ Progress: [████████░░] 83%
 | Phase 01-rich-media-export-polish P03 | 2 | 2 tasks | 6 files |
 | Phase 01-rich-media-export-polish P02 | 15 | 2 tasks | 4 files |
 | Phase 01-rich-media-export-polish P06 | 4 | 3 tasks | 7 files |
+| Phase 01-rich-media-export-polish P07 | 2 | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -82,6 +83,8 @@ Recent decisions affecting current work:
 - [Phase 01-rich-media-export-polish]: Shared browser context in PPTX native export uses finally block for guaranteed cleanup
 - [Phase 01-rich-media-export-polish]: PDF speaker notes interleaved immediately after each slide (not appended at end)
 - [Phase 01-rich-media-export-polish]: notes-page.html.j2: _render_notes_page() uses inline f-string, not Jinja2 builder, to keep pdf.py dependency-free
+- [Phase 01-rich-media-export-polish]: [01-07]: chart layout intentionally excluded from NATIVE_RENDERERS — interactive Plotly is visual, screenshot fallback is correct
+- [Phase 01-rich-media-export-polish]: [01-07]: _render_image skips http URLs and uses placeholder rect — no network calls at export time
 
 ### Pending Todos
 
@@ -94,6 +97,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-06T09:12:27.782Z
-Stopped at: Completed 01-06-PLAN.md
+Last session: 2026-03-06T09:30:27.779Z
+Stopped at: Completed 01-07-PLAN.md
 Resume file: None
