@@ -32,6 +32,18 @@
         }
       }
     },
+    "datasources": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["plugin"],
+        "properties": {
+          "plugin": {"type": "string"},
+          "config": {"type": "object"},
+          "merge_key": {"type": "string"}
+        }
+      }
+    },
     "slides": {
       "type": "array",
       "minItems": 1,

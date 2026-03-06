@@ -460,21 +460,85 @@ class PresentationBuilder:
 
         return custom_root
 
+    # ── Datasource Resolution ────────────────────────────────────
+
+    def _resolve_datasources(self, datasources: list[dict]) -> None:
+        """Fetch data from registered datasource plugins and merge into self.metrics.
+
+        Credentials are loaded (in priority order):
+          1. .pf/credentials.json in the config file's parent directory (lowest)
+          2. Environment variables prefixed with ``PF_`` (override file creds)
+
+        Each datasource entry in ``datasources`` must have a ``plugin`` key.
+        Optional keys: ``config`` (dict passed to fetch_fn) and ``merge_key``
+        (where to store the result in self.metrics -- defaults to the plugin name).
+        """
+        # Load credentials from file (lowest priority)
+        creds: dict = {}
+        creds_file = self.config_path.parent / ".pf" / "credentials.json"
+        if creds_file.exists():
+            with open(creds_file, encoding="utf-8") as f:
+                creds = json.load(f)
+
+        # Env vars override file credentials (PF_ prefix -> lowercased key)
+        for key, value in os.environ.items():
+            if key.startswith("PF_"):
+                creds[key.lower()] = value
+
+        for entry in datasources:
+            plugin_name = entry.get("plugin", "")
+            ds_plugin = self._registry.get_datasource(plugin_name)
+
+            if ds_plugin is None:
+                click.echo(
+                    click.style("  ⚠ datasource: ", fg="yellow")
+                    + f"plugin '{plugin_name}' not found -- skipping"
+                )
+                continue
+
+            try:
+                result = ds_plugin.fetch_fn(entry.get("config", {}), creds)
+            except PluginCredentialError as exc:
+                click.echo(
+                    click.style(f"  ✗ datasource '{plugin_name}': {exc}", fg="red"),
+                    err=True,
+                )
+                raise click.ClickException(
+                    f"datasource '{plugin_name}' failed: missing credentials -- {exc}"
+                )
+            except Exception as exc:  # noqa: BLE001
+                click.echo(
+                    click.style(
+                        f"  ⚠ datasource '{plugin_name}': fetch failed -- {exc}",
+                        fg="yellow",
+                    )
+                )
+                continue
+
+            merge_key = entry.get("merge_key", plugin_name)
+            self.metrics[merge_key] = result
+
     # ── Full Build ──────────────────────────────────────────────
 
     def build(self, output_dir: str = "slides") -> Path:
         """
         Full build pipeline:
         1. Load config + metrics
-        2. Resolve metrics references in slide data
-        3. Render each slide to HTML
-        4. Render navigator shell
-        5. Copy theme CSS files
-        6. Generate custom variables.css from theme config
-        7. Write everything to output_dir
+        2. Resolve datasource plugins (fetch external data -> merge into metrics)
+        3. Resolve metrics references in slide data
+        4. Render each slide to HTML
+        5. Render navigator shell
+        6. Copy theme CSS files
+        7. Generate custom variables.css from theme config
+        8. Write everything to output_dir
         """
         self.load_config()
         self.load_metrics()
+
+        # Resolve data sources -- fetch external data and merge into metrics
+        datasources = self.config.get("datasources", [])
+        if datasources and self._registry:
+            self._resolve_datasources(datasources)
 
         # Validate config
         errors = self.validate_config()
