@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.2
 milestone_name: milestone
 status: completed
-stopped_at: Completed 03-03-PLAN.md
-last_updated: "2026-03-06T20:31:56.929Z"
+stopped_at: Completed 03-04-PLAN.md
+last_updated: "2026-03-06T20:37:41.207Z"
 last_activity: 2026-03-06 — Phase 01 complete, all verification items passed
 progress:
   total_phases: 4
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 17
-  completed_plans: 16
+  completed_plans: 17
   percent: 100
 ---
 
@@ -64,6 +64,7 @@ Progress: [██████████] 100% (Phase 1)
 | Phase 03-llm-integration P01 | 3 | 2 tasks | 2 files |
 | Phase 03-llm-integration P02 | 2 | 2 tasks | 2 files |
 | Phase 03-llm-integration PP03 | 4 | 2 tasks | 5 files |
+| Phase 03-llm-integration PP04 | 2 | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -119,6 +120,9 @@ Recent decisions affecting current work:
 - [Phase 03-llm-integration]: Sanitize yaml_config by parse-sanitize-reserialize (not string-level) — avoids partial YAML corruption, correctly targets only user-visible string values inside slide data dicts
 - [Phase 03-llm-integration]: bleach.clean() with ALLOWED_TAGS chosen over full HTML stripping — preserves formatting markup (b, em, code) while blocking XSS vectors; regex fallback for environments without bleach
 - [Phase 03-llm-integration]: generate_presentation lazy-imports instructor inside function body — graceful pf[llm] error message without crashing the MCP server on import
+- [Phase 03-llm-integration]: optimize_slide accepts YAML string not dict — MCP tools communicate via JSON-RPC; YAML string keeps the tool interoperable with any client
+- [Phase 03-llm-integration]: suggest_layout defines SlideSuggestion/SuggestionList inline — avoids polluting pf/llm_schemas.py with non-layout models
+- [Phase 03-llm-integration]: MULTI_AGENT_WORKFLOW as module-level string constant — discoverable via MCP introspection and testable at runtime
 
 ### Pending Todos
 
@@ -131,6 +135,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-06T20:31:56.927Z
-Stopped at: Completed 03-03-PLAN.md
+Last session: 2026-03-06T20:37:41.205Z
+Stopped at: Completed 03-04-PLAN.md
 Resume file: None
