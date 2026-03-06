@@ -4,6 +4,7 @@ a complete HTML slide deck using Jinja2 templates and a shared CSS theme.
 """
 
 import json
+import os
 import re
 import shutil
 from pathlib import Path
@@ -15,7 +16,7 @@ from jinja2 import ChoiceLoader, Environment, FileSystemLoader, TemplateNotFound
 
 from pf.analyzer import LayoutAnalyzer
 from pf.contrast import check_contrast
-from pf.registry import PluginRegistry
+from pf.registry import PluginCredentialError, PluginRegistry
 
 
 def _hex_to_rgb(hex_color: str) -> tuple[int, int, int]:
@@ -256,7 +257,14 @@ class PresentationBuilder:
 
     # ── Rendering ───────────────────────────────────────────────
 
-    def render_slide(self, slide_config: dict, index: int, density: str = "normal", features: dict | None = None) -> str:
+    def render_slide(
+        self,
+        slide_config: dict,
+        index: int,
+        density: str = "normal",
+        features: dict | None = None,
+        plugin_css: list[str] | None = None,
+    ) -> str:
         """Render a single slide to HTML string."""
         layout = slide_config.get("layout", "two-column")
         template_name = f"layouts/{layout}.html.j2"
@@ -291,6 +299,7 @@ class PresentationBuilder:
                 density=density,
                 features=features or {},
                 is_light=_is_light(theme.get("primary", "#1C2537")),
+                plugin_css=plugin_css or [],
             )
         except Exception as e:
             raise click.ClickException(
@@ -486,6 +495,20 @@ class PresentationBuilder:
         # Scan all slides to determine which CDN libraries are needed
         features = self._scan_features(slides)
 
+        # Pre-compute plugin CSS relative paths so every slide gets <link> tags.
+        # We scan source files now; the actual copy happens after shutil.copytree below.
+        plugin_css_paths: list[str] = []
+        for _plugin in self._registry._layouts.values():
+            if isinstance(_plugin, LayoutPlugin):
+                for _css_file in _plugin.css_files:
+                    if Path(_css_file).exists():
+                        plugin_css_paths.append(f"theme/plugins/{_plugin.name}.css")
+                        break  # one entry per plugin, even if multiple source files
+            elif isinstance(_plugin, LocalLayoutPlugin):
+                _css_candidate = _plugin.template_path.parent / f"{_plugin.name}.css"
+                if _css_candidate.exists():
+                    plugin_css_paths.append(f"theme/plugins/{_plugin.name}.css")
+
         # Preprocess TOC slides — inject section entries
         toc_items = self._generate_toc(slides)
         for slide_cfg in slides:
@@ -519,7 +542,7 @@ class PresentationBuilder:
 
             density = LayoutAnalyzer.compute_density(slide_cfg)
 
-            html = self.render_slide(slide_cfg, i, density=density, features=features)
+            html = self.render_slide(slide_cfg, i, density=density, features=features, plugin_css=plugin_css_paths)
 
             filename = f"slide_{i + 1:02d}.html"
             (out / filename).write_text(html, encoding="utf-8")
@@ -531,8 +554,29 @@ class PresentationBuilder:
 
         self._warnings = warnings
 
-        # ── Contrast checks ──────────────────────────────────────
+        # ── Theme plugin merge ────────────────────────────────────
+        # Resolve theme config: plugin defaults < user overrides
         theme_cfg = self.config.get("theme", {})
+        theme_name = theme_cfg.get("name")
+        if theme_name and self._registry:
+            base_theme = self._registry.get_theme(theme_name)
+            if base_theme:
+                # Start with plugin defaults
+                merged = {**base_theme.defaults}
+                # Deep-merge fonts: plugin font defaults < user font overrides
+                if "fonts" in base_theme.defaults and "fonts" in theme_cfg:
+                    merged["fonts"] = {
+                        **base_theme.defaults.get("fonts", {}),
+                        **theme_cfg["fonts"],
+                    }
+                # Apply user overrides (skip fonts key if already deep-merged)
+                for k, v in theme_cfg.items():
+                    if k == "fonts" and "fonts" in base_theme.defaults:
+                        continue  # already deep-merged above
+                    merged[k] = v
+                theme_cfg = merged
+
+        # ── Contrast checks ──────────────────────────────────────
         self._contrast_warnings = check_contrast(
             primary=theme_cfg.get("primary", "#1C2537"),
             accent=theme_cfg.get("accent", "#C4A962"),
@@ -561,6 +605,25 @@ class PresentationBuilder:
         if theme_out.exists():
             shutil.rmtree(theme_out)
         shutil.copytree(THEME_DIR, theme_out)
+
+        # Copy plugin CSS files to theme/plugins/
+        # (plugin_css_paths already computed before the render loop above)
+        plugins_css_dir = theme_out / "plugins"
+        for plugin in self._registry._layouts.values():
+            if isinstance(plugin, LayoutPlugin):
+                for css_file in plugin.css_files:
+                    css_path = Path(css_file)
+                    if css_path.exists():
+                        plugins_css_dir.mkdir(parents=True, exist_ok=True)
+                        dest = plugins_css_dir / f"{plugin.name}.css"
+                        shutil.copy2(css_path, dest)
+                        break  # one output file per plugin (last css_file wins for multi-file plugins)
+            elif isinstance(plugin, LocalLayoutPlugin):
+                css_candidate = plugin.template_path.parent / f"{plugin.name}.css"
+                if css_candidate.exists():
+                    plugins_css_dir.mkdir(parents=True, exist_ok=True)
+                    dest = plugins_css_dir / f"{plugin.name}.css"
+                    shutil.copy2(css_candidate, dest)
 
         # Generate custom variables.css from presentation.yaml theme
         custom_vars = self.generate_variables_css(theme_cfg)
