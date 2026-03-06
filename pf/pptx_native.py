@@ -181,21 +181,44 @@ NATIVE_RENDERERS = {
 }
 
 
-def _render_image_fallback(slide, slide_file: Path):
-    """Fall back to screenshot for complex layouts (requires Playwright)."""
-    try:
-        from playwright.sync_api import sync_playwright
-    except ImportError:
-        return  # Skip if Playwright unavailable
+def _render_image_fallback(slide, slide_file: Path, context=None):
+    """Fall back to screenshot for complex layouts (requires Playwright).
 
-    with sync_playwright() as p:
-        browser = p.chromium.launch()
-        page = browser.new_page(viewport={"width": 1280, "height": 720})
+    Args:
+        slide: python-pptx slide object to add the screenshot to.
+        slide_file: Path to the slide HTML file.
+        context: Optional shared Playwright browser context. If provided,
+            reuses it instead of spawning a new browser per slide.
+    """
+    if context:
+        page = context.new_page()
         page.goto(f"file://{slide_file.resolve()}")
         page.wait_for_load_state("networkidle")
+        try:
+            page.wait_for_selector("[data-pf-ready]", timeout=10000)
+        except Exception:
+            pass  # Graceful fallback if sentinel missing
         png_bytes = page.screenshot(full_page=False)
         page.close()
-        browser.close()
+    else:
+        # Legacy path — spawns own browser (no shared context available)
+        try:
+            from playwright.sync_api import sync_playwright
+        except ImportError:
+            return  # Skip if Playwright unavailable
+
+        with sync_playwright() as p:
+            browser = p.chromium.launch()
+            page = browser.new_page(viewport={"width": 1280, "height": 720})
+            page.goto(f"file://{slide_file.resolve()}")
+            page.wait_for_load_state("networkidle")
+            try:
+                page.wait_for_selector("[data-pf-ready]", timeout=10000)
+            except Exception:
+                pass  # Graceful fallback if sentinel missing
+            png_bytes = page.screenshot(full_page=False)
+            page.close()
+            browser.close()
 
     slide.shapes.add_picture(
         io.BytesIO(png_bytes),
@@ -211,8 +234,10 @@ def export_pptx_editable(
 ):
     """Export slides to an editable .pptx file.
 
-    Native text/shapes for supported layouts (section, quote, closing).
-    Image fallback via Playwright for complex layouts.
+    Native text/shapes for supported layouts (section, quote, closing,
+    title, stat-grid, two-column, three-column). Image fallback via
+    Playwright for complex layouts. Uses a single shared browser context
+    across all image fallbacks to avoid spawning a browser per slide.
     """
     prs = Presentation()
     prs.slide_width = SLIDE_WIDTH
@@ -223,21 +248,42 @@ def export_pptx_editable(
     slides_path = Path(slides_dir)
     slides_cfg = config.get("slides", [])
 
-    for i, slide_cfg in enumerate(slides_cfg):
-        layout = slide_cfg.get("layout", "two-column")
-        data = slide_cfg.get("data", {})
-        slide = prs.slides.add_slide(blank_layout)
+    # Create shared browser context for image fallbacks (EXPORT-04)
+    pw_manager = None
+    pw_browser = None
+    pw_context = None
+    try:
+        from playwright.sync_api import sync_playwright
+        pw_manager = sync_playwright().start()
+        pw_browser = pw_manager.chromium.launch()
+        pw_context = pw_browser.new_context(viewport={"width": 1280, "height": 720})
+    except (ImportError, Exception):
+        pass  # Playwright unavailable — image fallback will skip gracefully
 
-        renderer = NATIVE_RENDERERS.get(layout)
-        if renderer:
-            renderer(slide, data, theme)
-        else:
-            slide_file = slides_path / f"slide_{i + 1:02d}.html"
-            if slide_file.exists():
-                _render_image_fallback(slide, slide_file)
+    try:
+        for i, slide_cfg in enumerate(slides_cfg):
+            layout = slide_cfg.get("layout", "two-column")
+            data = slide_cfg.get("data", {})
+            slide = prs.slides.add_slide(blank_layout)
 
-        # Speaker notes
-        if slide_cfg.get("notes"):
-            slide.notes_slide.notes_text_frame.text = slide_cfg["notes"]
+            renderer = NATIVE_RENDERERS.get(layout)
+            if renderer:
+                renderer(slide, data, theme)
+            else:
+                slide_file = slides_path / f"slide_{i + 1:02d}.html"
+                if slide_file.exists():
+                    _render_image_fallback(slide, slide_file, context=pw_context)
+
+            # Speaker notes
+            if slide_cfg.get("notes"):
+                slide.notes_slide.notes_text_frame.text = slide_cfg["notes"]
+    finally:
+        # Always clean up shared browser context
+        if pw_context:
+            pw_context.close()
+        if pw_browser:
+            pw_browser.close()
+        if pw_manager:
+            pw_manager.stop()
 
     prs.save(output_path)

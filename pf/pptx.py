@@ -62,6 +62,11 @@ def export_pptx(
             page = context.new_page()
             page.goto(f"file://{slide_file}")
             page.wait_for_load_state("networkidle")
+            # Wait for async content (Mermaid, Leaflet) to finish rendering
+            try:
+                page.wait_for_selector("[data-pf-ready]", timeout=10000)
+            except Exception:
+                pass  # Graceful fallback if sentinel missing (pre-Phase 1 slides)
 
             # Screenshot to bytes
             png_bytes = page.screenshot(full_page=False)
