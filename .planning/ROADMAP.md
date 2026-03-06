@@ -50,14 +50,14 @@ Plans:
   3. Developer can create a data source plugin that fetches from a Google Sheet and passes values into metrics interpolation — credentials managed via environment variables or config file
   4. User can run `pf plugins list` to see installed plugins and `pf plugins install <name>` to install from a registry
   5. Plugin CSS is scoped to its layout's slides and does not affect slides using other layouts
-**Plans**: TBD
+**Plans**: 5 plans
 
 Plans:
-- [ ] 02-01: Plugin registry (`pf/registry.py`) with entry point discovery and directory scanning; backward-compatible builder injection
-- [ ] 02-02: Layout plugin contract (template inheritance pattern, CSS scoping spec, schema isolation `additionalProperties: true`)
-- [ ] 02-03: Theme plugin system (installable packages, theme discovery, override chain)
-- [ ] 02-04: Data source plugins (Google Sheets, REST API, database adapters; credential management pattern)
-- [ ] 02-05: `pf plugins` CLI command group (list, install, info); updated `list_layouts()` MCP tool to include plugin layouts
+- [ ] 02-01-PLAN.md — Plugin registry core: PluginRegistry with entry point + directory discovery, builder ChoiceLoader integration, schema relaxation
+- [ ] 02-02-PLAN.md — Layout plugin contract: CSS scoping (.pf-layout-{name}), template inheritance, CSS injection into build output
+- [ ] 02-03-PLAN.md — Theme plugin system: theme discovery via pf.themes entry points, defaults merge with user overrides
+- [ ] 02-04-PLAN.md — Data source plugins: fetch/merge into metrics, credential resolution (env + file), datasources YAML key
+- [ ] 02-05-PLAN.md — Plugin CLI (pf plugins list/install/info) and MCP list_layouts() update
 
 ### Phase 3: LLM Integration
 **Goal**: AI agents can reliably generate complete, correctly-sized presentations from a prompt, with overflowing slides automatically split and all template rendering hardened against injection
