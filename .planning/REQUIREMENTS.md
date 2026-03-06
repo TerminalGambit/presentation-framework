@@ -11,9 +11,9 @@ Requirements for v1.0 release. Each maps to roadmap phases.
 
 - [x] **MEDIA-01**: User can add code blocks with syntax highlighting (language-aware coloring via Highlight.js or Prism.js)
 - [x] **MEDIA-02**: User can use slide fragments for progressive reveal (bullet-by-bullet, element-by-element builds)
-- [ ] **MEDIA-03**: User can embed Mermaid.js diagrams (flowcharts, sequence diagrams, org charts) in slides
-- [ ] **MEDIA-04**: User can embed video (YouTube/Vimeo/MP4) with thumbnail preview in HTML and static frame in exports
-- [ ] **MEDIA-05**: User can embed Google Maps with lat/lng, zoom, markers (interactive in HTML, static image in exports)
+- [x] **MEDIA-03**: User can embed Mermaid.js diagrams (flowcharts, sequence diagrams, org charts) in slides
+- [x] **MEDIA-04**: User can embed video (YouTube/Vimeo/MP4) with thumbnail preview in HTML and static frame in exports
+- [x] **MEDIA-05**: User can embed Google Maps with lat/lng, zoom, markers (interactive in HTML, static image in exports)
 - [x] **MEDIA-06**: User can apply custom CSS per individual slide via a `style:` key
 - [x] **MEDIA-07**: User can auto-generate a table of contents slide from section dividers
 
@@ -93,9 +93,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 |-------------|-------|--------|
 | MEDIA-01 | Phase 1 | Complete |
 | MEDIA-02 | Phase 1 | Complete |
-| MEDIA-03 | Phase 1 | Pending |
-| MEDIA-04 | Phase 1 | Pending |
-| MEDIA-05 | Phase 1 | Pending |
+| MEDIA-03 | Phase 1 | Complete |
+| MEDIA-04 | Phase 1 | Complete |
+| MEDIA-05 | Phase 1 | Complete |
 | MEDIA-06 | Phase 1 | Complete |
 | MEDIA-07 | Phase 1 | Complete |
 | EXPORT-01 | Phase 1 | Pending |

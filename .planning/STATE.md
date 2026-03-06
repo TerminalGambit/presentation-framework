@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v0.2
 milestone_name: milestone
 status: executing
-stopped_at: Completed 01-05-PLAN.md
-last_updated: "2026-03-06T09:01:30Z"
-last_activity: 2026-03-06 — Completed plan 01-05 (TOC layout and per-slide CSS tests)
+stopped_at: Completed 01-04-PLAN.md
+last_updated: "2026-03-06T09:04:10Z"
+last_activity: 2026-03-06 — Completed plan 01-04 (Mermaid, video, and map rich media layouts)
 progress:
   total_phases: 4
   completed_phases: 0
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-03-05)
 Phase: 1 of 4 (Rich Media + Export Polish)
 Plan: 5 of 6 in current phase
 Status: Executing
-Last activity: 2026-03-06 — Completed plan 01-05 (TOC layout and per-slide CSS tests)
+Last activity: 2026-03-06 — Completed plan 01-04 (Mermaid, video, and map rich media layouts)
 
 Progress: [████████░░] 83%
 
@@ -74,6 +74,9 @@ Recent decisions affecting current work:
 - [Phase 01-02]: Language badge only shown when language is explicitly set and not 'auto' — reduces visual noise on auto-detected code
 - [01-05]: Use slide.data.get('items') not slide.data.items in Jinja2 — .items resolves to Python dict builtin method causing TypeError
 - [01-05]: TOC preprocessing injects items into toc slides before render loop; user-provided data.items is overwritten by auto-generated entries
+- [01-04]: Video URL detection done in builder._enrich_video_data() not Jinja2 — avoids custom regex filter, cleanly testable
+- [01-04]: Map uses OpenStreetMap tiles (no API key required); data-pf-ready set after whenReady() + 800ms to ensure tile visibility for PDF export
+- [01-04]: Mermaid layout uses direct .mermaid div (not macro wrapper) — simpler, CDN init in base handles the rest
 
 ### Pending Todos
 
@@ -86,6 +89,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-06T09:01:30Z
-Stopped at: Completed 01-05-PLAN.md
+Last session: 2026-03-06T09:04:10Z
+Stopped at: Completed 01-04-PLAN.md
 Resume file: .planning/phases/01-rich-media-export-polish/01-06-PLAN.md
