@@ -16,7 +16,7 @@ from jinja2 import ChoiceLoader, Environment, FileSystemLoader, TemplateNotFound
 
 from pf.analyzer import LayoutAnalyzer
 from pf.contrast import check_contrast
-from pf.registry import PluginCredentialError, PluginRegistry
+from pf.registry import LayoutPlugin, LocalLayoutPlugin, PluginCredentialError, PluginRegistry
 
 
 def _hex_to_rgb(hex_color: str) -> tuple[int, int, int]:

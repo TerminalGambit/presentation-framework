@@ -541,3 +541,164 @@ class TestThemePluginDiscovery:
         validator = jsonschema.Draft202012Validator(schema)
         errors = list(validator.iter_errors(config))
         assert errors == [], f"Unexpected validation errors: {errors}"
+
+
+# ---------------------------------------------------------------------------
+# 10. Template inheritance via ChoiceLoader
+# ---------------------------------------------------------------------------
+
+
+class TestTemplateInheritance:
+    def test_template_inheritance(self, tmp_path):
+        """A local plugin template that extends base.html.j2 renders its content block."""
+        layouts_dir = tmp_path / "layouts"
+        layouts_dir.mkdir()
+        (layouts_dir / "variant.html.j2").write_text(
+            '{% extends "base.html.j2" %}'
+            "{% block content %}<div>VARIANT CONTENT</div>{% endblock %}",
+            encoding="utf-8",
+        )
+
+        config = {
+            "meta": {"title": "Inheritance Test"},
+            "theme": THEME_BASE,
+            "slides": [{"layout": "variant", "data": {"title": "Variant Slide"}}],
+        }
+        config_path = tmp_path / "presentation.yaml"
+        config_path.write_text(yaml.dump(config), encoding="utf-8")
+        metrics_path = tmp_path / "metrics.json"
+        metrics_path.write_text(json.dumps({}), encoding="utf-8")
+
+        builder = PresentationBuilder(str(config_path), str(metrics_path))
+        output_dir = tmp_path / "slides"
+        builder.build(str(output_dir))
+
+        slide_html = (output_dir / "slide_01.html").read_text(encoding="utf-8")
+        # Plugin content block rendered
+        assert "VARIANT CONTENT" in slide_html
+        # Inheritance from base.html.j2 worked — base scaffold is present
+        assert "<!DOCTYPE html>" in slide_html
+        assert "theme/variables.css" in slide_html
+
+
+# ---------------------------------------------------------------------------
+# 11. CSS injection into output directory
+# ---------------------------------------------------------------------------
+
+
+class TestCSSInjection:
+    def test_css_injection(self, tmp_path):
+        """Plugin CSS is copied to theme/plugins/ and linked in slide HTML."""
+        layouts_dir = tmp_path / "layouts"
+        layouts_dir.mkdir()
+        (layouts_dir / "testlayout.html.j2").write_text(
+            '{% extends "base.html.j2" %}'
+            '{% block content %}<div class="pf-layout-testlayout">TEST</div>{% endblock %}',
+            encoding="utf-8",
+        )
+        (layouts_dir / "testlayout.css").write_text(
+            ".pf-layout-testlayout { color: red; }",
+            encoding="utf-8",
+        )
+
+        config = {
+            "meta": {"title": "CSS Injection Test"},
+            "theme": THEME_BASE,
+            "slides": [{"layout": "testlayout", "data": {"title": "Test Slide"}}],
+        }
+        config_path = tmp_path / "presentation.yaml"
+        config_path.write_text(yaml.dump(config), encoding="utf-8")
+        metrics_path = tmp_path / "metrics.json"
+        metrics_path.write_text(json.dumps({}), encoding="utf-8")
+
+        builder = PresentationBuilder(str(config_path), str(metrics_path))
+        output_dir = tmp_path / "slides"
+        builder.build(str(output_dir))
+
+        # CSS file was copied to theme/plugins/
+        copied_css = output_dir / "theme" / "plugins" / "testlayout.css"
+        assert copied_css.exists(), "Plugin CSS not copied to theme/plugins/"
+        assert ".pf-layout-testlayout" in copied_css.read_text(encoding="utf-8")
+
+        # CSS link is present in the rendered slide HTML
+        slide_html = (output_dir / "slide_01.html").read_text(encoding="utf-8")
+        assert "theme/plugins/testlayout.css" in slide_html
+
+
+# ---------------------------------------------------------------------------
+# 12. CSS isolation — plugin CSS available but scoped via class prefix
+# ---------------------------------------------------------------------------
+
+
+class TestCSSIsolation:
+    def test_css_isolation(self, tmp_path):
+        """Plugin CSS class prefix appears in plugin slide; core title slide is unaffected."""
+        layouts_dir = tmp_path / "layouts"
+        layouts_dir.mkdir()
+        (layouts_dir / "myplugin.html.j2").write_text(
+            '{% extends "base.html.j2" %}'
+            '{% block content %}'
+            '<div class="pf-layout-myplugin">PLUGIN SLIDE</div>'
+            "{% endblock %}",
+            encoding="utf-8",
+        )
+        (layouts_dir / "myplugin.css").write_text(
+            ".pf-layout-myplugin { background: navy; }",
+            encoding="utf-8",
+        )
+
+        config = {
+            "meta": {"title": "Isolation Test"},
+            "theme": THEME_BASE,
+            "slides": [
+                {"layout": "title", "data": {"title": "Core Title Slide"}},
+                {"layout": "myplugin", "data": {"title": "Plugin Slide"}},
+            ],
+        }
+        config_path = tmp_path / "presentation.yaml"
+        config_path.write_text(yaml.dump(config), encoding="utf-8")
+        metrics_path = tmp_path / "metrics.json"
+        metrics_path.write_text(json.dumps({}), encoding="utf-8")
+
+        builder = PresentationBuilder(str(config_path), str(metrics_path))
+        output_dir = tmp_path / "slides"
+        builder.build(str(output_dir))
+
+        title_html = (output_dir / "slide_01.html").read_text(encoding="utf-8")
+        plugin_html = (output_dir / "slide_02.html").read_text(encoding="utf-8")
+
+        # Title slide does NOT contain plugin-specific CSS class in its content
+        assert "pf-layout-myplugin" not in title_html
+        # Plugin slide DOES contain the plugin CSS class wrapper
+        assert "pf-layout-myplugin" in plugin_html
+        # Both slides link the same plugin CSS file (shared, but scoped by class prefix)
+        assert "theme/plugins/myplugin.css" in title_html
+        assert "theme/plugins/myplugin.css" in plugin_html
+
+
+# ---------------------------------------------------------------------------
+# 13. No plugin CSS when no plugins present
+# ---------------------------------------------------------------------------
+
+
+class TestNoPluginCSSWhenNoPlugins:
+    def test_no_plugin_css_when_no_plugins(self, tmp_path):
+        """Standard build with no plugins does not create theme/plugins/ directory."""
+        config = {
+            "meta": {"title": "No Plugins Test"},
+            "theme": THEME_BASE,
+            "slides": [{"layout": "title", "data": {"title": "Core Only"}}],
+        }
+        config_path = tmp_path / "presentation.yaml"
+        config_path.write_text(yaml.dump(config), encoding="utf-8")
+        metrics_path = tmp_path / "metrics.json"
+        metrics_path.write_text(json.dumps({}), encoding="utf-8")
+
+        builder = PresentationBuilder(str(config_path), str(metrics_path))
+        output_dir = tmp_path / "slides"
+        builder.build(str(output_dir))
+
+        plugins_dir = output_dir / "theme" / "plugins"
+        assert not plugins_dir.exists(), (
+            "theme/plugins/ directory should not exist when no plugins are present"
+        )
