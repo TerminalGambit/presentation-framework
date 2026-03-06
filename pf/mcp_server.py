@@ -324,11 +324,34 @@ LAYOUT_EXAMPLES = {
 
 @mcp.tool()
 def list_layouts() -> list[dict]:
-    """List all available slide layouts with descriptions."""
-    return [
-        {"name": name, "description": desc}
+    """List all available slide layouts with descriptions.
+
+    Returns core built-in layouts plus any plugin layouts discovered from
+    installed packages (pf.layouts entry points) and local project directories.
+    """
+    from pf.registry import LayoutPlugin, PluginRegistry
+
+    # Core layouts
+    results: list[dict] = [
+        {"name": name, "description": desc, "source": "core"}
         for name, desc in LAYOUT_DESCRIPTIONS.items()
     ]
+
+    # Plugin layouts
+    try:
+        registry = PluginRegistry()
+        registry.discover()
+        for name in registry.layout_names:
+            plugin = registry.get_layout(name)
+            description = ""
+            if isinstance(plugin, LayoutPlugin):
+                description = plugin.description
+            results.append({"name": name, "description": description, "source": "plugin"})
+    except Exception:
+        # Registry discovery is best-effort — never block the MCP tool
+        pass
+
+    return results
 
 
 @mcp.tool()
