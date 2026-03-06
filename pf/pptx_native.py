@@ -349,6 +349,265 @@ def _render_three_column(slide, data: dict, theme: dict):
                 y += Inches(0.5)
 
 
+def _render_data_table(slide, data: dict, theme: dict):
+    """Render data-table: section titles + table rows + optional insight text."""
+    _add_bg(slide, theme["primary"])
+    center_x = SLIDE_WIDTH // 2
+
+    # Slide title (from header partial — data.title)
+    if data.get("title"):
+        box_w = Inches(12)
+        txBox = slide.shapes.add_textbox(center_x - box_w // 2, Inches(0.25), box_w, Inches(0.7))
+        _set_text(txBox.text_frame, data["title"], theme["font_heading"], 32, theme["accent"],
+                  bold=True, alignment=PP_ALIGN.LEFT)
+
+    sections = data.get("sections", [])
+    if not sections:
+        return
+
+    # Determine column layout: support up to 2 sections side by side
+    num_cols = min(len(sections), 2)
+    col_w = Inches(5.9) if num_cols == 2 else Inches(12)
+    col_gap = Inches(0.5)
+    col_xs = []
+    if num_cols == 2:
+        total_w = num_cols * col_w + (num_cols - 1) * col_gap
+        x_start = center_x - total_w // 2
+        col_xs = [x_start + i * (col_w + col_gap) for i in range(num_cols)]
+    else:
+        col_xs = [center_x - col_w // 2]
+
+    y_global_start = Inches(1.15)
+
+    for sec_idx, section in enumerate(sections[:2]):
+        col_x = col_xs[sec_idx]
+        y = y_global_start
+
+        # Section title
+        if section.get("section_title"):
+            txBox = slide.shapes.add_textbox(col_x, y, col_w, Inches(0.45))
+            _set_text(txBox.text_frame, section["section_title"], theme["font_subheading"],
+                      13, theme["accent"], bold=True, alignment=PP_ALIGN.LEFT)
+            y += Inches(0.5)
+
+        # Table
+        table_data = section.get("table")
+        if table_data:
+            headers = table_data.get("headers", [])
+            rows = table_data.get("rows", [])
+            winner_rows = set(table_data.get("winner_rows", []))
+            total_row = table_data.get("total_row")
+
+            all_rows = [headers] + rows
+            if total_row:
+                all_rows.append(total_row)
+
+            if all_rows and headers:
+                num_table_cols = len(headers)
+                cell_w = col_w / num_table_cols
+                row_h = Inches(0.3)
+
+                for row_idx, row in enumerate(all_rows):
+                    is_header = row_idx == 0
+                    is_winner = (row_idx - 1) in winner_rows  # rows are 1-indexed after header
+                    is_total = total_row and row_idx == len(all_rows) - 1
+
+                    # Row background
+                    if is_header:
+                        bg_color = _hex_to_rgb("#1a2236")
+                    elif is_winner:
+                        bg_color = _hex_to_rgb("#1e3a1e")  # muted green tint
+                    elif is_total:
+                        bg_color = _hex_to_rgb("#1a2236")
+                    else:
+                        bg_color = _hex_to_rgb("#111827") if row_idx % 2 == 1 else None
+
+                    if bg_color:
+                        _add_rect(slide, col_x, y, col_w, row_h, bg_color)
+
+                    for col_idx, cell in enumerate(row[:num_table_cols]):
+                        cell_x = col_x + col_idx * cell_w
+                        txBox = slide.shapes.add_textbox(
+                            cell_x + Inches(0.05), y + Inches(0.03),
+                            cell_w - Inches(0.1), row_h - Inches(0.05)
+                        )
+                        cell_color = theme["accent"] if is_header else (
+                            theme["accent"] if is_total else theme["white"]
+                        )
+                        cell_align = PP_ALIGN.LEFT if col_idx == 0 else PP_ALIGN.RIGHT
+                        _set_text(txBox.text_frame, str(cell), theme["font_body"],
+                                  10, cell_color, bold=is_header, alignment=cell_align)
+                    y += row_h
+
+                if table_data.get("footnote"):
+                    y += Inches(0.05)
+                    txBox = slide.shapes.add_textbox(col_x, y, col_w, Inches(0.3))
+                    _set_text(txBox.text_frame, table_data["footnote"], theme["font_body"],
+                              9, theme["text_muted"], alignment=PP_ALIGN.LEFT)
+                    y += Inches(0.35)
+
+        # Insight
+        insight = section.get("insight")
+        if insight and insight.get("text"):
+            y += Inches(0.1)
+            txBox = slide.shapes.add_textbox(col_x, y, col_w, Inches(0.45))
+            _set_text(txBox.text_frame, f"  {insight['text']}", theme["font_body"],
+                      10, theme["text_muted"], alignment=PP_ALIGN.LEFT)
+            txBox.text_frame.word_wrap = True
+
+
+def _render_image(slide, data: dict, theme: dict):
+    """Render image layout: embed picture with title and caption as native text.
+
+    Supports full-bleed (position='full') and split (position='split') modes.
+    If image path is a local file, embeds it natively via add_picture().
+    If image is a remote URL or unavailable, renders a colored placeholder rectangle
+    with title and caption text overlaid (no network dependency at export time).
+    """
+    position = data.get("position", "full")
+    image_src = data.get("image", "")
+    title = data.get("title", "")
+    caption = data.get("caption", "")
+
+    # Try to load the image as a local file
+    image_bytes = None
+    if image_src and not image_src.startswith("http"):
+        try:
+            img_path = Path(image_src)
+            if img_path.exists():
+                image_bytes = img_path.read_bytes()
+        except Exception:
+            pass
+
+    if position == "split":
+        side = data.get("side", "left")
+        img_w = SLIDE_WIDTH // 2
+        text_w = SLIDE_WIDTH // 2 - Inches(0.5)
+        img_x = 0 if side == "left" else SLIDE_WIDTH // 2
+        text_x = SLIDE_WIDTH // 2 + Inches(0.25) if side == "left" else Inches(0.25)
+
+        # Image panel
+        _add_bg(slide, theme["primary"])
+        if image_bytes:
+            try:
+                slide.shapes.add_picture(
+                    io.BytesIO(image_bytes), img_x, Emu(0), img_w, SLIDE_HEIGHT
+                )
+            except Exception:
+                _add_rect(slide, img_x, Emu(0), img_w, SLIDE_HEIGHT, _hex_to_rgb("#1a2236"))
+        else:
+            _add_rect(slide, img_x, Emu(0), img_w, SLIDE_HEIGHT, _hex_to_rgb("#1a2236"))
+
+        # Text panel
+        y_text = Inches(2.0)
+        if title:
+            txBox = slide.shapes.add_textbox(text_x, y_text, text_w, Inches(1.5))
+            _set_text(txBox.text_frame, title, theme["font_heading"], 36, theme["accent"],
+                      bold=True, alignment=PP_ALIGN.LEFT)
+            txBox.text_frame.word_wrap = True
+            y_text += Inches(1.6)
+        if caption:
+            txBox = slide.shapes.add_textbox(text_x, y_text, text_w, Inches(1.0))
+            _set_text(txBox.text_frame, caption, theme["font_body"], 14, theme["text_muted"],
+                      alignment=PP_ALIGN.LEFT)
+            txBox.text_frame.word_wrap = True
+    else:
+        # Full-bleed mode
+        _add_bg(slide, theme["primary"])
+        if image_bytes:
+            try:
+                slide.shapes.add_picture(
+                    io.BytesIO(image_bytes), Emu(0), Emu(0), SLIDE_WIDTH, SLIDE_HEIGHT
+                )
+            except Exception:
+                _add_rect(slide, Emu(0), Emu(0), SLIDE_WIDTH, SLIDE_HEIGHT, _hex_to_rgb("#1a2236"))
+        else:
+            # Placeholder: dark rectangle filling the slide
+            _add_rect(slide, Emu(0), Emu(0), SLIDE_WIDTH, SLIDE_HEIGHT, _hex_to_rgb("#1a2236"))
+
+        # Overlay: title and caption in lower third
+        if title or caption:
+            # Semi-dark overlay strip at bottom
+            overlay_h = Inches(1.8)
+            _add_rect(slide, Emu(0), SLIDE_HEIGHT - overlay_h, SLIDE_WIDTH, overlay_h,
+                      _hex_to_rgb("#0d1117"))
+            y_overlay = SLIDE_HEIGHT - overlay_h + Inches(0.25)
+            if title:
+                txBox = slide.shapes.add_textbox(Inches(0.8), y_overlay, SLIDE_WIDTH - Inches(1.6), Inches(0.9))
+                _set_text(txBox.text_frame, title, theme["font_heading"], 32, theme["white"],
+                          bold=True, alignment=PP_ALIGN.LEFT)
+                txBox.text_frame.word_wrap = True
+                y_overlay += Inches(0.9)
+            if caption:
+                txBox = slide.shapes.add_textbox(Inches(0.8), y_overlay, SLIDE_WIDTH - Inches(1.6), Inches(0.5))
+                _set_text(txBox.text_frame, caption, theme["font_body"], 13, theme["text_muted"],
+                          alignment=PP_ALIGN.LEFT)
+                txBox.text_frame.word_wrap = True
+
+
+def _render_timeline(slide, data: dict, theme: dict):
+    """Render timeline: title + horizontal steps with title and description text boxes."""
+    _add_bg(slide, theme["primary"])
+    center_x = SLIDE_WIDTH // 2
+
+    # Title (from data.title, rendered by header partial in HTML)
+    if data.get("title"):
+        box_w = Inches(12)
+        txBox = slide.shapes.add_textbox(center_x - box_w // 2, Inches(0.3), box_w, Inches(0.7))
+        _set_text(txBox.text_frame, data["title"], theme["font_heading"], 36, theme["accent"],
+                  bold=True, alignment=PP_ALIGN.LEFT)
+
+    steps = data.get("steps", [])
+    if not steps:
+        return
+
+    num_steps = len(steps)
+    # Layout: steps distributed across slide width
+    step_area_w = SLIDE_WIDTH - Inches(1.0)
+    step_w = step_area_w / num_steps
+    x_start = Inches(0.5)
+    dot_y = Inches(2.8)  # vertical position of the step dots
+    line_y = dot_y + Inches(0.18)  # center of connecting line
+    dot_size = Inches(0.36)
+
+    # Horizontal connecting line (drawn first, behind dots)
+    line_x_start = x_start + step_w * 0.5
+    line_x_end = x_start + step_w * (num_steps - 0.5)
+    if num_steps > 1:
+        line_w = line_x_end - line_x_start
+        _add_rect(slide, line_x_start, line_y - Inches(0.02), line_w, Inches(0.04), theme["accent"])
+
+    for i, step in enumerate(steps):
+        step_x_center = x_start + step_w * i + step_w / 2
+        step_x = step_x_center - dot_size / 2
+
+        # Step dot (circle approximated as square with accent color)
+        _add_rect(slide, int(step_x), int(dot_y), int(dot_size), int(dot_size), theme["accent"])
+
+        # Step number in dot
+        txBox = slide.shapes.add_textbox(
+            int(step_x), int(dot_y), int(dot_size), int(dot_size)
+        )
+        _set_text(txBox.text_frame, str(i + 1), theme["font_heading"], 11,
+                  theme["primary"], bold=True, alignment=PP_ALIGN.CENTER)
+
+        # Step title (below dot)
+        title_y = dot_y + dot_size + Inches(0.2)
+        title_w = step_w - Inches(0.1)
+        title_x = step_x_center - title_w / 2
+        txBox = slide.shapes.add_textbox(int(title_x), int(title_y), int(title_w), Inches(0.5))
+        _set_text(txBox.text_frame, step.get("title", ""), theme["font_subheading"], 12,
+                  theme["white"], bold=True, alignment=PP_ALIGN.CENTER)
+        txBox.text_frame.word_wrap = True
+
+        # Step description (below title)
+        desc_y = title_y + Inches(0.55)
+        txBox = slide.shapes.add_textbox(int(title_x), int(desc_y), int(title_w), Inches(1.2))
+        _set_text(txBox.text_frame, step.get("description", ""), theme["font_body"], 10,
+                  theme["text_muted"], alignment=PP_ALIGN.CENTER)
+        txBox.text_frame.word_wrap = True
+
+
 # ── Layout dispatch ──────────────────────────────────────────────
 
 NATIVE_RENDERERS = {
@@ -359,6 +618,9 @@ NATIVE_RENDERERS = {
     "stat-grid": _render_stat_grid,
     "two-column": _render_two_column,
     "three-column": _render_three_column,
+    "data-table": _render_data_table,
+    "image": _render_image,
+    "timeline": _render_timeline,
 }
 
 
