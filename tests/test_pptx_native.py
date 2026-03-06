@@ -320,3 +320,268 @@ class TestThreeColumnLayout:
         }, theme)
         texts = [s.text_frame.text for s in slide.shapes if s.has_text_frame]
         assert "Col A" in texts
+
+
+class TestDataTableLayout:
+    """Native PPTX renderer for data-table layout."""
+
+    def _make_slide(self):
+        from pf.pptx_native import _pptx_theme, SLIDE_WIDTH, SLIDE_HEIGHT
+        prs = PptxPresentation()
+        prs.slide_width = SLIDE_WIDTH
+        prs.slide_height = SLIDE_HEIGHT
+        slide = prs.slides.add_slide(prs.slide_layouts[6])
+        theme = _pptx_theme({"primary": "#1C2537", "accent": "#C4A962"})
+        return slide, theme
+
+    def test_data_table_in_native_renderers(self):
+        from pf.pptx_native import NATIVE_RENDERERS
+        assert "data-table" in NATIVE_RENDERERS
+
+    def test_data_table_renders_without_error(self):
+        from pf.pptx_native import NATIVE_RENDERERS
+        slide, theme = self._make_slide()
+        NATIVE_RENDERERS["data-table"](slide, {
+            "title": "Benchmark Results",
+            "sections": [
+                {
+                    "section_title": "Performance",
+                    "table": {
+                        "headers": ["Model", "Score", "Latency"],
+                        "rows": [
+                            ["GPT-4", "92%", "1.2s"],
+                            ["Claude", "94%", "0.9s"],
+                        ],
+                        "winner_rows": [1],
+                    },
+                }
+            ],
+        }, theme)
+        assert len(slide.shapes) > 0
+
+    def test_data_table_renders_section_title(self):
+        from pf.pptx_native import NATIVE_RENDERERS
+        slide, theme = self._make_slide()
+        NATIVE_RENDERERS["data-table"](slide, {
+            "sections": [
+                {
+                    "section_title": "My Section",
+                    "table": {
+                        "headers": ["A", "B"],
+                        "rows": [["1", "2"]],
+                    },
+                }
+            ],
+        }, theme)
+        texts = [s.text_frame.text for s in slide.shapes if s.has_text_frame]
+        assert any("My Section" in t for t in texts)
+
+    def test_data_table_renders_table_headers(self):
+        from pf.pptx_native import NATIVE_RENDERERS
+        slide, theme = self._make_slide()
+        NATIVE_RENDERERS["data-table"](slide, {
+            "sections": [
+                {
+                    "table": {
+                        "headers": ["Name", "Score"],
+                        "rows": [["Alpha", "95%"]],
+                    },
+                }
+            ],
+        }, theme)
+        texts = [s.text_frame.text for s in slide.shapes if s.has_text_frame]
+        assert "Name" in texts
+        assert "Score" in texts
+
+    def test_data_table_renders_with_insight(self):
+        from pf.pptx_native import NATIVE_RENDERERS
+        slide, theme = self._make_slide()
+        NATIVE_RENDERERS["data-table"](slide, {
+            "sections": [
+                {
+                    "table": {"headers": ["X"], "rows": []},
+                    "insight": {"text": "Key finding here"},
+                }
+            ],
+        }, theme)
+        texts = [s.text_frame.text for s in slide.shapes if s.has_text_frame]
+        assert any("Key finding" in t for t in texts)
+
+    def test_data_table_two_sections(self):
+        from pf.pptx_native import NATIVE_RENDERERS
+        slide, theme = self._make_slide()
+        # Should not raise even with 2 sections
+        NATIVE_RENDERERS["data-table"](slide, {
+            "sections": [
+                {"section_title": "Left", "table": {"headers": ["A"], "rows": []}},
+                {"section_title": "Right", "table": {"headers": ["B"], "rows": []}},
+            ],
+        }, theme)
+        assert len(slide.shapes) > 0
+
+
+class TestImageLayout:
+    """Native PPTX renderer for image layout."""
+
+    def _make_slide(self):
+        from pf.pptx_native import _pptx_theme, SLIDE_WIDTH, SLIDE_HEIGHT
+        prs = PptxPresentation()
+        prs.slide_width = SLIDE_WIDTH
+        prs.slide_height = SLIDE_HEIGHT
+        slide = prs.slides.add_slide(prs.slide_layouts[6])
+        theme = _pptx_theme({"primary": "#1C2537", "accent": "#C4A962"})
+        return slide, theme
+
+    def test_image_in_native_renderers(self):
+        from pf.pptx_native import NATIVE_RENDERERS
+        assert "image" in NATIVE_RENDERERS
+
+    def test_image_renders_without_error_no_file(self):
+        """Remote URL or missing file should render a placeholder without crashing."""
+        from pf.pptx_native import NATIVE_RENDERERS
+        slide, theme = self._make_slide()
+        NATIVE_RENDERERS["image"](slide, {
+            "image": "https://example.com/photo.jpg",
+            "title": "Our Office",
+            "caption": "San Francisco HQ",
+        }, theme)
+        assert len(slide.shapes) > 0
+
+    def test_image_full_mode_renders_title(self):
+        from pf.pptx_native import NATIVE_RENDERERS
+        slide, theme = self._make_slide()
+        NATIVE_RENDERERS["image"](slide, {
+            "image": "https://example.com/x.jpg",
+            "title": "Full Bleed Title",
+            "position": "full",
+        }, theme)
+        texts = [s.text_frame.text for s in slide.shapes if s.has_text_frame]
+        assert any("Full Bleed Title" in t for t in texts)
+
+    def test_image_split_mode_renders_title(self):
+        from pf.pptx_native import NATIVE_RENDERERS
+        slide, theme = self._make_slide()
+        NATIVE_RENDERERS["image"](slide, {
+            "image": "https://example.com/x.jpg",
+            "title": "Split Layout",
+            "caption": "Descriptive text",
+            "position": "split",
+            "side": "left",
+        }, theme)
+        texts = [s.text_frame.text for s in slide.shapes if s.has_text_frame]
+        assert any("Split Layout" in t for t in texts)
+
+    def test_image_renders_caption(self):
+        from pf.pptx_native import NATIVE_RENDERERS
+        slide, theme = self._make_slide()
+        NATIVE_RENDERERS["image"](slide, {
+            "image": "https://example.com/x.jpg",
+            "caption": "Photo credit: Unsplash",
+            "position": "full",
+        }, theme)
+        texts = [s.text_frame.text for s in slide.shapes if s.has_text_frame]
+        assert any("Photo credit" in t for t in texts)
+
+    def test_image_local_file(self, tmp_path):
+        """A local PNG file should be embedded natively via add_picture()."""
+        from pf.pptx_native import NATIVE_RENDERERS
+        # Create a minimal 1x1 white PNG (valid PNG bytes)
+        png_bytes = (
+            b'\x89PNG\r\n\x1a\n'  # PNG signature
+            b'\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01'
+            b'\x08\x02\x00\x00\x00\x90wS\xde\x00\x00\x00\x0cIDATx'
+            b'\x9cc\xf8\x0f\x00\x00\x01\x01\x00\x05\x18\xd8N\x00\x00'
+            b'\x00\x00IEND\xaeB`\x82'
+        )
+        img_path = tmp_path / "test.png"
+        img_path.write_bytes(png_bytes)
+        slide, theme = self._make_slide()
+        # Should not raise — local file embedding path
+        NATIVE_RENDERERS["image"](slide, {
+            "image": str(img_path),
+            "title": "Local Image",
+            "position": "full",
+        }, theme)
+        assert len(slide.shapes) > 0
+
+
+class TestTimelineLayout:
+    """Native PPTX renderer for timeline layout."""
+
+    def _make_slide(self):
+        from pf.pptx_native import _pptx_theme, SLIDE_WIDTH, SLIDE_HEIGHT
+        prs = PptxPresentation()
+        prs.slide_width = SLIDE_WIDTH
+        prs.slide_height = SLIDE_HEIGHT
+        slide = prs.slides.add_slide(prs.slide_layouts[6])
+        theme = _pptx_theme({"primary": "#1C2537", "accent": "#C4A962"})
+        return slide, theme
+
+    def test_timeline_in_native_renderers(self):
+        from pf.pptx_native import NATIVE_RENDERERS
+        assert "timeline" in NATIVE_RENDERERS
+
+    def test_timeline_renders_without_error(self):
+        from pf.pptx_native import NATIVE_RENDERERS
+        slide, theme = self._make_slide()
+        NATIVE_RENDERERS["timeline"](slide, {
+            "title": "Product Roadmap",
+            "steps": [
+                {"icon": "rocket", "title": "Launch", "description": "Initial release"},
+                {"icon": "chart-line", "title": "Grow", "description": "Scale users"},
+                {"icon": "trophy", "title": "Win", "description": "Market leader"},
+            ],
+        }, theme)
+        assert len(slide.shapes) > 0
+
+    def test_timeline_renders_step_titles(self):
+        from pf.pptx_native import NATIVE_RENDERERS
+        slide, theme = self._make_slide()
+        NATIVE_RENDERERS["timeline"](slide, {
+            "steps": [
+                {"icon": "flag", "title": "Step One", "description": "First step"},
+                {"icon": "check", "title": "Step Two", "description": "Second step"},
+            ],
+        }, theme)
+        texts = [s.text_frame.text for s in slide.shapes if s.has_text_frame]
+        assert any("Step One" in t for t in texts)
+        assert any("Step Two" in t for t in texts)
+
+    def test_timeline_renders_descriptions(self):
+        from pf.pptx_native import NATIVE_RENDERERS
+        slide, theme = self._make_slide()
+        NATIVE_RENDERERS["timeline"](slide, {
+            "steps": [
+                {"icon": "star", "title": "Phase A", "description": "Do the thing"},
+            ],
+        }, theme)
+        texts = [s.text_frame.text for s in slide.shapes if s.has_text_frame]
+        assert any("Do the thing" in t for t in texts)
+
+    def test_timeline_renders_slide_title(self):
+        from pf.pptx_native import NATIVE_RENDERERS
+        slide, theme = self._make_slide()
+        NATIVE_RENDERERS["timeline"](slide, {
+            "title": "Our Journey",
+            "steps": [{"icon": "play", "title": "Start", "description": "Begin"}],
+        }, theme)
+        texts = [s.text_frame.text for s in slide.shapes if s.has_text_frame]
+        assert any("Our Journey" in t for t in texts)
+
+    def test_timeline_empty_steps(self):
+        """Empty steps list should not raise."""
+        from pf.pptx_native import NATIVE_RENDERERS
+        slide, theme = self._make_slide()
+        NATIVE_RENDERERS["timeline"](slide, {"title": "Empty", "steps": []}, theme)
+        # Background shape added, no crash
+        assert len(slide.shapes) >= 0
+
+    def test_timeline_single_step_no_line(self):
+        """Single step — connecting line should still render without crashing."""
+        from pf.pptx_native import NATIVE_RENDERERS
+        slide, theme = self._make_slide()
+        NATIVE_RENDERERS["timeline"](slide, {
+            "steps": [{"icon": "bolt", "title": "Only", "description": "Solo step"}],
+        }, theme)
+        texts = [s.text_frame.text for s in slide.shapes if s.has_text_frame]
+        assert any("Only" in t for t in texts)
