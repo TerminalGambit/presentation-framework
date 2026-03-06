@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v0.2
 milestone_name: milestone
-status: phase_complete
-stopped_at: Phase 01 complete — all 7 plans executed, human verification passed
-last_updated: "2026-03-06"
-last_activity: 2026-03-06 — Phase 01 complete, human verified all 6 items (fragments, code, mermaid, map, video, PPTX native)
+status: completed
+stopped_at: Completed 02-01-PLAN.md
+last_updated: "2026-03-06T13:52:53.350Z"
+last_activity: 2026-03-06 — Phase 01 complete, all verification items passed
 progress:
   total_phases: 4
   completed_phases: 1
-  total_plans: 7
-  completed_plans: 7
+  total_plans: 12
+  completed_plans: 8
   percent: 100
 ---
 
@@ -55,6 +55,7 @@ Progress: [██████████] 100% (Phase 1)
 | Phase 01-rich-media-export-polish P02 | 15 | 2 tasks | 4 files |
 | Phase 01-rich-media-export-polish P06 | 4 | 3 tasks | 7 files |
 | Phase 01-rich-media-export-polish P07 | 2 | 2 tasks | 2 files |
+| Phase 02-plugin-ecosystem P01 | 4 | 2 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -85,6 +86,9 @@ Recent decisions affecting current work:
 - [Phase 01-rich-media-export-polish]: notes-page.html.j2: _render_notes_page() uses inline f-string, not Jinja2 builder, to keep pdf.py dependency-free
 - [Phase 01-rich-media-export-polish]: [01-07]: chart layout intentionally excluded from NATIVE_RENDERERS — interactive Plotly is visual, screenshot fallback is correct
 - [Phase 01-rich-media-export-polish]: [01-07]: _render_image skips http URLs and uses placeholder rect — no network calls at export time
+- [Phase 02-plugin-ecosystem]: PluginRegistry.discover() called in PresentationBuilder.__init__ with project_dir=config_path.parent — automatic, zero-config for users
+- [Phase 02-plugin-ecosystem]: Schema layout enum removed — type: string only — plugin layout names pass validation
+- [Phase 02-plugin-ecosystem]: ChoiceLoader puts plugin template dirs before core — plugins can override or extend built-in layouts
 
 ### Pending Todos
 
@@ -97,6 +101,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-06T09:30:27.779Z
-Stopped at: Completed 01-07-PLAN.md
+Last session: 2026-03-06T13:52:53.348Z
+Stopped at: Completed 02-01-PLAN.md
 Resume file: None
