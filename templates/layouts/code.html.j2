@@ -1,11 +1,12 @@
 {% extends "base.html.j2" %}
-{% from "partials/header.html.j2" import header with context %}
-{% from "partials/code-block.html.j2" import code_block %}
 
 {% block content %}
 {% include "partials/header.html.j2" %}
 
-<div class="pf-code-layout">
-  {{ code_block(slide.data) }}
+<div class="pf-code-fullslide">
+  <pre><code class="language-{{ slide.data.language | default('') }}" {% if slide.data.line_numbers %}data-line-numbers{% endif %}>{{ slide.data.code | e }}</code></pre>
+  {% if slide.data.caption %}
+  <div class="pf-code-caption">{{ slide.data.caption }}</div>
+  {% endif %}
 </div>
 {% endblock %}
