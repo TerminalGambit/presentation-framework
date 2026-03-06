@@ -1,0 +1,5 @@
+{% macro map_block(item, block_id) %}
+<div class="pf-map-block {% if item.fragment %}pf-fragment{% endif %}">
+  <div id="pf-map-{{ block_id }}" class="pf-map-container" style="width:100%;height:{{ item.height | default('300px') }};"></div>
+</div>
+{% endmacro %}

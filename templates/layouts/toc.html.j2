@@ -1,0 +1,19 @@
+{% extends "base.html.j2" %}
+
+{% block content %}
+{% include "partials/header.html.j2" %}
+
+<div class="pf-toc-layout">
+  {% if slide.data.items %}
+  <ol class="pf-toc-list">
+    {% for item in slide.data.items %}
+    <li class="pf-toc-item">
+      {% if item.number %}<span class="pf-toc-number">{{ item.number }}</span>{% endif %}
+      <span class="pf-toc-label">{{ item.label }}</span>
+      {% if item.description %}<span class="pf-toc-desc">{{ item.description }}</span>{% endif %}
+    </li>
+    {% endfor %}
+  </ol>
+  {% endif %}
+</div>
+{% endblock %}

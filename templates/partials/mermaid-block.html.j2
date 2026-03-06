@@ -1,0 +1,5 @@
+{% macro mermaid_block(item) %}
+<div class="pf-mermaid-block {% if item.fragment %}pf-fragment{% endif %}">
+  <div class="mermaid">{{ item.diagram }}</div>
+</div>
+{% endmacro %}

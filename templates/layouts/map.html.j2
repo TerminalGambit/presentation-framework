@@ -1,0 +1,10 @@
+{% extends "base.html.j2" %}
+{% from "partials/map-block.html.j2" import map_block %}
+
+{% block content %}
+{% include "partials/header.html.j2" %}
+
+<div class="pf-map-layout">
+  {{ map_block(slide.data, "main") }}
+</div>
+{% endblock %}

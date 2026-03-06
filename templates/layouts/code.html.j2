@@ -1,0 +1,11 @@
+{% extends "base.html.j2" %}
+{% from "partials/header.html.j2" import header with context %}
+{% from "partials/code-block.html.j2" import code_block %}
+
+{% block content %}
+{% include "partials/header.html.j2" %}
+
+<div class="pf-code-layout">
+  {{ code_block(slide.data) }}
+</div>
+{% endblock %}

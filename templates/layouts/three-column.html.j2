@@ -3,6 +3,10 @@
 {% from "partials/stat-box.html.j2" import stat_grid %}
 {% from "partials/bar-chart.html.j2" import data_table, val_bars, section_title %}
 {% from "partials/plotly-chart.html.j2" import plotly_chart %}
+{% from "partials/code-block.html.j2" import code_block %}
+{% from "partials/mermaid-block.html.j2" import mermaid_block %}
+{% from "partials/video-block.html.j2" import video_block %}
+{% from "partials/map-block.html.j2" import map_block %}
 
 {% block content %}
 {% include "partials/header.html.j2" %}
@@ -36,6 +40,14 @@
       {{ item.content }}
     {% elif item.type == "plotly-chart" %}
       {{ plotly_chart(item, "col" ~ loop.index0 ~ "-" ~ loop.index) }}
+    {% elif item.type == "code" %}
+      {{ code_block(item) }}
+    {% elif item.type == "mermaid" %}
+      {{ mermaid_block(item) }}
+    {% elif item.type == "video" %}
+      {{ video_block(item) }}
+    {% elif item.type == "map" %}
+      {{ map_block(item, "col" ~ loop.index0 ~ "-" ~ loop.index) }}
     {% endif %}
     {% endfor %}
   </div>

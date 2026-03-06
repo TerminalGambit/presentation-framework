@@ -1,0 +1,7 @@
+{% macro video_block(item) %}
+<div class="pf-video-block {% if item.fragment %}pf-fragment{% endif %}">
+  <div class="pf-video-embed" data-video-url="{{ item.url }}">
+    <div class="pf-video-placeholder">Video: {{ item.url }}</div>
+  </div>
+</div>
+{% endmacro %}

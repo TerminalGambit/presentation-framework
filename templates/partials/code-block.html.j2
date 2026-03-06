@@ -1,0 +1,6 @@
+{% macro code_block(item) %}
+<div class="pf-code-block {% if item.fragment %}pf-fragment{% endif %}">
+  <pre><code class="language-{{ item.language | default('auto') }}" {% if item.line_numbers %}data-line-numbers{% endif %}>{{ item.code | e }}</code></pre>
+  {% if item.caption %}<div class="pf-code-caption">{{ item.caption }}</div>{% endif %}
+</div>
+{% endmacro %}

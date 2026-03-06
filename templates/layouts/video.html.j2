@@ -1,0 +1,10 @@
+{% extends "base.html.j2" %}
+{% from "partials/video-block.html.j2" import video_block %}
+
+{% block content %}
+{% include "partials/header.html.j2" %}
+
+<div class="pf-video-layout">
+  {{ video_block(slide.data) }}
+</div>
+{% endblock %}
