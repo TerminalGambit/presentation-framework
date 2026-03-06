@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.2
 milestone_name: milestone
 status: completed
-stopped_at: Completed 03-02-PLAN.md
-last_updated: "2026-03-06T20:25:30.813Z"
+stopped_at: Completed 03-03-PLAN.md
+last_updated: "2026-03-06T20:31:56.929Z"
 last_activity: 2026-03-06 — Phase 01 complete, all verification items passed
 progress:
   total_phases: 4
   completed_phases: 2
   total_plans: 17
-  completed_plans: 15
+  completed_plans: 16
   percent: 100
 ---
 
@@ -63,6 +63,7 @@ Progress: [██████████] 100% (Phase 1)
 | Phase 03-llm-integration P05 | 2 | 2 tasks | 4 files |
 | Phase 03-llm-integration P01 | 3 | 2 tasks | 2 files |
 | Phase 03-llm-integration P02 | 2 | 2 tasks | 2 files |
+| Phase 03-llm-integration PP03 | 4 | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -115,6 +116,9 @@ Recent decisions affecting current work:
 - [Phase 03-llm-integration]: Discriminated union on 'type' literal field for ContentBlock — clean oneOf+discriminator in JSON Schema for instructor/OpenAI structured output
 - [Phase 03-llm-integration]: data-table split operates at the section level — each section is a split unit, overflow triggers when a section individually exceeds USABLE_HEIGHT
 - [Phase 03-llm-integration]: Single oversized block (first block exceeds USABLE_HEIGHT) passes through unchanged to avoid producing empty slides in split_slide()
+- [Phase 03-llm-integration]: Sanitize yaml_config by parse-sanitize-reserialize (not string-level) — avoids partial YAML corruption, correctly targets only user-visible string values inside slide data dicts
+- [Phase 03-llm-integration]: bleach.clean() with ALLOWED_TAGS chosen over full HTML stripping — preserves formatting markup (b, em, code) while blocking XSS vectors; regex fallback for environments without bleach
+- [Phase 03-llm-integration]: generate_presentation lazy-imports instructor inside function body — graceful pf[llm] error message without crashing the MCP server on import
 
 ### Pending Todos
 
@@ -127,6 +131,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-06T20:25:30.810Z
-Stopped at: Completed 03-02-PLAN.md
+Last session: 2026-03-06T20:31:56.927Z
+Stopped at: Completed 03-03-PLAN.md
 Resume file: None
