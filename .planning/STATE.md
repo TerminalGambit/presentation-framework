@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.2
 milestone_name: milestone
 status: completed
-stopped_at: Completed 03-05-PLAN.md
-last_updated: "2026-03-06T20:25:06.534Z"
+stopped_at: Completed 03-01-PLAN.md
+last_updated: "2026-03-06T20:25:17.194Z"
 last_activity: 2026-03-06 — Phase 01 complete, all verification items passed
 progress:
   total_phases: 4
   completed_phases: 2
   total_plans: 17
-  completed_plans: 14
+  completed_plans: 15
   percent: 100
 ---
 
@@ -110,6 +110,8 @@ Recent decisions affecting current work:
 - [Phase 03-llm-integration]: Regex over BeautifulSoup for HTML accessibility scanning — avoids adding a dependency
 - [Phase 03-llm-integration]: High-contrast toggle uses classList.toggle('pf-high-contrast') on slide-container — no DOM overlay required
 - [Phase 03-llm-integration]: generate_alt_text() is filename-based only in Phase 3 — vision-based alt text deferred to a later phase
+- [Phase 03-llm-integration]: Field(max_length=N) on list fields generates maxItems in JSON Schema — Pydantic v2 idiomatic, avoids deprecated conlist()
+- [Phase 03-llm-integration]: Discriminated union on 'type' literal field for ContentBlock — clean oneOf+discriminator in JSON Schema for instructor/OpenAI structured output
 
 ### Pending Todos
 
@@ -122,6 +124,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-06T20:25:03.515Z
-Stopped at: Completed 03-05-PLAN.md
+Last session: 2026-03-06T20:25:17.191Z
+Stopped at: Completed 03-01-PLAN.md
 Resume file: None

@@ -35,7 +35,7 @@ Requirements for v1.0 release. Each maps to roadmap phases.
 
 ### LLM Integration
 
-- [ ] **LLM-01**: Each layout has a documented JSON Schema with constraints (maxItems, maxLength) for LLM structured output
+- [x] **LLM-01**: Each layout has a documented JSON Schema with constraints (maxItems, maxLength) for LLM structured output
 - [ ] **LLM-02**: MCP server provides `generate_presentation(prompt, style, length)` tool that outputs valid YAML+JSON
 - [ ] **LLM-03**: MCP server provides slide suggestion tool (given partial deck, suggests next slides based on content flow)
 - [ ] **LLM-04**: Multi-agent workflow (researcher → data → layout → review) is documented and tested
@@ -108,7 +108,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | PLUG-04 | Phase 2 | Complete |
 | PLUG-05 | Phase 2 | Complete |
 | PLUG-06 | Phase 2 | Complete |
-| LLM-01 | Phase 3 | Pending |
+| LLM-01 | Phase 3 | Complete |
 | LLM-02 | Phase 3 | Pending |
 | LLM-03 | Phase 3 | Pending |
 | LLM-04 | Phase 3 | Pending |
