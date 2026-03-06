@@ -104,7 +104,7 @@
   {% block head_extra %}{% endblock %}
 </head>
 <body>
-  <div class="slide-container{% block container_class %}{% endblock %}" data-density="{{ density | default('normal') }}" style="{% if density == 'high' %}--pf-body-size: 12px; --pf-card-pad: 14px; --pf-header-size: 36px; --pf-gap: 18px;{% else %}--pf-body-size: 14px; --pf-card-pad: 20px; --pf-header-size: 42px; --pf-gap: 25px;{% endif %}{% if slide.style %} {{ slide.style }}{% endif %}">
+  <div class="slide-container{% block container_class %}{% endblock %}" data-density="{{ density | default('normal') }}" role="region" aria-label="{{ slide_title | default('Slide') }}" tabindex="0" style="{% if density == 'high' %}--pf-body-size: 12px; --pf-card-pad: 14px; --pf-header-size: 36px; --pf-gap: 18px;{% else %}--pf-body-size: 14px; --pf-card-pad: 20px; --pf-header-size: 42px; --pf-gap: 25px;{% endif %}{% if slide.style %} {{ slide.style }}{% endif %}">
     <div class="bg-pattern"></div>
     {% block decorations %}{% endblock %}
     {% block content %}{% endblock %}
@@ -113,6 +113,48 @@
     <aside class="notes">{{ slide.notes }}</aside>
     {% endif %}
   </div>
+  <button class="pf-hc-toggle" aria-label="Toggle high-contrast mode" title="Toggle high-contrast mode (H)">
+    <i class="fa-solid fa-circle-half-stroke"></i>
+  </button>
+  <style>
+  .pf-hc-toggle {
+    position: fixed;
+    bottom: 10px;
+    right: 10px;
+    z-index: 9999;
+    background: rgba(128, 128, 128, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 50%;
+    width: 32px;
+    height: 32px;
+    cursor: pointer;
+    color: inherit;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0.4;
+    transition: opacity 0.2s;
+  }
+  .pf-hc-toggle:hover { opacity: 1; }
+  </style>
+  <script>
+  (function() {
+    var container = document.querySelector('.slide-container');
+    var btn = document.querySelector('.pf-hc-toggle');
+    function toggleHC() {
+      if (container) container.classList.toggle('pf-high-contrast');
+    }
+    if (btn) btn.addEventListener('click', toggleHC);
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'h' || e.key === 'H') {
+        // Don't trigger if user is typing in an input/textarea
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+        toggleHC();
+      }
+    });
+  })();
+  </script>
   <script>
   {% if not features.mermaid %}
   document.addEventListener('DOMContentLoaded', () => {
