@@ -12,6 +12,9 @@ body {
   overflow: hidden;
 }
 
+/* Speaker notes — hidden on slides, read by navigator JS */
+aside.notes { display: none; }
+
 /* ── Slide Container ────────────────────────────────────────── */
 .slide-container {
   width: var(--pf-slide-width);
@@ -178,7 +181,28 @@ body {
   bottom: 50px;
   font-family: var(--pf-font-subheading);
   font-size: 14px;
-  color: rgba(255, 255, 255, 0.6);
+  color: var(--pf-text-muted);
   letter-spacing: 1px;
   z-index: 10;
+}
+
+/* -- High-Contrast Mode -------------------------------------------------- */
+/* Toggle via: press 'H' key or click the contrast button in slide corner  */
+.slide-container.pf-high-contrast {
+  --pf-primary: #000000;
+  --pf-primary-dark: #000000;
+  --pf-accent: #FFD700;
+  --pf-white: #FFFFFF;
+  --pf-text: #FFFFFF;
+  --pf-text-light: #FFFFFF;
+  --pf-text-muted: #E0E0E0;
+  --pf-text-dim: #CCCCCC;
+  --pf-card-bg: rgba(255, 255, 255, 0.1);
+  --pf-card-border: rgba(255, 215, 0, 0.5);
+  --pf-shadow-card: none;
+  background-color: #000000 !important;
+}
+
+.slide-container.pf-high-contrast * {
+  text-shadow: none !important;
 }
