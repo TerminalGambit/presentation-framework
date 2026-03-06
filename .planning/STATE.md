@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.2
 milestone_name: milestone
 status: executing
-stopped_at: "Completed 01-01-PLAN.md"
-last_updated: "2026-03-06T08:54:47Z"
-last_activity: 2026-03-06 — Completed plan 01-01 (foundation infrastructure for rich media)
+stopped_at: Completed 01-05-PLAN.md
+last_updated: "2026-03-06T09:01:30Z"
+last_activity: 2026-03-06 — Completed plan 01-05 (TOC layout and per-slide CSS tests)
 progress:
   total_phases: 4
   completed_phases: 0
   total_plans: 6
-  completed_plans: 1
-  percent: 17
+  completed_plans: 5
+  percent: 83
 ---
 
 # Project State
@@ -50,6 +50,8 @@ Progress: [█░░░░░░░░░] 17%
 - Trend: —
 
 *Updated after each plan completion*
+| Phase 01-rich-media-export-polish P03 | 2 | 2 tasks | 6 files |
+| Phase 01-rich-media-export-polish P02 | 15 | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -65,6 +67,10 @@ Recent decisions affecting current work:
 - [01-01]: Stub layout templates created for all 5 new layouts so render_slide() doesn't fail with TemplateNotFound — Wave 2 plans flesh out details
 - [01-01]: CDN auto-detection via _scan_features() scans layouts AND block types in left/right/columns for comprehensive detection
 - [01-01]: data-pf-ready sentinel: mermaid sets it after mermaid.run() async completion; all other content sets it synchronously
+- [Phase 01-rich-media-export-polish]: [01-03]: Fragment state lives in navigator (present.html.j2), not in slide iframes — navigator drives iframe contentDocument directly via querySelectorAll
+- [Phase 01-rich-media-export-polish]: [01-03]: Backward nav pre-reveals all fragments on target slide so left arrow can reverse them sequentially
+- [Phase 01-02]: Full-slide layout uses direct pre/code rendering (not delegated to partial) — consistent with chart.html.j2 pattern
+- [Phase 01-02]: Language badge only shown when language is explicitly set and not 'auto' — reduces visual noise on auto-detected code
 
 ### Pending Todos
 
@@ -77,6 +83,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-06T08:54:47Z
-Stopped at: Completed 01-01-PLAN.md
-Resume file: .planning/phases/01-rich-media-export-polish/01-02-PLAN.md
+Last session: 2026-03-06T09:02:11.151Z
+Stopped at: Completed 01-02-PLAN.md
+Resume file: None

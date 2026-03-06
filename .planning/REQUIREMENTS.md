@@ -9,7 +9,7 @@ Requirements for v1.0 release. Each maps to roadmap phases.
 
 ### Rich Media
 
-- [ ] **MEDIA-01**: User can add code blocks with syntax highlighting (language-aware coloring via Highlight.js or Prism.js)
+- [x] **MEDIA-01**: User can add code blocks with syntax highlighting (language-aware coloring via Highlight.js or Prism.js)
 - [ ] **MEDIA-02**: User can use slide fragments for progressive reveal (bullet-by-bullet, element-by-element builds)
 - [ ] **MEDIA-03**: User can embed Mermaid.js diagrams (flowcharts, sequence diagrams, org charts) in slides
 - [ ] **MEDIA-04**: User can embed video (YouTube/Vimeo/MP4) with thumbnail preview in HTML and static frame in exports
@@ -91,7 +91,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| MEDIA-01 | Phase 1 | Pending |
+| MEDIA-01 | Phase 1 | Complete |
 | MEDIA-02 | Phase 1 | Pending |
 | MEDIA-03 | Phase 1 | Pending |
 | MEDIA-04 | Phase 1 | Pending |
