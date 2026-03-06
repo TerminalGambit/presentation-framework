@@ -39,8 +39,7 @@
         "required": ["layout", "data"],
         "properties": {
           "layout": {
-            "type": "string",
-            "enum": ["title", "two-column", "three-column", "data-table", "stat-grid", "closing", "image", "section", "quote", "timeline", "chart", "code", "mermaid", "video", "map", "toc"]
+            "type": "string"
           },
           "data": {"type": "object"},
           "notes": {"type": "string"},

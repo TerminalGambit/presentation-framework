@@ -11,10 +11,11 @@ from pathlib import Path
 import click
 import jsonschema
 import yaml
-from jinja2 import Environment, FileSystemLoader, TemplateNotFound
+from jinja2 import ChoiceLoader, Environment, FileSystemLoader, TemplateNotFound
 
 from pf.analyzer import LayoutAnalyzer
 from pf.contrast import check_contrast
+from pf.registry import PluginRegistry
 
 
 def _hex_to_rgb(hex_color: str) -> tuple[int, int, int]:
@@ -49,13 +50,20 @@ THEME_DIR = PACKAGE_ROOT / "theme"
 class PresentationBuilder:
     """Build HTML presentations from YAML config + JSON metrics."""
 
-    def __init__(self, config_path: str = "presentation.yaml", metrics_path: str = "metrics.json"):
+    def __init__(
+        self,
+        config_path: str = "presentation.yaml",
+        metrics_path: str = "metrics.json",
+        registry: PluginRegistry | None = None,
+    ):
         self.config_path = Path(config_path)
         self.metrics_path = Path(metrics_path)
         self.config: dict = {}
         self.metrics: dict = {}
+        self._registry = registry or PluginRegistry()
+        self._registry.discover(project_dir=self.config_path.parent)
         self.env = Environment(
-            loader=FileSystemLoader(str(TEMPLATES_DIR)),
+            loader=self._registry.get_template_loader(TEMPLATES_DIR),
             autoescape=False,  # HTML output — we control the templates
         )
 
@@ -256,9 +264,12 @@ class PresentationBuilder:
         try:
             template = self.env.get_template(template_name)
         except TemplateNotFound:
-            valid = ", ".join(sorted(
+            core_names = sorted(
                 p.stem for p in (TEMPLATES_DIR / "layouts").glob("*.html.j2")
-            ))
+            )
+            plugin_names = self._registry.layout_names
+            all_names = sorted(set(core_names) | set(plugin_names))
+            valid = ", ".join(all_names)
             raise click.ClickException(
                 f"slide {index + 1} uses unknown layout '{layout}'. "
                 f"Valid layouts: {valid}"

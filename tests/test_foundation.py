@@ -6,11 +6,18 @@ from pf.builder import PresentationBuilder, _is_light
 
 # --- Schema tests ---
 
-def test_schema_includes_new_layouts():
+def test_schema_layout_accepts_any_string():
+    """Schema accepts any string layout name (enum removed to support plugins).
+    Core layout names are validated at render time, not schema time.
+    """
     schema = json.load(open(Path(__file__).parent.parent / "pf" / "schema.json"))
-    layouts = schema["properties"]["slides"]["items"]["properties"]["layout"]["enum"]
-    for name in ("code", "mermaid", "video", "map", "toc"):
-        assert name in layouts, f"{name} missing from schema layout enum"
+    layout_def = schema["properties"]["slides"]["items"]["properties"]["layout"]
+    # Enum is removed — only a type constraint remains
+    assert layout_def == {"type": "string"}, (
+        f"layout schema should be {{\"type\": \"string\"}}, got: {layout_def}"
+    )
+    # Verify no enum key exists (plugins would be rejected otherwise)
+    assert "enum" not in layout_def
 
 def test_schema_allows_style_key():
     schema = json.load(open(Path(__file__).parent.parent / "pf" / "schema.json"))

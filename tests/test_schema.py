@@ -11,14 +11,15 @@ class TestSchemaValidation:
         assert len(errors) > 0
         assert any("slides" in e for e in errors)
 
-    def test_invalid_layout_name(self):
+    def test_any_layout_name_accepted(self):
+        """Schema accepts any string layout name (enum removed to support plugins)."""
         b = PresentationBuilder()
         b.config = {
             "meta": {"title": "Test"},
-            "slides": [{"layout": "nonexistent", "data": {}}],
+            "slides": [{"layout": "custom-plugin-layout", "data": {}}],
         }
         errors = b.validate_config()
-        assert len(errors) > 0
+        assert errors == []
 
     def test_valid_config_no_errors(self):
         b = PresentationBuilder()
