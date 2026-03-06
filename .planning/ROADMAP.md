@@ -29,15 +29,15 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. User can define a Mermaid.js diagram in YAML and it renders correctly in both the HTML viewer and PDF/PPTX exports (no raw `<pre>` text in exports)
   4. User can embed a YouTube, Vimeo, or MP4 video with a thumbnail preview in HTML and a static frame in PDF/PPTX exports
   5. `pf pptx` produces fully editable native shapes (text, tables, bars) for all 11 layouts, not image screenshots
-**Plans**: TBD
+**Plans**: 6 plans
 
 Plans:
-- [ ] 01-01: Code syntax highlighting (Highlight.js CDN integration, `code` block type for all layouts)
-- [ ] 01-02: Slide fragments / progressive builds (fragment JS state machine, YAML `fragment:` key)
-- [ ] 01-03: Mermaid.js diagrams + async export sentinel (`data-pf-ready` fix for Playwright)
-- [ ] 01-04: Video embed + Google Maps embed (YouTube/Vimeo/MP4 iframe, Leaflet/static Maps)
-- [ ] 01-05: Custom per-slide CSS (`style:` key), auto-generated table of contents slide
-- [ ] 01-06: Export pipeline completion (all-layout native PPTX, PDF speaker notes, shared browser context)
+- [ ] 01-01-PLAN.md — Foundation infrastructure (schema, CDN auto-detect, sentinel, per-slide CSS, block dispatch stubs)
+- [ ] 01-02-PLAN.md — Code syntax highlighting (Highlight.js, code layout + block type)
+- [ ] 01-03-PLAN.md — Fragment reveal system (CSS + navigator JS state machine)
+- [ ] 01-04-PLAN.md — Mermaid diagrams, video embeds, interactive maps (3 layout + block types)
+- [ ] 01-05-PLAN.md — Auto-generated TOC slide + per-slide CSS tests
+- [ ] 01-06-PLAN.md — Export pipeline (sentinel waiting, native PPTX expansion, PDF notes, shared browser context)
 
 ### Phase 2: Plugin Ecosystem
 **Goal**: Developers can create, distribute, and install custom layout, theme, and data source plugins without modifying the core engine
@@ -104,7 +104,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Rich Media + Export Polish | 0/6 | Not started | - |
+| 1. Rich Media + Export Polish | 0/6 | Planning complete | - |
 | 2. Plugin Ecosystem | 0/5 | Not started | - |
 | 3. LLM Integration | 0/5 | Not started | - |
 | 4. Hosted Platform | 0/6 | Not started | - |
