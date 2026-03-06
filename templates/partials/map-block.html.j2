@@ -1,5 +1,17 @@
 {% macro map_block(item, block_id) %}
 <div class="pf-map-block {% if item.fragment %}pf-fragment{% endif %}">
-  <div id="pf-map-{{ block_id }}" class="pf-map-container" style="width:100%;height:{{ item.height | default('300px') }};"></div>
+  <div id="pf-map-{{ block_id }}" class="pf-map-container" style="width:100%;height:{{ item.height | default('250px') }};"></div>
 </div>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  var map = L.map('pf-map-{{ block_id }}').setView([{{ item.lat | default(0) }}, {{ item.lng | default(0) }}], {{ item.zoom | default(12) }});
+  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; OSM',
+    maxZoom: 19
+  }).addTo(map);
+  {% for marker in item.markers | default([]) %}
+  L.marker([{{ marker.lat }}, {{ marker.lng }}]).addTo(map){% if marker.label %}.bindPopup('{{ marker.label | e }}'){% endif %};
+  {% endfor %}
+});
+</script>
 {% endmacro %}

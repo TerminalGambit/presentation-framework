@@ -1,10 +1,25 @@
 {% extends "base.html.j2" %}
-{% from "partials/map-block.html.j2" import map_block %}
 
 {% block content %}
 {% include "partials/header.html.j2" %}
 
-<div class="pf-map-layout">
-  {{ map_block(slide.data, "main") }}
+<div class="pf-map-fullslide">
+  <div id="pf-map-main" class="pf-map-container"></div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  var map = L.map('pf-map-main').setView([{{ slide.data.lat | default(0) }}, {{ slide.data.lng | default(0) }}], {{ slide.data.zoom | default(12) }});
+  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; OpenStreetMap contributors',
+    maxZoom: 19
+  }).addTo(map);
+  {% for marker in slide.data.markers | default([]) %}
+  L.marker([{{ marker.lat }}, {{ marker.lng }}]).addTo(map){% if marker.label %}.bindPopup('{{ marker.label | e }}'){% endif %};
+  {% endfor %}
+  map.whenReady(function() {
+    setTimeout(function() { document.body.setAttribute('data-pf-ready', '1'); }, 800);
+  });
+});
+</script>
 {% endblock %}

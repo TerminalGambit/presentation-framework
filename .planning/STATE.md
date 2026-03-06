@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-03-05)
 ## Current Position
 
 Phase: 1 of 4 (Rich Media + Export Polish)
-Plan: 1 of 6 in current phase
+Plan: 5 of 6 in current phase
 Status: Executing
-Last activity: 2026-03-06 — Completed plan 01-01 (foundation infrastructure for rich media)
+Last activity: 2026-03-06 — Completed plan 01-05 (TOC layout and per-slide CSS tests)
 
-Progress: [█░░░░░░░░░] 17%
+Progress: [████████░░] 83%
 
 ## Performance Metrics
 
@@ -50,6 +50,7 @@ Progress: [█░░░░░░░░░] 17%
 - Trend: —
 
 *Updated after each plan completion*
+| Phase 01-rich-media-export-polish P05 | 3 | 2 tasks | 5 files |
 | Phase 01-rich-media-export-polish P03 | 2 | 2 tasks | 6 files |
 | Phase 01-rich-media-export-polish P02 | 15 | 2 tasks | 4 files |
 
@@ -71,6 +72,8 @@ Recent decisions affecting current work:
 - [Phase 01-rich-media-export-polish]: [01-03]: Backward nav pre-reveals all fragments on target slide so left arrow can reverse them sequentially
 - [Phase 01-02]: Full-slide layout uses direct pre/code rendering (not delegated to partial) — consistent with chart.html.j2 pattern
 - [Phase 01-02]: Language badge only shown when language is explicitly set and not 'auto' — reduces visual noise on auto-detected code
+- [01-05]: Use slide.data.get('items') not slide.data.items in Jinja2 — .items resolves to Python dict builtin method causing TypeError
+- [01-05]: TOC preprocessing injects items into toc slides before render loop; user-provided data.items is overwritten by auto-generated entries
 
 ### Pending Todos
 
@@ -83,6 +86,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-06T09:02:11.151Z
-Stopped at: Completed 01-02-PLAN.md
-Resume file: None
+Last session: 2026-03-06T09:01:30Z
+Stopped at: Completed 01-05-PLAN.md
+Resume file: .planning/phases/01-rich-media-export-polish/01-06-PLAN.md

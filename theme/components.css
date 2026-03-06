@@ -1240,3 +1240,24 @@ code[data-line-numbers] .hljs-ln-line {
 .pf-video-inline {
   max-width: 100%;
 }
+
+/* ── Maps (Leaflet) ──────────────────────────────────────────── */
+.pf-map-fullslide {
+  padding: 0 var(--pf-gap, 25px);
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.pf-map-fullslide .pf-map-container {
+  width: 100%;
+  height: 520px;
+  border-radius: var(--pf-radius-lg, 8px);
+  overflow: hidden;
+}
+
+.pf-map-block .pf-map-container {
+  border-radius: var(--pf-radius-lg, 8px);
+  overflow: hidden;
+}
