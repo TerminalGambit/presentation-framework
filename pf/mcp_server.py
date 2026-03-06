@@ -414,5 +414,141 @@ def init_presentation(name: str, directory: str = ".") -> dict:
         return {"error": str(e)}
 
 
+GENERATE_SYSTEM_PROMPT = """You are an expert presentation designer.
+Generate a professional slide deck based on the user's prompt.
+
+Available layouts (use a variety appropriate for the content):
+- title: Opening slide with hero title, subtitle, tagline, feature icons, footer
+- two-column: Main workhorse; typed content blocks (card, solution-box, stat-grid, table, dist-bars, val-bars, insight) in left/right columns
+- three-column: Three-column comparisons; use columns list (not left/right)
+- data-table: Benchmark/comparison tables with sections; use sections list
+- stat-grid: KPI dashboard; use columns list (two columns of content blocks)
+- chart: Interactive Plotly chart (bar, line, pie, scatter); requires labels and values lists
+- section: Section divider between major topics; minimal — title, subtitle, optional number
+- quote: Centered blockquote with author attribution
+- image: Full-bleed or split image; requires image URL
+- timeline: Horizontal step visualization (2–6 steps); each step has icon, title, description
+- closing: Thank you / Q&A slide with contact pills
+
+Style guidance:
+- modern: clean, data-driven, minimal decoration
+- minimal: whitespace-heavy, single focal point per slide
+- bold: high contrast, large numbers, strong headlines
+
+Length guidance (approximate slide counts, always include title + closing):
+- short: ~5 slides (title + 3 content + closing)
+- medium: ~8 slides (title + 6 content + closing)
+- long: ~12 slides (title + 10 content + closing)
+
+Rules:
+1. ALWAYS start with a title slide and end with a closing slide.
+2. Put ALL numerical data, lists, and benchmarks in the metrics dict — NEVER hardcode in yaml_config.
+   Reference them in yaml_config via {{ metrics.key.subkey }} interpolation.
+3. Choose diverse layouts — avoid using the same layout consecutively.
+4. Keep slide content concise — each slide conveys ONE key idea.
+5. The yaml_config must be valid YAML with a 'meta', 'theme', and 'slides' key.
+6. The theme should use tasteful hex colors. Default: primary "#1E293B", accent "#6366F1".
+"""
+
+
+@mcp.tool()
+def generate_presentation(
+    prompt: str,
+    style: str = "modern",
+    length: str = "medium",
+    provider: str = "anthropic/claude-sonnet-4-20250514",
+) -> dict:
+    """Generate a complete presentation from a natural language prompt.
+
+    Uses an LLM (via the instructor library) to produce structured YAML
+    config and metrics dict. Requires ``pip install 'pf[llm]'``.
+
+    Args:
+        prompt: Description of the presentation topic and content.
+        style: Visual style — "modern", "minimal", or "bold".
+        length: Approximate deck length — "short" (~5 slides),
+                "medium" (~8 slides), or "long" (~12 slides).
+        provider: LiteLLM-style provider string passed to
+                  instructor.from_provider().
+
+    Returns:
+        dict with "yaml_config" (sanitized YAML string) and "metrics"
+        (sanitized metrics dict), OR {"error": "..."} on failure.
+    """
+    try:
+        import instructor  # type: ignore[import]
+    except ImportError:
+        return {"error": "LLM features require: pip install 'pf[llm]'"}
+
+    import yaml
+
+    from pf.llm_schemas import PresentationOutput
+    from pf.sanitize import sanitize_slide_data
+
+    user_message = (
+        f"Create a {style} {length} presentation about:\n\n{prompt}\n\n"
+        f"Return valid YAML for yaml_config and a flat metrics dict."
+    )
+
+    try:
+        client = instructor.from_provider(provider, mode=instructor.Mode.TOOLS)
+        result: PresentationOutput = client.create(
+            response_model=PresentationOutput,
+            max_tokens=4096,
+            messages=[
+                {"role": "system", "content": GENERATE_SYSTEM_PROMPT},
+                {"role": "user", "content": user_message},
+            ],
+        )
+    except Exception as e:
+        return {"error": str(e)}
+
+    # Sanitize yaml_config: parse → sanitize per-slide data → re-serialize
+    try:
+        config = yaml.safe_load(result.yaml_config)
+        if isinstance(config, dict):
+            slides = config.get("slides", [])
+            for slide in slides:
+                if isinstance(slide, dict) and "data" in slide:
+                    slide["data"] = sanitize_slide_data(slide["data"])
+            sanitized_yaml = yaml.dump(config, default_flow_style=False, sort_keys=False)
+        else:
+            # Unexpected structure — return raw yaml (safe fallback)
+            sanitized_yaml = result.yaml_config
+    except Exception:
+        sanitized_yaml = result.yaml_config
+
+    # Sanitize metrics dict directly
+    raw_metrics = result.metrics if isinstance(result.metrics, dict) else {}
+    sanitized_metrics = sanitize_slide_data(raw_metrics)
+
+    return {"yaml_config": sanitized_yaml, "metrics": sanitized_metrics}
+
+
+@mcp.tool()
+def get_layout_schema(layout_name: str) -> dict:
+    """Get the JSON Schema with constraints for a specific layout.
+
+    Returns the Pydantic-generated JSON Schema for the named layout model,
+    including maxItems, maxLength, and type constraints derived from
+    LayoutAnalyzer size estimates. Useful for LLM structured-output
+    prompting and validation.
+
+    Args:
+        layout_name: One of the 11 built-in layout names (e.g. "timeline",
+                     "two-column", "data-table").
+
+    Returns:
+        JSON Schema dict with "properties", "required", etc., or
+        {"error": "..."} for unknown layout names.
+    """
+    from pf.llm_schemas import get_layout_schema as _get_schema
+
+    model = _get_schema(layout_name)
+    if model is None:
+        return {"error": f"Unknown layout: {layout_name}"}
+    return model.model_json_schema()
+
+
 if __name__ == "__main__":
     mcp.run()

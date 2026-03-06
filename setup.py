@@ -20,6 +20,7 @@ setup(
         "pdf": ["playwright>=1.40"],
         "mcp": ["mcp[cli]>=1.6.0"],
         "pptx": ["python-pptx>=1.0"],
+        "llm": ["instructor[anthropic]>=1.13.0", "bleach>=6.0"],
     },
     entry_points={
         "console_scripts": [
