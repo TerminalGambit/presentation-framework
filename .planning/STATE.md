@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.2
 milestone_name: milestone
 status: executing
-stopped_at: Completed 01-04-PLAN.md
-last_updated: "2026-03-06T09:04:10Z"
+stopped_at: Completed 01-06-PLAN.md
+last_updated: "2026-03-06T09:12:27.784Z"
 last_activity: 2026-03-06 — Completed plan 01-04 (Mermaid, video, and map rich media layouts)
 progress:
   total_phases: 4
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 6
-  completed_plans: 5
+  completed_plans: 6
   percent: 83
 ---
 
@@ -53,6 +53,7 @@ Progress: [████████░░] 83%
 | Phase 01-rich-media-export-polish P05 | 3 | 2 tasks | 5 files |
 | Phase 01-rich-media-export-polish P03 | 2 | 2 tasks | 6 files |
 | Phase 01-rich-media-export-polish P02 | 15 | 2 tasks | 4 files |
+| Phase 01-rich-media-export-polish P06 | 4 | 3 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -77,6 +78,10 @@ Recent decisions affecting current work:
 - [01-04]: Video URL detection done in builder._enrich_video_data() not Jinja2 — avoids custom regex filter, cleanly testable
 - [01-04]: Map uses OpenStreetMap tiles (no API key required); data-pf-ready set after whenReady() + 800ms to ensure tile visibility for PDF export
 - [01-04]: Mermaid layout uses direct .mermaid div (not macro wrapper) — simpler, CDN init in base handles the rest
+- [Phase 01-rich-media-export-polish]: Sentinel wait uses try/except pass for graceful fallback on slides without data-pf-ready
+- [Phase 01-rich-media-export-polish]: Shared browser context in PPTX native export uses finally block for guaranteed cleanup
+- [Phase 01-rich-media-export-polish]: PDF speaker notes interleaved immediately after each slide (not appended at end)
+- [Phase 01-rich-media-export-polish]: notes-page.html.j2: _render_notes_page() uses inline f-string, not Jinja2 builder, to keep pdf.py dependency-free
 
 ### Pending Todos
 
@@ -89,6 +94,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-06T09:04:10Z
-Stopped at: Completed 01-04-PLAN.md
-Resume file: .planning/phases/01-rich-media-export-polish/01-06-PLAN.md
+Last session: 2026-03-06T09:12:27.782Z
+Stopped at: Completed 01-06-PLAN.md
+Resume file: None

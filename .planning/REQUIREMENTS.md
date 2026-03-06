@@ -19,10 +19,10 @@ Requirements for v1.0 release. Each maps to roadmap phases.
 
 ### Export
 
-- [ ] **EXPORT-01**: PDF/PPTX export correctly renders async JS content (Mermaid, Prism) via `data-pf-ready` sentinel
-- [ ] **EXPORT-02**: PPTX native renderer supports all 11 layouts (not just title/section/quote/closing)
-- [ ] **EXPORT-03**: PDF export includes speaker notes as annotations or separate notes pages
-- [ ] **EXPORT-04**: PPTX native export reuses single browser context instead of spawning per-slide
+- [x] **EXPORT-01**: PDF/PPTX export correctly renders async JS content (Mermaid, Prism) via `data-pf-ready` sentinel
+- [x] **EXPORT-02**: PPTX native renderer supports all 11 layouts (not just title/section/quote/closing)
+- [x] **EXPORT-03**: PDF export includes speaker notes as annotations or separate notes pages
+- [x] **EXPORT-04**: PPTX native export reuses single browser context instead of spawning per-slide
 
 ### Plugin Ecosystem
 
@@ -98,10 +98,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | MEDIA-05 | Phase 1 | Complete |
 | MEDIA-06 | Phase 1 | Complete |
 | MEDIA-07 | Phase 1 | Complete |
-| EXPORT-01 | Phase 1 | Pending |
-| EXPORT-02 | Phase 1 | Pending |
-| EXPORT-03 | Phase 1 | Pending |
-| EXPORT-04 | Phase 1 | Pending |
+| EXPORT-01 | Phase 1 | Complete |
+| EXPORT-02 | Phase 1 | Complete |
+| EXPORT-03 | Phase 1 | Complete |
+| EXPORT-04 | Phase 1 | Complete |
 | PLUG-01 | Phase 2 | Pending |
 | PLUG-02 | Phase 2 | Pending |
 | PLUG-03 | Phase 2 | Pending |

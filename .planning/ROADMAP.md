@@ -12,7 +12,7 @@ Starting from a solid v0.2.0 baseline (11 layouts, MCP server, PDF/PPTX export),
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: Rich Media + Export Polish** - Close developer credibility gaps (code highlighting, fragments, Mermaid, video, maps) and finish the export pipeline (all-layout PPTX, PDF notes, async sentinel, browser context fix)
+- [x] **Phase 1: Rich Media + Export Polish** - Close developer credibility gaps (code highlighting, fragments, Mermaid, video, maps) and finish the export pipeline (all-layout PPTX, PDF notes, async sentinel, browser context fix) (completed 2026-03-06)
 - [ ] **Phase 2: Plugin Ecosystem** - Open the extension model with layout, theme, and data source plugins discoverable via entry points and a `pf plugins` CLI
 - [ ] **Phase 3: LLM Integration** - Add generation-constrained layout schemas, a content density optimizer, and `generate_presentation` MCP tool with XSS-hardened template rendering
 - [ ] **Phase 4: Hosted Platform** - Ship a FastAPI service with shareable URLs, embed codes, REST API, analytics, and presenter WebSocket sync
@@ -104,7 +104,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Rich Media + Export Polish | 5/6 | In Progress|  |
+| 1. Rich Media + Export Polish | 6/6 | Complete   | 2026-03-06 |
 | 2. Plugin Ecosystem | 0/5 | Not started | - |
 | 3. LLM Integration | 0/5 | Not started | - |
 | 4. Hosted Platform | 0/6 | Not started | - |
