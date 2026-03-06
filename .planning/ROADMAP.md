@@ -69,14 +69,14 @@ Plans:
   3. Agent can call `optimize_slide(slide_yaml)` and receive a split into two slides when content exceeds the layout's density threshold
   4. Jinja2 templates use selective autoescaping for any rendering path that processes LLM-generated or API-submitted content, preventing XSS
   5. ARIA labels are present on all interactive slide elements and alt text is generated for images lacking it
-**Plans**: TBD
+**Plans**: 5 plans
 
 Plans:
-- [ ] 03-01: Layout LLM schemas (`pf/llm_schemas.py`) — per-layout Pydantic models with cardinality constraints, separate from `schema.json` validation schemas
-- [ ] 03-02: Content density optimizer (`pf/optimizer.py`) — algorithmic slide splitter using existing `LayoutAnalyzer`
-- [ ] 03-03: `generate_presentation` MCP tool — `instructor`-based structured output, `pf[llm]` optional dependency group, autoescape hardening
-- [ ] 03-04: Slide suggestion + multi-agent workflow (suggest_layout MCP tool, documented multi-agent pattern: researcher → data → layout → review)
-- [ ] 03-05: Accessibility pass (ARIA labels, alt text generation, high-contrast mode toggle)
+- [ ] 03-01-PLAN.md — Layout LLM schemas (`pf/llm_schemas.py`) — per-layout Pydantic models with cardinality constraints
+- [ ] 03-02-PLAN.md — Content density optimizer (`pf/optimizer.py`) — algorithmic slide splitter using LayoutAnalyzer
+- [ ] 03-03-PLAN.md — generate_presentation MCP tool + XSS sanitization (`pf/sanitize.py`, `pf[llm]` extra, bleach)
+- [ ] 03-04-PLAN.md — suggest_layout + optimize_slide MCP tools + multi-agent workflow documentation
+- [ ] 03-05-PLAN.md — Accessibility pass (ARIA labels, alt text generation, high-contrast mode toggle)
 
 ### Phase 4: Hosted Platform
 **Goal**: Users can share a presentation via URL, embed it in any webpage, hit a REST API to build programmatically, and see view analytics — with presenter WebSocket sync for live delivery
