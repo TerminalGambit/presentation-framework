@@ -392,3 +392,152 @@ class TestPluginDataclasses:
         d = DataSourcePlugin(name="sheets")
         assert d.fetch_fn is None
         assert d.version == "0.0.0"
+
+
+# ---------------------------------------------------------------------------
+# 9. Theme plugin discovery and merge
+# ---------------------------------------------------------------------------
+
+
+class TestThemePluginDiscovery:
+    def test_theme_discovery_via_entry_points(self, registry):
+        """A ThemePlugin exposed via pf.themes entry point appears in theme_names."""
+        fake_plugin = ThemePlugin(
+            name="corporate",
+            defaults={"primary": "#003366", "accent": "#FFD700", "fonts": {"heading": "Arial"}},
+        )
+        fake_ep = MagicMock()
+        fake_ep.name = "corporate"
+        fake_ep.load.return_value = fake_plugin
+
+        with patch("pf.registry.entry_points") as mock_eps:
+            mock_eps.side_effect = lambda group: (
+                [fake_ep] if group == "pf.themes" else []
+            )
+            registry.discover()
+
+        assert "corporate" in registry.theme_names
+        assert registry.get_theme("corporate").defaults["primary"] == "#003366"
+
+    def test_theme_plugin_merge(self, tmp_path):
+        """Plugin defaults merged with user overrides: user values win, fonts deep-merged."""
+        fake_plugin = ThemePlugin(
+            name="corporate",
+            defaults={
+                "primary": "#003366",
+                "accent": "#FFD700",
+                "style": "bold",
+                "fonts": {"heading": "Arial", "body": "Helvetica"},
+            },
+        )
+        fake_ep = MagicMock()
+        fake_ep.name = "corporate"
+        fake_ep.load.return_value = fake_plugin
+
+        # presentation.yaml with theme.name and partial overrides
+        config = {
+            "meta": {"title": "Theme Merge Test"},
+            "theme": {
+                "name": "corporate",
+                "accent": "#FF0000",  # override
+                "fonts": {"heading": "Custom Font"},  # partial font override
+            },
+            "slides": [{"layout": "title", "data": {"title": "Merge Test"}}],
+        }
+        config_path = tmp_path / "presentation.yaml"
+        config_path.write_text(yaml.dump(config), encoding="utf-8")
+        metrics_path = tmp_path / "metrics.json"
+        metrics_path.write_text("{}", encoding="utf-8")
+
+        pre_loaded_registry = PluginRegistry()
+        with patch("pf.registry.entry_points") as mock_eps:
+            mock_eps.side_effect = lambda group: (
+                [fake_ep] if group == "pf.themes" else []
+            )
+            pre_loaded_registry.discover()
+
+        builder = PresentationBuilder(
+            str(config_path), str(metrics_path), registry=pre_loaded_registry
+        )
+        output_dir = tmp_path / "slides"
+        builder.build(str(output_dir))
+
+        css = (output_dir / "theme" / "variables.css").read_text(encoding="utf-8")
+
+        # Primary comes from plugin default (user did not override)
+        assert "#003366" in css
+        # Accent comes from user override
+        assert "#FF0000" in css.lower() or "#ff0000" in css.lower()
+        # Plugin default accent is NOT used
+        assert "#FFD700" not in css and "#ffd700" not in css.lower()
+        # Font heading overridden by user
+        assert "Custom Font" in css
+        # Font body from plugin default (user didn't override)
+        assert "Helvetica" in css
+
+    def test_theme_no_name_key_uses_inline(self, tmp_path):
+        """When theme has no 'name' key, inline values are used directly (no plugin merge)."""
+        config = {
+            "meta": {"title": "Inline Theme Test"},
+            "theme": {
+                "primary": "#111111",
+                "accent": "#AAAAAA",
+                "fonts": {"heading": "Arial", "subheading": "Helvetica", "body": "Lato"},
+            },
+            "slides": [{"layout": "title", "data": {"title": "Inline"}}],
+        }
+        config_path = tmp_path / "presentation.yaml"
+        config_path.write_text(yaml.dump(config), encoding="utf-8")
+        metrics_path = tmp_path / "metrics.json"
+        metrics_path.write_text("{}", encoding="utf-8")
+
+        builder = PresentationBuilder(str(config_path), str(metrics_path))
+        output_dir = tmp_path / "slides"
+        builder.build(str(output_dir))
+
+        css = (output_dir / "theme" / "variables.css").read_text(encoding="utf-8")
+        assert "#111111" in css
+
+    def test_theme_unknown_name_ignored(self, tmp_path):
+        """An unknown theme name silently falls back to inline values."""
+        config = {
+            "meta": {"title": "Unknown Theme Test"},
+            "theme": {
+                "name": "nonexistent",
+                "primary": "#222222",
+                "accent": "#BBBBBB",
+                "fonts": {"heading": "Arial", "subheading": "Helvetica", "body": "Lato"},
+            },
+            "slides": [{"layout": "title", "data": {"title": "Unknown Theme"}}],
+        }
+        config_path = tmp_path / "presentation.yaml"
+        config_path.write_text(yaml.dump(config), encoding="utf-8")
+        metrics_path = tmp_path / "metrics.json"
+        metrics_path.write_text("{}", encoding="utf-8")
+
+        builder = PresentationBuilder(str(config_path), str(metrics_path))
+        output_dir = tmp_path / "slides"
+        # Should not raise — unknown theme name is silently ignored
+        builder.build(str(output_dir))
+
+        css = (output_dir / "theme" / "variables.css").read_text(encoding="utf-8")
+        assert "#222222" in css
+
+    def test_schema_accepts_theme_name(self):
+        """Validate that a config with theme.name passes schema validation."""
+        import json as _json
+        from pathlib import Path as _Path
+
+        import jsonschema
+
+        schema_path = _Path(__file__).parent.parent / "pf" / "schema.json"
+        with open(schema_path, "r", encoding="utf-8") as f:
+            schema = _json.load(f)
+
+        config = {
+            "slides": [{"layout": "title", "data": {"title": "Test"}}],
+            "theme": {"name": "test-theme"},
+        }
+        validator = jsonschema.Draft202012Validator(schema)
+        errors = list(validator.iter_errors(config))
+        assert errors == [], f"Unexpected validation errors: {errors}"
