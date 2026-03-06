@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.2
 milestone_name: milestone
 status: completed
-stopped_at: Completed 02-01-PLAN.md
-last_updated: "2026-03-06T13:52:53.350Z"
+stopped_at: Completed 02-04-PLAN.md
+last_updated: "2026-03-06T14:00:11.893Z"
 last_activity: 2026-03-06 — Phase 01 complete, all verification items passed
 progress:
   total_phases: 4
   completed_phases: 1
   total_plans: 12
-  completed_plans: 8
+  completed_plans: 10
   percent: 100
 ---
 
@@ -56,6 +56,8 @@ Progress: [██████████] 100% (Phase 1)
 | Phase 01-rich-media-export-polish P06 | 4 | 3 tasks | 7 files |
 | Phase 01-rich-media-export-polish P07 | 2 | 2 tasks | 2 files |
 | Phase 02-plugin-ecosystem P01 | 4 | 2 tasks | 6 files |
+| Phase 02-plugin-ecosystem P03 | 4 | 2 tasks | 3 files |
+| Phase 02-plugin-ecosystem P04 | 4 | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -89,6 +91,12 @@ Recent decisions affecting current work:
 - [Phase 02-plugin-ecosystem]: PluginRegistry.discover() called in PresentationBuilder.__init__ with project_dir=config_path.parent — automatic, zero-config for users
 - [Phase 02-plugin-ecosystem]: Schema layout enum removed — type: string only — plugin layout names pass validation
 - [Phase 02-plugin-ecosystem]: ChoiceLoader puts plugin template dirs before core — plugins can override or extend built-in layouts
+- [Phase 02-plugin-ecosystem]: Theme merge order: plugin defaults applied first, then user overrides — user values always win
+- [Phase 02-plugin-ecosystem]: Fonts deep-merged independently: plugin provides heading+body, user can override just heading, body preserved
+- [Phase 02-plugin-ecosystem]: Unknown theme names silently ignored — graceful degradation, no crash
+- [Phase 02-plugin-ecosystem]: Datasource resolution placed after load_metrics() and before validate_config() so fetched values are available for interpolation
+- [Phase 02-plugin-ecosystem]: PluginCredentialError is fatal (halts build with ClickException); general exceptions are non-fatal warnings so builds continue despite flaky APIs
+- [Phase 02-plugin-ecosystem]: Datasource credentials: file (.pf/credentials.json) loaded first, then PF_* env vars override; env vars stored lowercased to match file key convention
 
 ### Pending Todos
 
@@ -101,6 +109,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-06T13:52:53.348Z
-Stopped at: Completed 02-01-PLAN.md
+Last session: 2026-03-06T14:00:11.891Z
+Stopped at: Completed 02-04-PLAN.md
 Resume file: None

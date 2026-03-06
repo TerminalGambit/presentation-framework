@@ -26,8 +26,8 @@ Requirements for v1.0 release. Each maps to roadmap phases.
 
 ### Plugin Ecosystem
 
-- [ ] **PLUG-01**: Developer can create and register custom layout plugins via Python entry points or `layouts/` directory
-- [ ] **PLUG-02**: Developer can create and distribute installable theme packages (`pip install pf-theme-<name>`)
+- [x] **PLUG-01**: Developer can create and register custom layout plugins via Python entry points or `layouts/` directory
+- [x] **PLUG-02**: Developer can create and distribute installable theme packages (`pip install pf-theme-<name>`)
 - [ ] **PLUG-03**: Developer can create data source plugins connecting to Google Sheets, REST APIs, and databases
 - [ ] **PLUG-04**: User can discover and install plugins via CLI (`pf plugins list`, `pf plugins install <name>`)
 - [ ] **PLUG-05**: Layout plugins support template inheritance (base layout → variant pattern)
@@ -102,8 +102,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | EXPORT-02 | Phase 1 | Complete |
 | EXPORT-03 | Phase 1 | Complete |
 | EXPORT-04 | Phase 1 | Complete |
-| PLUG-01 | Phase 2 | Pending |
-| PLUG-02 | Phase 2 | Pending |
+| PLUG-01 | Phase 2 | Complete |
+| PLUG-02 | Phase 2 | Complete |
 | PLUG-03 | Phase 2 | Pending |
 | PLUG-04 | Phase 2 | Pending |
 | PLUG-05 | Phase 2 | Pending |
