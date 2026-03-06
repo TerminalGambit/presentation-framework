@@ -16,7 +16,7 @@
   <div class="col">
     {% for item in col %}
     {% if item.type == "card" %}
-    <div class="card {{ item.extra_class | default('') }}">
+    <div class="card {{ item.extra_class | default('') }} {% if item.fragment %}pf-fragment{% endif %}">
       {% if item.header %}
       <div class="card-header">
         {% if item.icon %}<i class="fas fa-{{ item.icon }}"></i>{% endif %}

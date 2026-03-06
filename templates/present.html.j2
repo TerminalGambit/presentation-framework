@@ -259,20 +259,88 @@ window.addEventListener('resize', resize);
 document.addEventListener('fullscreenchange', () => { requestAnimationFrame(resize); setTimeout(resize, 100); });
 resize();
 
-function show(n, instant) {
+// ── Fragment state machine ──────────────────────────────
+function getFragments() {
+  try {
+    return Array.from(frame.contentDocument.querySelectorAll('.pf-fragment'));
+  } catch(e) { return []; }
+}
+
+function getHiddenFragments() {
+  try {
+    return Array.from(frame.contentDocument.querySelectorAll('.pf-fragment:not(.visible)'));
+  } catch(e) { return []; }
+}
+
+function getVisibleFragments() {
+  try {
+    return Array.from(frame.contentDocument.querySelectorAll('.pf-fragment.visible'));
+  } catch(e) { return []; }
+}
+
+function revealNextFragment() {
+  var hidden = getHiddenFragments();
+  if (hidden.length > 0) {
+    hidden[0].classList.add('visible');
+    return true;
+  }
+  return false;
+}
+
+function hideLastFragment() {
+  var visible = getVisibleFragments();
+  if (visible.length > 0) {
+    visible[visible.length - 1].classList.remove('visible');
+    return true;
+  }
+  return false;
+}
+
+function revealAllFragments() {
+  getFragments().forEach(function(f) { f.classList.add('visible'); });
+}
+
+function show(n, instant, showAllFragments) {
   current = Math.max(1, Math.min(TOTAL, n));
   const file = SLIDES[current - 1];
   const transition = TRANSITIONS[current - 1] || 'fade';
-  if (instant || transition === 'none') { frame.src = file; }
-  else { frame.classList.add('fading'); setTimeout(() => { frame.src = file; frame.classList.remove('fading'); }, 200); }
+  if (instant || transition === 'none') {
+    frame.src = file;
+    frame.addEventListener('load', function onLoad() {
+      frame.removeEventListener('load', onLoad);
+      if (showAllFragments) { revealAllFragments(); }
+      enableLightbox();
+      enableChartModals();
+    }, { once: true });
+  } else {
+    frame.classList.add('fading');
+    setTimeout(() => {
+      frame.src = file;
+      frame.classList.remove('fading');
+      frame.addEventListener('load', function onLoad() {
+        frame.removeEventListener('load', onLoad);
+        if (showAllFragments) { revealAllFragments(); }
+        enableLightbox();
+        enableChartModals();
+      }, { once: true });
+    }, 200);
+  }
   curEl.textContent = current;
   slideNumEl.textContent = 'SLIDE ' + String(current).padStart(2, '0');
   progress.style.width = ((current / TOTAL) * 100) + '%';
   document.querySelectorAll('.thumb').forEach((t, i) => { t.classList.toggle('active', i === current - 1); });
   if (notesVisible) loadNotes();
 }
-function next() { show(current + 1); }
-function prev() { show(current - 1); }
+function next() {
+  if (!revealNextFragment()) {
+    show(current + 1);
+  }
+}
+function prev() {
+  if (!hideLastFragment()) {
+    show(current - 1, false, true); // showAllFragments=true on backward nav
+  }
+}
 
 function toggleNotes() {
   notesVisible = !notesVisible;
@@ -343,8 +411,6 @@ function enableLightbox() {
     });
   } catch(e) { /* cross-origin — lightbox unavailable */ }
 }
-frame.addEventListener('load', enableLightbox);
-
 let chartModalActive = false;
 
 function openChartModal(chartConfig, chartType) {
@@ -382,8 +448,6 @@ function enableChartModals() {
     });
   } catch(e) { /* cross-origin */ }
 }
-frame.addEventListener('load', enableChartModals);
-
 document.addEventListener('keydown', e => {
   if (chartModalActive) { if (e.key === 'Escape') { e.preventDefault(); closeChartModal(); } return; }
   if (lightboxActive) { if (e.key === 'Escape') { e.preventDefault(); closeLightbox(); } return; }

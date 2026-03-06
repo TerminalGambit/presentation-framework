@@ -17,8 +17,10 @@
 {% endmacro %}
 
 {# Left-bordered challenge card with icon circle #}
-{% macro challenge_card(icon, title, text, bullets=[]) %}
-<div class="challenge-card">
+{# fragment=true: whole card starts hidden and reveals on keypress #}
+{# Per-bullet fragments: pass bullets as list of {text, fragment} dicts #}
+{% macro challenge_card(icon, title, text, bullets=[], fragment=false) %}
+<div class="challenge-card {% if fragment %}pf-fragment{% endif %}">
   <div class="challenge-icon-box">
     <i class="fas fa-{{ icon }} challenge-icon"></i>
   </div>
@@ -26,7 +28,11 @@
     <h3 class="card-title">{{ title }}</h3>
     <p class="card-text">{{ text }}</p>
     {% for bullet in bullets %}
+    {% if bullet is mapping %}
+    <div class="card-bullet {% if bullet.fragment %}pf-fragment{% endif %}">{{ bullet.text }}</div>
+    {% else %}
     <div class="card-bullet">{{ bullet }}</div>
+    {% endif %}
     {% endfor %}
   </div>
 </div>

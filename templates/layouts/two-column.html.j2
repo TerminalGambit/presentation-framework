@@ -16,7 +16,7 @@
   <div class="col">
     {% for item in slide.data.left %}
     {% if item.type == "card" %}
-      {{ challenge_card(item.icon, item.title, item.text, item.bullets | default([])) }}
+      {{ challenge_card(item.icon, item.title, item.text, item.bullets | default([]), item.fragment | default(false)) }}
     {% elif item.type == "solution-box" %}
       {{ solution_box(item.badge | default(""), item.title, item['items'] | default([]), item.icon | default("gem")) }}
     {% elif item.type == "stat-grid" %}
@@ -54,7 +54,7 @@
   <div class="col">
     {% for item in slide.data.right %}
     {% if item.type == "card" %}
-      {{ challenge_card(item.icon, item.title, item.text, item.bullets | default([])) }}
+      {{ challenge_card(item.icon, item.title, item.text, item.bullets | default([]), item.fragment | default(false)) }}
     {% elif item.type == "solution-box" %}
       {{ solution_box(item.badge | default(""), item.title, item['items'] | default([]), item.icon | default("gem")) }}
     {% elif item.type == "stat-grid" %}
