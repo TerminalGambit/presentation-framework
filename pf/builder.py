@@ -492,6 +492,16 @@ class PresentationBuilder:
                 )
             slide_cfg["data"] = resolved_data
 
+            # Preprocess video slides/blocks — extract type, ID, and thumbnail
+            layout = slide_cfg.get("layout", "")
+            data = slide_cfg.get("data", {})
+            has_video_block = any(
+                isinstance(b, dict) and b.get("type") == "video"
+                for b in data.get("left", []) + data.get("right", [])
+            )
+            if layout == "video" or has_video_block:
+                self._preprocess_video(slide_cfg)
+
             warning = LayoutAnalyzer.analyze_slide(slide_cfg, i)
             if warning:
                 warnings.append(warning)

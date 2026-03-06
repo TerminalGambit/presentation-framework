@@ -1,10 +1,9 @@
 {% extends "base.html.j2" %}
-{% from "partials/mermaid-block.html.j2" import mermaid_block %}
 
 {% block content %}
 {% include "partials/header.html.j2" %}
 
-<div class="pf-mermaid-layout">
-  {{ mermaid_block(slide.data) }}
+<div class="pf-mermaid-fullslide">
+  <div class="mermaid">{{ slide.data.diagram }}</div>
 </div>
 {% endblock %}

@@ -1,10 +1,38 @@
 {% extends "base.html.j2" %}
-{% from "partials/video-block.html.j2" import video_block %}
 
 {% block content %}
 {% include "partials/header.html.j2" %}
 
-<div class="pf-video-layout">
-  {{ video_block(slide.data) }}
+<div class="pf-video-fullslide">
+  {% if slide.data._video_type == "youtube" %}
+  <div class="pf-video-embed" data-video-url="https://www.youtube.com/embed/{{ slide.data._video_id }}?autoplay=1">
+    <img src="{{ slide.data._thumbnail }}" alt="{{ slide.data.title | default('Video') }}" class="pf-video-thumbnail"/>
+    <div class="pf-play-btn"><i class="fas fa-play"></i></div>
+  </div>
+  {% elif slide.data._video_type == "vimeo" %}
+  <div class="pf-video-embed" data-video-url="https://player.vimeo.com/video/{{ slide.data._video_id }}?autoplay=1">
+    <div class="pf-video-placeholder">
+      <div class="pf-play-btn"><i class="fas fa-play"></i></div>
+      <span class="pf-video-label">Vimeo Video</span>
+    </div>
+  </div>
+  {% else %}
+  <video class="pf-video-native" controls preload="metadata" poster="{{ slide.data.poster | default('') }}">
+    <source src="{{ slide.data.url }}" type="video/mp4"/>
+    Your browser does not support the video tag.
+  </video>
+  {% endif %}
+  {% if slide.data.caption %}
+  <div class="pf-video-caption">{{ slide.data.caption }}</div>
+  {% endif %}
 </div>
+
+<script>
+document.querySelectorAll('.pf-video-embed').forEach(function(el) {
+  el.addEventListener('click', function() {
+    var url = this.dataset.videoUrl;
+    this.innerHTML = '<iframe src="' + url + '" frameborder="0" allowfullscreen style="width:100%;height:100%;border-radius:var(--pf-radius-lg,8px);"></iframe>';
+  });
+});
+</script>
 {% endblock %}

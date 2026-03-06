@@ -1,7 +1,20 @@
 {% macro video_block(item) %}
 <div class="pf-video-block {% if item.fragment %}pf-fragment{% endif %}">
-  <div class="pf-video-embed" data-video-url="{{ item.url }}">
-    <div class="pf-video-placeholder">Video: {{ item.url }}</div>
+  {% if item._video_type == "youtube" %}
+  <div class="pf-video-embed pf-video-inline" data-video-url="https://www.youtube.com/embed/{{ item._video_id }}?autoplay=1">
+    <img src="{{ item._thumbnail }}" alt="Video" class="pf-video-thumbnail"/>
+    <div class="pf-play-btn"><i class="fas fa-play"></i></div>
   </div>
+  {% elif item._video_type == "vimeo" %}
+  <div class="pf-video-embed pf-video-inline" data-video-url="https://player.vimeo.com/video/{{ item._video_id }}?autoplay=1">
+    <div class="pf-video-placeholder">
+      <div class="pf-play-btn"><i class="fas fa-play"></i></div>
+    </div>
+  </div>
+  {% else %}
+  <video class="pf-video-native pf-video-inline" controls preload="metadata" poster="{{ item.poster | default('') }}">
+    <source src="{{ item.url }}" type="video/mp4"/>
+  </video>
+  {% endif %}
 </div>
 {% endmacro %}
