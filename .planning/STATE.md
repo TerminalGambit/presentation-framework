@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v0.2
 milestone_name: milestone
 status: completed
-stopped_at: Completed 03-01-PLAN.md
-last_updated: "2026-03-06T20:25:17.194Z"
+stopped_at: Completed 03-02-PLAN.md
+last_updated: "2026-03-06T20:25:30.813Z"
 last_activity: 2026-03-06 — Phase 01 complete, all verification items passed
 progress:
   total_phases: 4
@@ -62,6 +62,7 @@ Progress: [██████████] 100% (Phase 1)
 | Phase 02-plugin-ecosystem P05 | 2 | 2 tasks | 3 files |
 | Phase 03-llm-integration P05 | 2 | 2 tasks | 4 files |
 | Phase 03-llm-integration P01 | 3 | 2 tasks | 2 files |
+| Phase 03-llm-integration P02 | 2 | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -112,6 +113,8 @@ Recent decisions affecting current work:
 - [Phase 03-llm-integration]: generate_alt_text() is filename-based only in Phase 3 — vision-based alt text deferred to a later phase
 - [Phase 03-llm-integration]: Field(max_length=N) on list fields generates maxItems in JSON Schema — Pydantic v2 idiomatic, avoids deprecated conlist()
 - [Phase 03-llm-integration]: Discriminated union on 'type' literal field for ContentBlock — clean oneOf+discriminator in JSON Schema for instructor/OpenAI structured output
+- [Phase 03-llm-integration]: data-table split operates at the section level — each section is a split unit, overflow triggers when a section individually exceeds USABLE_HEIGHT
+- [Phase 03-llm-integration]: Single oversized block (first block exceeds USABLE_HEIGHT) passes through unchanged to avoid producing empty slides in split_slide()
 
 ### Pending Todos
 
@@ -124,6 +127,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-06T20:25:17.191Z
-Stopped at: Completed 03-01-PLAN.md
+Last session: 2026-03-06T20:25:30.810Z
+Stopped at: Completed 03-02-PLAN.md
 Resume file: None
