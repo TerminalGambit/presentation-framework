@@ -19,6 +19,7 @@ import click
 import yaml
 
 from pf.builder import PresentationBuilder
+from pf.registry import LayoutPlugin, PluginRegistry
 
 STARTER_CONFIG = {
     "meta": {
@@ -318,6 +319,140 @@ def zip_cmd(directory: str, output: str | None):
 
     size_kb = zip_path.stat().st_size / 1024
     click.echo(f"Zipped → {zip_path} ({size_kb:.0f} KB)")
+
+
+@cli.group()
+def plugins():
+    """Manage presentation framework plugins."""
+    pass
+
+
+@plugins.command(name="list")
+def plugins_list():
+    """List all installed layout, theme, and data source plugins."""
+    registry = PluginRegistry()
+    registry.discover()
+
+    click.echo(click.style("Installed Plugins", bold=True))
+    click.echo()
+
+    # Layouts
+    layout_names = registry.layout_names
+    click.echo(click.style(f"  Layouts ({len(layout_names)}):", bold=True))
+    if layout_names:
+        for name in sorted(layout_names):
+            plugin = registry.get_layout(name)
+            desc = ""
+            if isinstance(plugin, LayoutPlugin) and plugin.description:
+                desc = f"  {plugin.description}"
+            click.echo(f"    - {name:<20}{desc}")
+    else:
+        click.echo("    (none installed)")
+
+    click.echo()
+
+    # Themes
+    theme_names = registry.theme_names
+    click.echo(click.style(f"  Themes ({len(theme_names)}):", bold=True))
+    if theme_names:
+        for name in sorted(theme_names):
+            plugin = registry.get_theme(name)
+            desc = ""
+            if plugin and plugin.description:
+                desc = f"  {plugin.description}"
+            click.echo(f"    - {name:<20}{desc}")
+    else:
+        click.echo("    (none installed)")
+
+    click.echo()
+
+    # Data Sources
+    ds_names = registry.datasource_names
+    click.echo(click.style(f"  Data Sources ({len(ds_names)}):", bold=True))
+    if ds_names:
+        for name in sorted(ds_names):
+            plugin = registry.get_datasource(name)
+            desc = ""
+            if plugin and plugin.description:
+                desc = f"  {plugin.description}"
+            click.echo(f"    - {name:<20}{desc}")
+    else:
+        click.echo("    (none installed)")
+
+
+@plugins.command(name="install")
+@click.argument("package")
+def plugins_install(package: str):
+    """Install a plugin package from PyPI."""
+    import subprocess
+    import sys
+
+    result = subprocess.run(
+        [sys.executable, "-m", "pip", "install", package],
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode == 0:
+        click.echo(click.style(f"Installed {package}", fg="green"))
+    else:
+        click.echo(click.style(f"Failed to install '{package}':", fg="red"), err=True)
+        click.echo(result.stderr, err=True)
+        raise SystemExit(1)
+
+
+@plugins.command(name="info")
+@click.argument("plugin_name")
+def plugins_info(plugin_name: str):
+    """Show metadata for a named plugin."""
+    from pf.registry import DataSourcePlugin, LocalLayoutPlugin, ThemePlugin
+
+    registry = PluginRegistry()
+    registry.discover()
+
+    # Search layouts
+    layout = registry.get_layout(plugin_name)
+    if layout is not None:
+        click.echo(click.style(f"Plugin: {plugin_name}", bold=True))
+        click.echo(f"  Type:    layout")
+        if isinstance(layout, LayoutPlugin):
+            click.echo(f"  Version: {layout.version}")
+            if layout.description:
+                click.echo(f"  Description: {layout.description}")
+            if layout.templates_dir:
+                click.echo(f"  Templates: {layout.templates_dir}")
+        elif isinstance(layout, LocalLayoutPlugin):
+            click.echo(f"  Version: local")
+            click.echo(f"  Template: {layout.template_path}")
+        return
+
+    # Search themes
+    theme = registry.get_theme(plugin_name)
+    if theme is not None:
+        click.echo(click.style(f"Plugin: {plugin_name}", bold=True))
+        click.echo(f"  Type:    theme")
+        click.echo(f"  Version: {theme.version}")
+        if theme.description:
+            click.echo(f"  Description: {theme.description}")
+        if theme.defaults:
+            click.echo(f"  Defaults: {theme.defaults}")
+        return
+
+    # Search datasources
+    ds = registry.get_datasource(plugin_name)
+    if ds is not None:
+        click.echo(click.style(f"Plugin: {plugin_name}", bold=True))
+        click.echo(f"  Type:    datasource")
+        click.echo(f"  Version: {ds.version}")
+        if ds.description:
+            click.echo(f"  Description: {ds.description}")
+        return
+
+    # Not found
+    click.echo(
+        f"Plugin '{plugin_name}' not found. Run 'pf plugins list' to see installed plugins.",
+        err=True,
+    )
+    raise SystemExit(1)
 
 
 if __name__ == "__main__":
