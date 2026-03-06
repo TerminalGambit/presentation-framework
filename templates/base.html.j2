@@ -15,8 +15,8 @@
   <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js" crossorigin="anonymous"
     onload="renderMathInElement(document.body, {delimiters: [{left: '$$', right: '$$', display: true}, {left: '$', right: '$', display: false}]});"></script>
   <style>
-    .katex-display { margin: 0.8em 0; color: var(--pf-white); }
-    .katex { color: var(--pf-white); }
+    .katex-display { margin: 0.8em 0; color: var(--pf-contrast-text); }
+    .katex { color: var(--pf-contrast-text); }
   </style>
   {% endif %}
   {% if theme.charts %}
@@ -26,6 +26,9 @@
     accent: '{{ theme.accent | default("#C4A962") }}',
     secondaryAccent: '{{ theme.secondary_accent | default("#5B8FA8") }}',
     fontBody: '{{ theme.fonts.body | default("Lato") }}',
+    textColor: getComputedStyle(document.documentElement).getPropertyValue('--pf-contrast-text').trim() || '#ffffff',
+    axisColor: getComputedStyle(document.documentElement).getPropertyValue('--pf-text-muted').trim() || '#aaa',
+    gridColor: getComputedStyle(document.documentElement).getPropertyValue('--pf-text-faint').trim() || 'rgba(255,255,255,0.1)',
   };
   function _pfBuildTrace(chartType, labels, values, name, color, palette) {
     switch (chartType) {
@@ -61,23 +64,42 @@
     var isPie = chartType === 'pie' || chartType === 'donut';
     var layout = {
       paper_bgcolor:'transparent', plot_bgcolor:'transparent',
-      font:{family:t.fontBody, color:'#ffffff', size:14},
+      font:{family:t.fontBody, color:t.textColor, size:14},
       margin:{l:60,r:30,t:10,b:50},
       showlegend: series.length > 1 || isPie,
-      legend:{font:{color:'#ffffff'}},
+      legend:{font:{color:t.textColor}},
     };
     if (!isPie) {
-      layout.xaxis = {gridcolor:'rgba(255,255,255,0.1)', zerolinecolor:'rgba(255,255,255,0.2)', tickfont:{color:'#aaa'}};
-      layout.yaxis = {gridcolor:'rgba(255,255,255,0.1)', zerolinecolor:'rgba(255,255,255,0.2)', tickfont:{color:'#aaa'}};
+      layout.xaxis = {gridcolor:t.gridColor, zerolinecolor:t.gridColor, tickfont:{color:t.axisColor}};
+      layout.yaxis = {gridcolor:t.gridColor, zerolinecolor:t.gridColor, tickfont:{color:t.axisColor}};
     }
     Plotly.newPlot(el, traces, layout, {responsive:true, displayModeBar:false});
   }
   </script>
   {% endif %}
+  {% if features.code %}
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/{{ 'github' if is_light else 'github-dark' }}.min.css"/>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js"></script>
+  <script>document.addEventListener('DOMContentLoaded', () => hljs.highlightAll());</script>
+  {% endif %}
+  {% if features.mermaid %}
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mermaid/11.12.0/mermaid.min.js"></script>
+  <script>
+    mermaid.initialize({ startOnLoad: false, theme: '{{ "default" if is_light else "dark" }}' });
+    document.addEventListener('DOMContentLoaded', async () => {
+      await mermaid.run({ querySelector: '.mermaid' });
+      document.body.setAttribute('data-pf-ready', '1');
+    });
+  </script>
+  {% endif %}
+  {% if features.map %}
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+  {% endif %}
   {% block head_extra %}{% endblock %}
 </head>
 <body>
-  <div class="slide-container{% block container_class %}{% endblock %}" data-density="{{ density | default('normal') }}" style="{% if density == 'high' %}--pf-body-size: 12px; --pf-card-pad: 14px; --pf-header-size: 36px; --pf-gap: 18px;{% else %}--pf-body-size: 14px; --pf-card-pad: 20px; --pf-header-size: 42px; --pf-gap: 25px;{% endif %}">
+  <div class="slide-container{% block container_class %}{% endblock %}" data-density="{{ density | default('normal') }}" style="{% if density == 'high' %}--pf-body-size: 12px; --pf-card-pad: 14px; --pf-header-size: 36px; --pf-gap: 18px;{% else %}--pf-body-size: 14px; --pf-card-pad: 20px; --pf-header-size: 42px; --pf-gap: 25px;{% endif %}{% if slide.style %} {{ slide.style }}{% endif %}">
     <div class="bg-pattern"></div>
     {% block decorations %}{% endblock %}
     {% block content %}{% endblock %}
@@ -86,5 +108,18 @@
     <aside class="notes">{{ slide.notes }}</aside>
     {% endif %}
   </div>
+  <script>
+  {% if not features.mermaid %}
+  document.addEventListener('DOMContentLoaded', () => {
+    {% if features.map %}
+    if (!document.body.hasAttribute('data-pf-ready')) {
+      setTimeout(() => document.body.setAttribute('data-pf-ready', '1'), 100);
+    }
+    {% else %}
+    document.body.setAttribute('data-pf-ready', '1');
+    {% endif %}
+  });
+  {% endif %}
+  </script>
 </body>
 </html>

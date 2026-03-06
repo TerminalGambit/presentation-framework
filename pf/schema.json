@@ -40,11 +40,13 @@
         "properties": {
           "layout": {
             "type": "string",
-            "enum": ["title", "two-column", "three-column", "data-table", "stat-grid", "closing", "image", "section", "quote", "timeline", "chart"]
+            "enum": ["title", "two-column", "three-column", "data-table", "stat-grid", "closing", "image", "section", "quote", "timeline", "chart", "code", "mermaid", "video", "map", "toc"]
           },
           "data": {"type": "object"},
           "notes": {"type": "string"},
-          "transition": {"type": "string", "enum": ["fade", "slide-left", "slide-up", "none"]}
+          "transition": {"type": "string", "enum": ["fade", "slide-left", "slide-up", "none"]},
+          "style": {"type": "string"},
+          "fragment": {"type": "boolean"}
         }
       }
     }

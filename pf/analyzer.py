@@ -20,6 +20,10 @@ SIZE_MODEL = {
     "insight": {"base": 45, "per_item": 0},
     "value-prop": {"base": 45, "per_item": 0},
     "takeaway": {"base": 40, "per_item": 0},
+    "code": {"base": 120, "per_item": 0},
+    "mermaid": {"base": 200, "per_item": 0},
+    "video": {"base": 180, "per_item": 0},
+    "map": {"base": 200, "per_item": 0},
 }
 
 DEFAULT_BLOCK_HEIGHT = 40

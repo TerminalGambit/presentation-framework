@@ -28,6 +28,18 @@ def _darken_hex(hex_color: str, factor: float = 0.4) -> str:
     r, g, b = _hex_to_rgb(hex_color)
     return f"#{int(r * factor):02x}{int(g * factor):02x}{int(b * factor):02x}"
 
+
+def _luminance(hex_color: str) -> float:
+    """Relative luminance (0 = black, 1 = white) using rec. 709 coefficients."""
+    r, g, b = _hex_to_rgb(hex_color)
+    return (0.299 * r + 0.587 * g + 0.114 * b) / 255
+
+
+def _is_light(hex_color: str) -> bool:
+    """True if the color is perceptually light (better with dark text)."""
+    return _luminance(hex_color) > 0.5
+
+
 # Root of the presentation-framework package
 PACKAGE_ROOT = Path(__file__).resolve().parent.parent
 TEMPLATES_DIR = PACKAGE_ROOT / "templates"
@@ -140,9 +152,46 @@ class PresentationBuilder:
             errors.append(f"{path}: {error.message}")
         return errors
 
+    # ── Feature Scanning ─────────────────────────────────────────
+
+    def _scan_features(self, slides: list[dict]) -> dict:
+        """Scan all slides to determine which CDN libraries are needed."""
+        features = {"code": False, "mermaid": False, "map": False, "video": False}
+        for slide in slides:
+            layout = slide.get("layout", "")
+            data = slide.get("data", {})
+            if layout in ("code",):
+                features["code"] = True
+            if layout in ("mermaid",):
+                features["mermaid"] = True
+            if layout in ("map",):
+                features["map"] = True
+            if layout in ("video",):
+                features["video"] = True
+            # Scan block types in columnar layouts (left/right)
+            for key in ("left", "right"):
+                for block in data.get(key, []):
+                    if isinstance(block, dict):
+                        t = block.get("type", "")
+                        if t == "code": features["code"] = True
+                        elif t == "mermaid": features["mermaid"] = True
+                        elif t == "map": features["map"] = True
+                        elif t == "video": features["video"] = True
+            # Scan columns (three-column, stat-grid)
+            for col in data.get("columns", []):
+                if isinstance(col, list):
+                    for block in col:
+                        if isinstance(block, dict):
+                            t = block.get("type", "")
+                            if t == "code": features["code"] = True
+                            elif t == "mermaid": features["mermaid"] = True
+                            elif t == "map": features["map"] = True
+                            elif t == "video": features["video"] = True
+        return features
+
     # ── Rendering ───────────────────────────────────────────────
 
-    def render_slide(self, slide_config: dict, index: int, density: str = "normal") -> str:
+    def render_slide(self, slide_config: dict, index: int, density: str = "normal", features: dict | None = None) -> str:
         """Render a single slide to HTML string."""
         layout = slide_config.get("layout", "two-column")
         template_name = f"layouts/{layout}.html.j2"
@@ -172,6 +221,8 @@ class PresentationBuilder:
                 theme=theme,
                 page_number=page_number,
                 density=density,
+                features=features or {},
+                is_light=_is_light(theme.get("primary", "#1C2537")),
             )
         except Exception as e:
             raise click.ClickException(
@@ -237,9 +288,37 @@ class PresentationBuilder:
         # Read the stock variables.css as a base, then replace the :root block
         stock = (THEME_DIR / "variables.css").read_text(encoding="utf-8")
 
+        # Detect light vs dark background
+        light = _is_light(primary)
+
         # Build the custom :root block
-        custom_root = f""":root {{
-  /* ── Colors (generated from presentation.yaml) ──────────── */
+        if light:
+            custom_root = f""":root {{
+  /* ── Colors (generated — LIGHT theme) ───────────────────── */
+  --pf-primary:       {primary};
+  --pf-primary-dark:  {primary_dark};
+  --pf-accent:        {accent};
+  --pf-accent-dim:    rgba({ar}, {ag}, {ab}, 0.5);
+  --pf-accent-glow:   rgba({ar}, {ag}, {ab}, 0.12);
+  --pf-accent-border: rgba({ar}, {ag}, {ab}, 0.25);
+  --pf-accent-bg:     rgba({ar}, {ag}, {ab}, 0.08);
+  --pf-accent-bg-subtle: rgba({ar}, {ag}, {ab}, 0.04);
+
+  --pf-white:         #1a1a2e;
+  --pf-text:          {accent};
+  --pf-text-light:    {accent};
+  --pf-text-muted:    rgba({ar}, {ag}, {ab}, 0.7);
+  --pf-text-dim:      rgba({ar}, {ag}, {ab}, 0.5);
+  --pf-text-faint:    rgba({ar}, {ag}, {ab}, 0.2);
+
+  --pf-card-bg:       rgba({ar}, {ag}, {ab}, 0.03);
+  --pf-card-bg-hover: rgba({ar}, {ag}, {ab}, 0.06);
+  --pf-card-border:   rgba({ar}, {ag}, {ab}, 0.2);
+  --pf-dark-bg:       rgba(0, 0, 0, 0.03);
+  --pf-darker-bg:     rgba(0, 0, 0, 0.05);"""
+        else:
+            custom_root = f""":root {{
+  /* ── Colors (generated — DARK theme) ────────────────────── */
   --pf-primary:       {primary};
   --pf-primary-dark:  {primary_dark};
   --pf-accent:        {accent};
@@ -336,6 +415,9 @@ class PresentationBuilder:
         slide_transitions = []
         slide_notes = []
 
+        # Scan all slides to determine which CDN libraries are needed
+        features = self._scan_features(slides)
+
         warnings = []
         for i, slide_cfg in enumerate(slides):
             resolved_data = self.resolve_data(slide_cfg.get("data", {}), self.metrics)
@@ -353,7 +435,7 @@ class PresentationBuilder:
 
             density = LayoutAnalyzer.compute_density(slide_cfg)
 
-            html = self.render_slide(slide_cfg, i, density=density)
+            html = self.render_slide(slide_cfg, i, density=density, features=features)
 
             filename = f"slide_{i + 1:02d}.html"
             (out / filename).write_text(html, encoding="utf-8")
