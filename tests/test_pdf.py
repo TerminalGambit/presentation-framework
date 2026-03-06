@@ -41,3 +41,39 @@ class TestPdfCli:
         # Mock sync_playwright so we don't need actual Playwright installed
         with pytest.raises(FileNotFoundError, match="No slide files"):
             pf.pdf.export_pdf(str(tmp_path), "output.pdf")
+
+
+class TestPDFSentinelWait:
+    """PDF export waits for data-pf-ready sentinel (EXPORT-01)."""
+
+    def test_pdf_code_references_sentinel(self):
+        from pathlib import Path
+        code = (Path(__file__).parent.parent / "pf" / "pdf.py").read_text()
+        assert "data-pf-ready" in code, "pdf.py should wait for data-pf-ready sentinel"
+
+
+class TestPDFNotesSupport:
+    """PDF export supports include_notes parameter (EXPORT-03)."""
+
+    def test_export_pdf_accepts_include_notes(self):
+        """Verify export_pdf signature includes include_notes."""
+        import inspect
+        from pf.pdf import export_pdf
+        sig = inspect.signature(export_pdf)
+        assert "include_notes" in sig.parameters
+
+    def test_export_pdf_accepts_config(self):
+        """Verify export_pdf signature includes config parameter for notes."""
+        import inspect
+        from pf.pdf import export_pdf
+        sig = inspect.signature(export_pdf)
+        assert "config" in sig.parameters
+
+    def test_render_notes_page_returns_html(self):
+        """_render_notes_page generates valid HTML with slide data."""
+        from pf.pdf import _render_notes_page
+        html = _render_notes_page("My Slide Title", "Speaker note text here.", 3)
+        assert "My Slide Title" in html
+        assert "Speaker note text here." in html
+        assert "SLIDE 03" in html
+        assert "<!DOCTYPE html>" in html

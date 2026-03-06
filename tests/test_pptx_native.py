@@ -176,3 +176,147 @@ class TestExportEditable:
         export_pptx_editable(builder.config, str(out), output_pptx)
         prs = PptxPresentation(output_pptx)
         assert len(prs.slides) == 2
+
+
+class TestTitleLayout:
+    """Native PPTX renderer for title layout."""
+
+    def test_title_in_native_renderers(self):
+        from pf.pptx_native import NATIVE_RENDERERS
+        assert "title" in NATIVE_RENDERERS
+
+    def test_title_renders_without_error(self):
+        from pf.pptx_native import NATIVE_RENDERERS, _pptx_theme, SLIDE_WIDTH, SLIDE_HEIGHT
+        prs = PptxPresentation()
+        prs.slide_width = SLIDE_WIDTH
+        prs.slide_height = SLIDE_HEIGHT
+        slide = prs.slides.add_slide(prs.slide_layouts[6])
+        theme = _pptx_theme({"primary": "#1C2537", "accent": "#C4A962"})
+        NATIVE_RENDERERS["title"](slide, {"title": "Hello World", "subtitle": "Subtitle"}, theme)
+        assert len(slide.shapes) > 0
+
+    def test_title_renders_features(self):
+        from pf.pptx_native import NATIVE_RENDERERS, _pptx_theme, SLIDE_WIDTH, SLIDE_HEIGHT
+        prs = PptxPresentation()
+        prs.slide_width = SLIDE_WIDTH
+        prs.slide_height = SLIDE_HEIGHT
+        slide = prs.slides.add_slide(prs.slide_layouts[6])
+        theme = _pptx_theme({"primary": "#1C2537", "accent": "#C4A962"})
+        NATIVE_RENDERERS["title"](slide, {
+            "title": "Title",
+            "features": [{"label": "Feature A"}, {"label": "Feature B"}],
+        }, theme)
+        texts = [s.text_frame.text for s in slide.shapes if s.has_text_frame]
+        assert any("Feature A" in t for t in texts)
+
+
+class TestStatGridLayout:
+    def test_stat_grid_in_native_renderers(self):
+        from pf.pptx_native import NATIVE_RENDERERS
+        assert "stat-grid" in NATIVE_RENDERERS
+
+    def test_stat_grid_renders_without_error(self):
+        from pf.pptx_native import NATIVE_RENDERERS, _pptx_theme, SLIDE_WIDTH, SLIDE_HEIGHT
+        prs = PptxPresentation()
+        prs.slide_width = SLIDE_WIDTH
+        prs.slide_height = SLIDE_HEIGHT
+        slide = prs.slides.add_slide(prs.slide_layouts[6])
+        theme = _pptx_theme({"primary": "#1C2537", "accent": "#C4A962"})
+        NATIVE_RENDERERS["stat-grid"](slide, {
+            "title": "KPIs",
+            "stats": [
+                {"value": "$1.2M", "label": "Revenue"},
+                {"value": "45%", "label": "Growth"},
+            ],
+            "cols": 2,
+        }, theme)
+        assert len(slide.shapes) > 0
+
+    def test_stat_grid_renders_values(self):
+        from pf.pptx_native import NATIVE_RENDERERS, _pptx_theme, SLIDE_WIDTH, SLIDE_HEIGHT
+        prs = PptxPresentation()
+        prs.slide_width = SLIDE_WIDTH
+        prs.slide_height = SLIDE_HEIGHT
+        slide = prs.slides.add_slide(prs.slide_layouts[6])
+        theme = _pptx_theme({"primary": "#1C2537", "accent": "#C4A962"})
+        NATIVE_RENDERERS["stat-grid"](slide, {
+            "stats": [{"value": "99%", "label": "Uptime"}],
+            "cols": 1,
+        }, theme)
+        texts = [s.text_frame.text for s in slide.shapes if s.has_text_frame]
+        assert "99%" in texts
+
+
+class TestTwoColumnLayout:
+    def test_two_column_in_native_renderers(self):
+        from pf.pptx_native import NATIVE_RENDERERS
+        assert "two-column" in NATIVE_RENDERERS
+
+    def test_two_column_renders_cards(self):
+        from pf.pptx_native import NATIVE_RENDERERS, _pptx_theme, SLIDE_WIDTH, SLIDE_HEIGHT
+        prs = PptxPresentation()
+        prs.slide_width = SLIDE_WIDTH
+        prs.slide_height = SLIDE_HEIGHT
+        slide = prs.slides.add_slide(prs.slide_layouts[6])
+        theme = _pptx_theme({"primary": "#1C2537", "accent": "#C4A962"})
+        NATIVE_RENDERERS["two-column"](slide, {
+            "title": "Comparison",
+            "left": [{"type": "card", "title": "Option A", "text": "First choice"}],
+            "right": [{"type": "card", "title": "Option B", "text": "Second choice"}],
+        }, theme)
+        assert len(slide.shapes) > 0
+
+    def test_two_column_renders_card_titles(self):
+        from pf.pptx_native import NATIVE_RENDERERS, _pptx_theme, SLIDE_WIDTH, SLIDE_HEIGHT
+        prs = PptxPresentation()
+        prs.slide_width = SLIDE_WIDTH
+        prs.slide_height = SLIDE_HEIGHT
+        slide = prs.slides.add_slide(prs.slide_layouts[6])
+        theme = _pptx_theme({"primary": "#1C2537", "accent": "#C4A962"})
+        NATIVE_RENDERERS["two-column"](slide, {
+            "title": "Slide Title",
+            "left": [{"type": "card", "title": "Left Card", "text": "Left text"}],
+            "right": [],
+        }, theme)
+        texts = [s.text_frame.text for s in slide.shapes if s.has_text_frame]
+        assert "Left Card" in texts
+
+
+class TestThreeColumnLayout:
+    def test_three_column_in_native_renderers(self):
+        from pf.pptx_native import NATIVE_RENDERERS
+        assert "three-column" in NATIVE_RENDERERS
+
+    def test_three_column_renders(self):
+        from pf.pptx_native import NATIVE_RENDERERS, _pptx_theme, SLIDE_WIDTH, SLIDE_HEIGHT
+        prs = PptxPresentation()
+        prs.slide_width = SLIDE_WIDTH
+        prs.slide_height = SLIDE_HEIGHT
+        slide = prs.slides.add_slide(prs.slide_layouts[6])
+        theme = _pptx_theme({"primary": "#1C2537", "accent": "#C4A962"})
+        NATIVE_RENDERERS["three-column"](slide, {
+            "title": "Three Options",
+            "columns": [
+                [{"type": "card", "title": "A", "text": "First"}],
+                [{"type": "card", "title": "B", "text": "Second"}],
+                [{"type": "card", "title": "C", "text": "Third"}],
+            ],
+        }, theme)
+        assert len(slide.shapes) > 0
+
+    def test_three_column_renders_card_titles(self):
+        from pf.pptx_native import NATIVE_RENDERERS, _pptx_theme, SLIDE_WIDTH, SLIDE_HEIGHT
+        prs = PptxPresentation()
+        prs.slide_width = SLIDE_WIDTH
+        prs.slide_height = SLIDE_HEIGHT
+        slide = prs.slides.add_slide(prs.slide_layouts[6])
+        theme = _pptx_theme({"primary": "#1C2537", "accent": "#C4A962"})
+        NATIVE_RENDERERS["three-column"](slide, {
+            "columns": [
+                [{"type": "card", "title": "Col A", "text": "Content"}],
+                [],
+                [],
+            ],
+        }, theme)
+        texts = [s.text_frame.text for s in slide.shapes if s.has_text_frame]
+        assert "Col A" in texts

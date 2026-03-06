@@ -47,3 +47,24 @@ class TestPptxCli:
         runner = CliRunner()
         result = runner.invoke(cli, ["pptx", "--help"])
         assert "--editable" in result.output
+
+
+class TestSentinelWait:
+    """PPTX export waits for data-pf-ready sentinel (EXPORT-01)."""
+
+    def test_pptx_code_references_sentinel(self):
+        """Verify the pptx.py source code includes sentinel waiting."""
+        from pathlib import Path
+        code = (Path(__file__).parent.parent / "pf" / "pptx.py").read_text()
+        assert "data-pf-ready" in code, "pptx.py should wait for data-pf-ready sentinel"
+
+
+class TestSharedBrowserContext:
+    """PPTX native export uses shared browser context (EXPORT-04)."""
+
+    def test_render_image_fallback_accepts_context(self):
+        """Verify _render_image_fallback accepts context parameter."""
+        import inspect
+        from pf.pptx_native import _render_image_fallback
+        sig = inspect.signature(_render_image_fallback)
+        assert "context" in sig.parameters
