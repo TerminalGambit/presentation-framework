@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.2
 milestone_name: milestone
 status: completed
-stopped_at: Completed 02-02-PLAN.md
-last_updated: "2026-03-06T14:01:42.022Z"
+stopped_at: Completed 02-05-PLAN.md
+last_updated: "2026-03-06T14:05:37.704Z"
 last_activity: 2026-03-06 — Phase 01 complete, all verification items passed
 progress:
   total_phases: 4
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 12
-  completed_plans: 11
+  completed_plans: 12
   percent: 100
 ---
 
@@ -59,6 +59,7 @@ Progress: [██████████] 100% (Phase 1)
 | Phase 02-plugin-ecosystem P03 | 4 | 2 tasks | 3 files |
 | Phase 02-plugin-ecosystem P04 | 4 | 2 tasks | 3 files |
 | Phase 02-plugin-ecosystem P02 | 6 | 2 tasks | 3 files |
+| Phase 02-plugin-ecosystem P05 | 2 | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -101,6 +102,9 @@ Recent decisions affecting current work:
 - [Phase 02-plugin-ecosystem]: plugin_css_paths pre-computed before render loop so all slides get identical link tags without second registry scan
 - [Phase 02-plugin-ecosystem]: CSS isolation via class prefix convention (.pf-layout-{name}) — framework injects links in all slides, scoping is CSS selector responsibility of plugin author
 - [Phase 02-plugin-ecosystem]: No theme/plugins/ directory created when no plugins present — avoids empty dirs in clean builds
+- [Phase Phase 02-plugin-ecosystem]: Use sys.executable for pip install in plugins install command to avoid wrong-pip PATH pitfall
+- [Phase Phase 02-plugin-ecosystem]: Best-effort plugin discovery in MCP list_layouts: exceptions caught to never block JSON-RPC channel
+- [Phase Phase 02-plugin-ecosystem]: Plugin layouts appended after core in list_layouts with source field to distinguish origin
 
 ### Pending Todos
 
@@ -113,6 +117,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-06T14:01:42.019Z
-Stopped at: Completed 02-02-PLAN.md
+Last session: 2026-03-06T14:05:37.702Z
+Stopped at: Completed 02-05-PLAN.md
 Resume file: None
