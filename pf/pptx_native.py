@@ -172,12 +172,193 @@ def _render_closing(slide, data: dict, theme: dict):
         _set_text(txBox.text_frame, data["subtitle"], theme["font_subheading"], 20, theme["text_muted"])
 
 
+def _render_title(slide, data: dict, theme: dict):
+    """Render title slide: hero title + subtitle + optional feature labels."""
+    _add_bg(slide, theme["primary"])
+    center_x = SLIDE_WIDTH // 2
+
+    # Hero title
+    box_w, box_h = Inches(10), Inches(2)
+    txBox = slide.shapes.add_textbox(center_x - box_w // 2, Inches(1.8), box_w, box_h)
+    _set_text(txBox.text_frame, data.get("title", ""), theme["font_heading"], 60, theme["accent"], bold=True)
+    txBox.text_frame.word_wrap = True
+
+    # Subtitle
+    if data.get("subtitle"):
+        box_w, box_h = Inches(10), Inches(0.8)
+        txBox = slide.shapes.add_textbox(center_x - box_w // 2, Inches(3.9), box_w, box_h)
+        _set_text(txBox.text_frame, data["subtitle"], theme["font_subheading"], 20, theme["text_muted"])
+        txBox.text_frame.word_wrap = True
+
+    # Features (icon labels across bottom)
+    features = data.get("features", [])
+    if features:
+        total_w = len(features) * Inches(2.5)
+        x_start = center_x - total_w // 2
+        for i, feat in enumerate(features):
+            box_x = x_start + i * Inches(2.5)
+            txBox = slide.shapes.add_textbox(box_x, Inches(5.2), Inches(2.2), Inches(0.6))
+            label = feat.get("label", feat) if isinstance(feat, dict) else str(feat)
+            _set_text(txBox.text_frame, label, theme["font_body"], 12, theme["text_muted"])
+
+
+def _render_stat_grid(slide, data: dict, theme: dict):
+    """Render stat-grid: title + grid of stat boxes with values and labels."""
+    import math
+    _add_bg(slide, theme["primary"])
+    center_x = SLIDE_WIDTH // 2
+
+    # Title
+    if data.get("title"):
+        box_w = Inches(10)
+        txBox = slide.shapes.add_textbox(center_x - box_w // 2, Inches(0.5), box_w, Inches(0.8))
+        _set_text(txBox.text_frame, data["title"], theme["font_heading"], 36, theme["accent"], bold=True)
+
+    stats = data.get("stats", [])
+    cols = data.get("cols", min(len(stats), 4))
+    if not stats or cols == 0:
+        return
+
+    rows = math.ceil(len(stats) / cols)
+    card_w = Inches(2.8)
+    card_h = Inches(1.8)
+    gap = Inches(0.3)
+    total_w = cols * card_w + (cols - 1) * gap
+    x_start = center_x - total_w // 2
+    y_start = Inches(1.8)
+
+    for idx, stat in enumerate(stats):
+        row = idx // cols
+        col = idx % cols
+        x = x_start + col * (card_w + gap)
+        y = y_start + row * (card_h + gap)
+
+        # Stat card background
+        _add_rect(slide, x, y, card_w, card_h, _hex_to_rgb("#1a2236"))
+
+        # Value
+        txBox = slide.shapes.add_textbox(x + Inches(0.2), y + Inches(0.3), card_w - Inches(0.4), Inches(0.8))
+        value = str(stat.get("value", ""))
+        _set_text(txBox.text_frame, value, theme["font_heading"], 36, theme["accent"], bold=True)
+
+        # Label
+        txBox = slide.shapes.add_textbox(x + Inches(0.2), y + Inches(1.1), card_w - Inches(0.4), Inches(0.5))
+        label = stat.get("label", "")
+        _set_text(txBox.text_frame, label, theme["font_body"], 12, theme["text_muted"])
+
+
+def _render_two_column(slide, data: dict, theme: dict):
+    """Render two-column: title + left/right columns with card/insight blocks."""
+    _add_bg(slide, theme["primary"])
+    center_x = SLIDE_WIDTH // 2
+
+    # Title
+    if data.get("title"):
+        box_w = Inches(12)
+        txBox = slide.shapes.add_textbox(center_x - box_w // 2, Inches(0.3), box_w, Inches(0.8))
+        _set_text(txBox.text_frame, data["title"], theme["font_heading"], 36, theme["accent"], bold=True,
+                  alignment=PP_ALIGN.LEFT)
+
+    col_w = Inches(5.8)
+    left_x = Inches(0.5)
+    right_x = Inches(7.0)
+    y_start = Inches(1.4)
+
+    def render_column(blocks, x_start):
+        y = y_start
+        for block in blocks:
+            btype = block.get("type", "card")
+            if btype == "card":
+                card_h = Inches(0.8) + Inches(0.25) * len(block.get("bullets", []))
+                # Card background
+                _add_rect(slide, x_start, y, col_w, card_h, _hex_to_rgb("#1a2236"))
+                # Card title
+                if block.get("title"):
+                    txBox = slide.shapes.add_textbox(
+                        x_start + Inches(0.2), y + Inches(0.1), col_w - Inches(0.4), Inches(0.4))
+                    _set_text(txBox.text_frame, block["title"], theme["font_subheading"], 14, theme["accent"],
+                              bold=True, alignment=PP_ALIGN.LEFT)
+                # Card text
+                if block.get("text"):
+                    txBox = slide.shapes.add_textbox(
+                        x_start + Inches(0.2), y + Inches(0.45), col_w - Inches(0.4), Inches(0.35))
+                    _set_text(txBox.text_frame, block["text"], theme["font_body"], 11, theme["white"],
+                              alignment=PP_ALIGN.LEFT)
+                    txBox.text_frame.word_wrap = True
+                y += card_h + Inches(0.15)
+            elif btype == "insight":
+                txBox = slide.shapes.add_textbox(x_start, y, col_w, Inches(0.5))
+                _set_text(txBox.text_frame, block.get("text", ""), theme["font_body"], 11, theme["text_muted"],
+                          alignment=PP_ALIGN.LEFT)
+                txBox.text_frame.word_wrap = True
+                y += Inches(0.55)
+            else:
+                # Unsupported block type in native — skip with spacing
+                y += Inches(0.5)
+
+    render_column(data.get("left", []), left_x)
+    render_column(data.get("right", []), right_x)
+
+
+def _render_three_column(slide, data: dict, theme: dict):
+    """Render three-column: title + 3 columns with card blocks."""
+    _add_bg(slide, theme["primary"])
+    center_x = SLIDE_WIDTH // 2
+
+    # Title
+    if data.get("title"):
+        box_w = Inches(12)
+        txBox = slide.shapes.add_textbox(center_x - box_w // 2, Inches(0.3), box_w, Inches(0.8))
+        _set_text(txBox.text_frame, data["title"], theme["font_heading"], 36, theme["accent"], bold=True,
+                  alignment=PP_ALIGN.LEFT)
+
+    columns = data.get("columns", [[], [], []])
+    num_cols = len(columns)
+    if num_cols == 0:
+        return
+
+    col_w = Inches(3.6)
+    gap = Inches(0.3)
+    total_w = num_cols * col_w + (num_cols - 1) * gap
+    x_start = center_x - total_w // 2
+    y_start = Inches(1.4)
+
+    for col_idx, col_blocks in enumerate(columns):
+        x = x_start + col_idx * (col_w + gap)
+        y = y_start
+        if not isinstance(col_blocks, list):
+            continue
+        for block in col_blocks:
+            btype = block.get("type", "card")
+            if btype == "card":
+                card_h = Inches(0.8) + Inches(0.25) * len(block.get("bullets", []))
+                _add_rect(slide, x, y, col_w, card_h, _hex_to_rgb("#1a2236"))
+                if block.get("title"):
+                    txBox = slide.shapes.add_textbox(
+                        x + Inches(0.15), y + Inches(0.1), col_w - Inches(0.3), Inches(0.4))
+                    _set_text(txBox.text_frame, block["title"], theme["font_subheading"], 13, theme["accent"],
+                              bold=True, alignment=PP_ALIGN.LEFT)
+                if block.get("text"):
+                    txBox = slide.shapes.add_textbox(
+                        x + Inches(0.15), y + Inches(0.45), col_w - Inches(0.3), Inches(0.3))
+                    _set_text(txBox.text_frame, block["text"], theme["font_body"], 10, theme["white"],
+                              alignment=PP_ALIGN.LEFT)
+                    txBox.text_frame.word_wrap = True
+                y += card_h + Inches(0.15)
+            else:
+                y += Inches(0.5)
+
+
 # ── Layout dispatch ──────────────────────────────────────────────
 
 NATIVE_RENDERERS = {
     "section": _render_section,
     "quote": _render_quote,
     "closing": _render_closing,
+    "title": _render_title,
+    "stat-grid": _render_stat_grid,
+    "two-column": _render_two_column,
+    "three-column": _render_three_column,
 }
 
 
