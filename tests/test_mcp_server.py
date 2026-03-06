@@ -1,8 +1,10 @@
 """Tests for pf.mcp_server tool functions."""
 
 import json
+import sys
 import tempfile
 from pathlib import Path
+from unittest.mock import MagicMock, patch
 
 import pytest
 import yaml
@@ -10,7 +12,9 @@ import yaml
 from pf.mcp_server import (
     build_presentation,
     check_contrast,
+    generate_presentation,
     get_layout_example,
+    get_layout_schema,
     init_presentation,
     list_layouts,
     validate_config,
@@ -172,3 +176,164 @@ class TestGetLayoutExample:
             result = get_layout_example(layout["name"])
             assert "error" not in result, f"Missing example for layout: {layout['name']}"
             assert "yaml_example" in result
+
+
+# ── generate_presentation ────────────────────────────────────────
+
+class TestGeneratePresentation:
+    def test_generate_requires_llm_extra_when_instructor_missing(self):
+        """When instructor is not installed, return error with install instructions."""
+        # Simulate instructor being unavailable by patching sys.modules
+        original = sys.modules.get("instructor", _SENTINEL := object())
+        sys.modules["instructor"] = None  # type: ignore[assignment]
+        try:
+            result = generate_presentation(prompt="test presentation")
+        finally:
+            # Restore original state
+            if original is _SENTINEL:
+                sys.modules.pop("instructor", None)
+            else:
+                sys.modules["instructor"] = original  # type: ignore[assignment]
+
+        assert isinstance(result, dict)
+        assert "error" in result
+        # Error message should mention how to install
+        error_msg = result["error"].lower()
+        assert "pip install" in error_msg or "pf[llm]" in error_msg
+
+    def test_generate_returns_dict(self):
+        """generate_presentation must always return a dict."""
+        result = generate_presentation(prompt="test about AI")
+        assert isinstance(result, dict)
+        # Either a success payload or a graceful error
+        if "error" in result:
+            assert isinstance(result["error"], str)
+        else:
+            assert "yaml_config" in result
+            assert "metrics" in result
+
+    def test_generate_with_mocked_instructor(self):
+        """With a mocked instructor client, generate_presentation returns sanitized output."""
+        import yaml as _yaml
+
+        from pf.llm_schemas import PresentationOutput
+
+        # Build a minimal PresentationOutput that our mock will return
+        fake_yaml = _yaml.dump({
+            "meta": {"title": "AI Trends"},
+            "theme": {"primary": "#1E293B", "accent": "#6366F1"},
+            "slides": [
+                {"layout": "title", "data": {"title": "AI Trends 2026"}},
+                {"layout": "section", "data": {"title": "<script>xss</script>Safe Section"}},
+                {"layout": "closing", "data": {"title": "Thank You"}},
+            ],
+        }, default_flow_style=False, sort_keys=False)
+        fake_output = PresentationOutput(yaml_config=fake_yaml, metrics={"count": 3})
+
+        mock_client = MagicMock()
+        mock_client.create.return_value = fake_output
+
+        mock_instructor = MagicMock()
+        mock_instructor.from_provider.return_value = mock_client
+        mock_instructor.Mode.TOOLS = "tools"
+
+        with patch.dict("sys.modules", {"instructor": mock_instructor}):
+            result = generate_presentation(prompt="AI trends", style="modern", length="short")
+
+        assert "error" not in result, f"Unexpected error: {result.get('error')}"
+        assert "yaml_config" in result
+        assert "metrics" in result
+
+        # Verify the XSS content was stripped from the sanitized output
+        assert "script" not in result["yaml_config"].lower()
+        assert "Safe Section" in result["yaml_config"]
+
+        # Metrics passthrough
+        assert result["metrics"]["count"] == 3
+
+    def test_generate_sanitizes_metrics(self):
+        """generate_presentation must sanitize the metrics dict too."""
+        import yaml as _yaml
+
+        from pf.llm_schemas import PresentationOutput
+
+        fake_yaml = _yaml.dump({
+            "meta": {"title": "Test"},
+            "theme": {},
+            "slides": [{"layout": "title", "data": {"title": "Test"}}],
+        }, default_flow_style=False, sort_keys=False)
+        fake_output = PresentationOutput(
+            yaml_config=fake_yaml,
+            metrics={"label": "<script>evil</script>Clean"},
+        )
+
+        mock_client = MagicMock()
+        mock_client.create.return_value = fake_output
+        mock_instructor = MagicMock()
+        mock_instructor.from_provider.return_value = mock_client
+        mock_instructor.Mode.TOOLS = "tools"
+
+        with patch.dict("sys.modules", {"instructor": mock_instructor}):
+            result = generate_presentation(prompt="test")
+
+        assert "script" not in str(result["metrics"]).lower()
+        assert "Clean" in result["metrics"]["label"]
+
+    def test_generate_handles_llm_exception(self):
+        """If the LLM call raises, generate_presentation returns error dict."""
+        mock_client = MagicMock()
+        mock_client.create.side_effect = RuntimeError("API timeout")
+
+        mock_instructor = MagicMock()
+        mock_instructor.from_provider.return_value = mock_client
+        mock_instructor.Mode.TOOLS = "tools"
+
+        with patch.dict("sys.modules", {"instructor": mock_instructor}):
+            result = generate_presentation(prompt="test")
+
+        assert "error" in result
+        assert "API timeout" in result["error"]
+
+
+# ── get_layout_schema ────────────────────────────────────────────
+
+class TestGetLayoutSchema:
+    def test_get_schema_returns_json_schema(self):
+        """get_layout_schema should return a dict with 'properties' for a known layout."""
+        result = get_layout_schema("timeline")
+        assert isinstance(result, dict)
+        assert "properties" in result
+
+    def test_get_schema_unknown_layout(self):
+        """get_layout_schema should return error dict for an unknown layout."""
+        result = get_layout_schema("nonexistent")
+        assert "error" in result
+        assert "nonexistent" in result["error"]
+
+    def test_get_schema_has_constraints(self):
+        """two-column schema should include maxItems constraints for list fields."""
+        result = get_layout_schema("two-column")
+        schema_str = json.dumps(result)
+        assert "maxItems" in schema_str
+
+    def test_get_schema_all_layouts_return_valid_schema(self):
+        """Every core layout name should return a schema with 'properties'."""
+        core_layouts = [
+            "title", "two-column", "three-column", "data-table", "stat-grid",
+            "chart", "closing", "image", "section", "quote", "timeline",
+        ]
+        for name in core_layouts:
+            result = get_layout_schema(name)
+            assert "error" not in result, f"Unexpected error for layout {name!r}: {result}"
+            assert "properties" in result, f"No 'properties' in schema for {name!r}"
+
+    def test_get_schema_timeline_has_steps(self):
+        """timeline schema should include a 'steps' property."""
+        result = get_layout_schema("timeline")
+        assert "steps" in result["properties"]
+
+    def test_get_schema_title_field_is_required(self):
+        """Most layout schemas should list 'title' in required fields (if applicable)."""
+        result = get_layout_schema("section")
+        # 'title' is a required field in SectionSlide
+        assert "title" in result.get("required", []) or "title" in result.get("properties", {})
