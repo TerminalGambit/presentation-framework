@@ -550,5 +550,174 @@ def get_layout_schema(layout_name: str) -> dict:
     return model.model_json_schema()
 
 
+MULTI_AGENT_WORKFLOW = """
+Multi-Agent Presentation Workflow
+=================================
+1. RESEARCHER: Call generate_presentation(prompt, style, length) to create initial deck
+2. REVIEWER: Call validate_config() on the generated YAML to check structure
+3. OPTIMIZER: For each slide, call optimize_slide() to split overflowing content
+4. BUILDER: Call build_presentation() to render the final HTML deck
+5. AUDITOR: Call check_accessibility_output() to verify ARIA labels and alt text
+
+Optional enhancement steps:
+- Call suggest_layout() between steps 1-2 to refine slide selection
+- Call get_layout_schema() to understand constraints before generation
+- Call check_contrast() to verify theme accessibility
+"""
+
+
+@mcp.tool()
+def optimize_slide(slide_yaml: str) -> dict:
+    """Split an overflowing slide into multiple non-overflowing slides.
+
+    Accepts a YAML string representing a single slide dict.
+    Returns a dict with "slides" key containing a list of slide dicts,
+    or "error" on failure.
+
+    Args:
+        slide_yaml: YAML string for a single slide (with "layout" and "data" keys).
+
+    Returns:
+        dict with "slides" (list of slide dicts), "count" (int), "was_split" (bool),
+        or {"error": "..."} on invalid YAML or unexpected failure.
+    """
+    import yaml
+
+    from pf.optimizer import split_slide
+
+    try:
+        slide_dict = yaml.safe_load(slide_yaml)
+    except yaml.YAMLError as e:
+        return {"error": f"Invalid YAML: {e}"}
+
+    try:
+        result = split_slide(slide_dict)
+        return {
+            "slides": result,
+            "count": len(result),
+            "was_split": len(result) > 1,
+        }
+    except Exception as e:
+        return {"error": str(e)}
+
+
+@mcp.tool()
+def suggest_layout(
+    slides_yaml: str,
+    topic: str = "",
+    count: int = 3,
+    provider: str = "anthropic/claude-sonnet-4-20250514",
+) -> dict:
+    """Suggest next slides for a partial presentation deck.
+
+    Given the current slides (as YAML) and an optional topic, suggests
+    the next N slides with layout type and content outline.
+
+    Requires ``pip install 'pf[llm]'`` for LLM-based suggestions.
+
+    Args:
+        slides_yaml: YAML string of the current slides list.
+        topic: Optional topic/subject for the presentation.
+        count: Number of slide suggestions to return (1-5).
+        provider: LiteLLM-style provider string for instructor.
+
+    Returns:
+        dict with "suggestions" list (each has "layout", "title", "reasoning"),
+        or {"error": "..."} on failure.
+    """
+    try:
+        import instructor  # type: ignore[import]
+    except ImportError:
+        return {"error": "LLM features require: pip install 'pf[llm]'"}
+
+    from pydantic import BaseModel, Field
+
+    class SlideSuggestion(BaseModel):
+        layout: str = Field(description="Layout name from available layouts")
+        title: str = Field(max_length=80)
+        reasoning: str = Field(
+            max_length=200,
+            description="Why this slide follows logically from the current deck",
+        )
+
+    class SuggestionList(BaseModel):
+        suggestions: list[SlideSuggestion] = Field(max_length=5)
+
+    available_layouts = ", ".join(LAYOUT_DESCRIPTIONS.keys())
+    topic_line = f"Topic: {topic}\n\n" if topic else ""
+
+    suggestion_prompt = (
+        f"{topic_line}"
+        f"Current deck slides (YAML):\n{slides_yaml}\n\n"
+        f"Available layout types: {available_layouts}\n\n"
+        f"Suggest the next {count} slides that would logically follow this deck. "
+        f"Each suggestion must use one of the available layout types and explain "
+        f"why it follows naturally from the existing content flow."
+    )
+
+    try:
+        client = instructor.from_provider(provider, mode=instructor.Mode.TOOLS)
+        result: SuggestionList = client.create(
+            response_model=SuggestionList,
+            max_tokens=1024,
+            messages=[
+                {
+                    "role": "system",
+                    "content": (
+                        "You are an expert presentation designer. "
+                        "Suggest logical next slides based on the current deck content."
+                    ),
+                },
+                {"role": "user", "content": suggestion_prompt},
+            ],
+        )
+        return {"suggestions": [s.model_dump() for s in result.suggestions]}
+    except Exception as e:
+        return {"error": str(e)}
+
+
+@mcp.tool()
+def check_accessibility_output(output_dir: str) -> dict:
+    """Audit built slide HTML files for accessibility issues.
+
+    Scans all slide_*.html files in the output directory for missing alt
+    attributes, missing ARIA labels, and other a11y problems.
+    Returns a dict with "warnings" list and "pass" boolean.
+
+    Args:
+        output_dir: Path to the directory containing built slide HTML files.
+
+    Returns:
+        dict with "pass" (bool), "warning_count" (int), "warnings" (list of dicts),
+        or {"error": "..."} if the directory does not exist.
+    """
+    from pathlib import Path as _Path
+
+    from pf.accessibility import check_slide_dir
+
+    if not _Path(output_dir).is_dir():
+        return {"error": f"Output directory not found: {output_dir}"}
+
+    try:
+        warnings = check_slide_dir(output_dir)
+        warning_dicts = [
+            {
+                "file": w.file,
+                "element": w.element,
+                "issue": w.issue,
+                "suggestion": w.suggestion,
+                "severity": w.severity,
+            }
+            for w in warnings
+        ]
+        return {
+            "pass": len(warnings) == 0,
+            "warning_count": len(warnings),
+            "warnings": warning_dicts,
+        }
+    except Exception as e:
+        return {"error": str(e)}
+
+
 if __name__ == "__main__":
     mcp.run()
