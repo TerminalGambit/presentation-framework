@@ -625,6 +625,16 @@ class PresentationBuilder:
                     dest = plugins_css_dir / f"{plugin.name}.css"
                     shutil.copy2(css_candidate, dest)
 
+        # Copy theme plugin CSS if a named theme with a css_file was resolved
+        if theme_name and self._registry:
+            base_theme = self._registry.get_theme(theme_name)
+            if base_theme and base_theme.css_file and Path(base_theme.css_file).exists():
+                plugins_css_dir.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(
+                    base_theme.css_file,
+                    plugins_css_dir / Path(base_theme.css_file).name,
+                )
+
         # Generate custom variables.css from presentation.yaml theme
         custom_vars = self.generate_variables_css(theme_cfg)
         (theme_out / "variables.css").write_text(custom_vars, encoding="utf-8")

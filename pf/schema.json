@@ -15,6 +15,7 @@
     "theme": {
       "type": "object",
       "properties": {
+        "name": {"type": "string"},
         "primary": {"type": "string"},
         "accent": {"type": "string"},
         "secondary_accent": {"type": "string"},
