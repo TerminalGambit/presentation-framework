@@ -11,12 +11,15 @@ import yaml
 
 from pf.mcp_server import (
     build_presentation,
+    check_accessibility_output,
     check_contrast,
     generate_presentation,
     get_layout_example,
     get_layout_schema,
     init_presentation,
     list_layouts,
+    optimize_slide,
+    suggest_layout,
     validate_config,
 )
 
@@ -337,3 +340,132 @@ class TestGetLayoutSchema:
         result = get_layout_schema("section")
         # 'title' is a required field in SectionSlide
         assert "title" in result.get("required", []) or "title" in result.get("properties", {})
+
+
+# ── optimize_slide ────────────────────────────────────────────────
+
+class TestOptimizeSlide:
+    def test_optimize_non_overflowing_slide(self):
+        """A simple title slide should not be split."""
+        slide = {"layout": "title", "data": {"title": "Hello World"}}
+        result = optimize_slide(yaml.dump(slide))
+        assert "error" not in result
+        assert "slides" in result
+        assert result["count"] == 1
+        assert result["was_split"] is False
+
+    def test_optimize_overflowing_two_column(self):
+        """A two-column slide with 8 cards per column (3 bullets each) should be split."""
+        cards = [
+            {
+                "type": "card",
+                "title": f"Card {i}",
+                "bullets": [f"Bullet {j} of card {i}" for j in range(3)],
+            }
+            for i in range(8)
+        ]
+        slide = {
+            "layout": "two-column",
+            "data": {
+                "title": "Overflowing Slide",
+                "left": cards,
+                "right": cards,
+            },
+        }
+        result = optimize_slide(yaml.dump(slide))
+        assert "error" not in result
+        assert result["was_split"] is True
+        assert result["count"] >= 2
+
+    def test_optimize_invalid_yaml(self):
+        """Invalid YAML input should return an error dict."""
+        result = optimize_slide("{{{{not yaml")
+        assert "error" in result
+        assert isinstance(result["error"], str)
+
+
+# ── suggest_layout ────────────────────────────────────────────────
+
+class TestSuggestLayout:
+    def test_suggest_requires_llm_extra_when_instructor_missing(self):
+        """When instructor is not installed, return error with install instructions."""
+        original = sys.modules.get("instructor", _SENTINEL := object())
+        sys.modules["instructor"] = None  # type: ignore[assignment]
+        try:
+            result = suggest_layout(slides_yaml="- layout: title\n  data:\n    title: Test\n")
+        finally:
+            if original is _SENTINEL:
+                sys.modules.pop("instructor", None)
+            else:
+                sys.modules["instructor"] = original  # type: ignore[assignment]
+
+        assert isinstance(result, dict)
+        assert "error" in result
+        error_msg = result["error"].lower()
+        assert "pip install" in error_msg or "pf[llm]" in error_msg
+
+    def test_suggest_returns_dict(self):
+        """suggest_layout must always return a dict."""
+        result = suggest_layout(
+            slides_yaml="- layout: title\n  data:\n    title: Test\n",
+            topic="AI trends",
+        )
+        assert isinstance(result, dict)
+        # Either a success payload or a graceful error
+        if "error" in result:
+            assert isinstance(result["error"], str)
+        else:
+            assert "suggestions" in result
+
+
+# ── check_accessibility_output ────────────────────────────────────
+
+class TestCheckAccessibilityOutput:
+    def test_check_accessibility_clean_output(self, tmp_path):
+        """An HTML slide with proper alt and aria-label should pass."""
+        slide_html = (
+            '<!DOCTYPE html><html><body>'
+            '<div class="slide-container" role="region" aria-label="Slide 1" tabindex="0">'
+            '<img src="photo.jpg" alt="Team Photo">'
+            '<button aria-label="Next slide">Next</button>'
+            '</div></body></html>'
+        )
+        slide_file = tmp_path / "slide_01.html"
+        slide_file.write_text(slide_html, encoding="utf-8")
+
+        result = check_accessibility_output(str(tmp_path))
+        assert "error" not in result
+        assert result["pass"] is True
+        assert result["warning_count"] == 0
+        assert isinstance(result["warnings"], list)
+
+    def test_check_accessibility_missing_alt(self, tmp_path):
+        """An HTML slide with a missing alt attribute should fail with a warning."""
+        slide_html = (
+            '<!DOCTYPE html><html><body>'
+            '<div class="slide-container" role="region" aria-label="Slide 1" tabindex="0">'
+            '<img src="photo.jpg">'  # no alt attribute
+            '</div></body></html>'
+        )
+        slide_file = tmp_path / "slide_01.html"
+        slide_file.write_text(slide_html, encoding="utf-8")
+
+        result = check_accessibility_output(str(tmp_path))
+        assert "error" not in result
+        assert result["pass"] is False
+        assert result["warning_count"] >= 1
+        # At least one warning should mention alt
+        assert any("alt" in w["issue"] for w in result["warnings"])
+        # Warning dicts should have the expected keys
+        for w in result["warnings"]:
+            assert "file" in w
+            assert "element" in w
+            assert "issue" in w
+            assert "suggestion" in w
+            assert "severity" in w
+
+    def test_check_accessibility_invalid_dir(self):
+        """A non-existent directory should return an error dict."""
+        result = check_accessibility_output("/nonexistent/path/to/slides")
+        assert "error" in result
+        assert isinstance(result["error"], str)
