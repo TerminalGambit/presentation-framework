@@ -45,11 +45,11 @@ Requirements for v1.0 release. Each maps to roadmap phases.
 
 ### Platform
 
-- [ ] **PLAT-01**: User can upload or link a deck to get a shareable URL with full navigator experience
-- [ ] **PLAT-02**: User can embed presentations via iframe or script tag in blogs, Notion, and docs
+- [x] **PLAT-01**: User can upload or link a deck to get a shareable URL with full navigator experience
+- [x] **PLAT-02**: User can embed presentations via iframe or script tag in blogs, Notion, and docs
 - [ ] **PLAT-03**: Platform tracks presentation analytics (views, slide-level engagement, time-per-slide)
 - [ ] **PLAT-04**: Multiple users can edit the same presentation with real-time WebSocket sync
-- [ ] **PLAT-05**: REST API provides HTTP endpoints for build, validate, and generate operations
+- [x] **PLAT-05**: REST API provides HTTP endpoints for build, validate, and generate operations
 - [x] **PLAT-06**: Build output supports configurable base URL for CDN/hosted asset paths (`--base-url`)
 
 ## v2 Requirements
@@ -115,11 +115,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 | LLM-05 | Phase 3 | Complete |
 | LLM-06 | Phase 3 | Complete |
 | LLM-07 | Phase 3 | Complete |
-| PLAT-01 | Phase 4 | Pending |
-| PLAT-02 | Phase 4 | Pending |
+| PLAT-01 | Phase 4 | Complete |
+| PLAT-02 | Phase 4 | Complete |
 | PLAT-03 | Phase 4 | Pending |
 | PLAT-04 | Phase 4 | Pending |
-| PLAT-05 | Phase 4 | Pending |
+| PLAT-05 | Phase 4 | Complete |
 | PLAT-06 | Phase 4 | Complete |
 
 **Coverage:**
