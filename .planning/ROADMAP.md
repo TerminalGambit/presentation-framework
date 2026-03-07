@@ -15,7 +15,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 1: Rich Media + Export Polish** - Close developer credibility gaps (code highlighting, fragments, Mermaid, video, maps) and finish the export pipeline (all-layout PPTX, PDF notes, async sentinel, browser context fix) — gap closure in progress (EXPORT-02) (completed 2026-03-06)
 - [ ] **Phase 2: Plugin Ecosystem** - Open the extension model with layout, theme, and data source plugins discoverable via entry points and a `pf plugins` CLI
 - [x] **Phase 3: LLM Integration** - Add generation-constrained layout schemas, a content density optimizer, and `generate_presentation` MCP tool with XSS-hardened template rendering (completed 2026-03-06)
-- [ ] **Phase 4: Hosted Platform** - Ship a FastAPI service with shareable URLs, embed codes, REST API, analytics, and presenter WebSocket sync
+- [x] **Phase 4: Hosted Platform** - Ship a FastAPI service with shareable URLs, embed codes, REST API, analytics, and presenter WebSocket sync (completed 2026-03-07)
 
 ## Phase Details
 
@@ -106,4 +106,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 | 1. Rich Media + Export Polish | 7/7 | Complete   | 2026-03-06 |
 | 2. Plugin Ecosystem | 4/5 | In Progress|  |
 | 3. LLM Integration | 5/5 | Complete   | 2026-03-06 |
-| 4. Hosted Platform | 3/4 | In Progress|  |
+| 4. Hosted Platform | 4/4 | Complete   | 2026-03-07 |
