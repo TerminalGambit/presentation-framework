@@ -106,3 +106,11 @@ None - no external service configuration required.
 ---
 *Phase: 01-rich-media-export-polish*
 *Completed: 2026-03-06*
+
+## Self-Check: PASSED
+
+- FOUND: pf/pptx_native.py
+- FOUND: tests/test_pptx_native.py
+- FOUND: .planning/phases/01-rich-media-export-polish/01-07-SUMMARY.md
+- FOUND commit: 8ed3ae6 (feat — Task 1)
+- FOUND commit: 43f3386 (test — Task 2)
