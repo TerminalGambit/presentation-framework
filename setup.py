@@ -21,6 +21,8 @@ setup(
         "mcp": ["mcp[cli]>=1.6.0"],
         "pptx": ["python-pptx>=1.0"],
         "llm": ["instructor[anthropic]>=1.13.0", "bleach>=6.0"],
+        "platform": ["fastapi>=0.110", "uvicorn>=0.27", "python-multipart>=0.0.9", "slowapi>=0.1.9"],
+        "dev": ["httpx>=0.27", "pytest-asyncio>=0.23"],
     },
     entry_points={
         "console_scripts": [
