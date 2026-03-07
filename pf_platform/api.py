@@ -6,7 +6,7 @@ import tempfile
 from pathlib import Path
 from typing import Optional
 
-from fastapi import FastAPI, HTTPException, Request, UploadFile
+from fastapi import FastAPI, HTTPException, Request, UploadFile, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
@@ -15,7 +15,15 @@ from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
 from starlette.middleware.base import BaseHTTPMiddleware
 
+from pf_platform.analytics import (
+    BEACON_SCRIPT,
+    get_dashboard,
+    get_total_views,
+    init_db,
+    record_event,
+)
 from pf_platform.storage import delete_deck, get_deck_dir, store_deck
+from pf_platform.sync import manager
 
 # ---------------------------------------------------------------------------
 # Rate limiter
@@ -187,3 +195,25 @@ async def remove_deck(deck_id: str):
         raise HTTPException(status_code=404, detail="Deck not found")
     _mounted_decks.discard(deck_id)
     return {"deleted": deck_id}
+
+
+# ---------------------------------------------------------------------------
+# WebSocket presenter sync
+# ---------------------------------------------------------------------------
+
+
+@app.websocket("/ws/{deck_id}")
+async def presenter_sync(websocket: WebSocket, deck_id: str):
+    """Real-time presenter sync: any client's slide change broadcasts to all room members."""
+    await manager.connect(deck_id, websocket)
+    try:
+        while True:
+            data = await websocket.receive_json()
+            if "slide" in data:
+                slide = int(data["slide"])
+                manager.set_slide(deck_id, slide)
+                await manager.broadcast(deck_id, {"slide": slide, "type": "goto"})
+    except WebSocketDisconnect:
+        manager.disconnect(deck_id, websocket)
+    except Exception:
+        manager.disconnect(deck_id, websocket)
