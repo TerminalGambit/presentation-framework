@@ -8,7 +8,7 @@ import click
 import pytest
 import yaml
 
-from pf.builder import PresentationBuilder
+from pf.builder import PresentationBuilder, _rewrite_asset_paths
 
 
 # ── resolve_data tests ──────────────────────────────────────────
@@ -367,3 +367,119 @@ class TestResolveDataObjects:
         data = {"source": "{{ metrics.nonexistent.path }}"}
         resolved = PresentationBuilder.resolve_data(data, {})
         assert resolved["source"] == "{{ metrics.nonexistent.path }}"
+
+
+# ── _rewrite_asset_paths tests ──────────────────────────────────
+
+class TestRewriteAssetPaths:
+    """Unit tests for the _rewrite_asset_paths() module-level function."""
+
+    def test_rewrite_asset_paths_basic(self):
+        """Relative href and src attributes are rewritten with the base URL."""
+        html = '<link href="theme/variables.css"><img src="images/logo.png">'
+        result = _rewrite_asset_paths(html, "https://cdn.example.com/deck/abc")
+        assert 'href="https://cdn.example.com/deck/abc/theme/variables.css"' in result
+        assert 'src="https://cdn.example.com/deck/abc/images/logo.png"' in result
+
+    def test_rewrite_asset_paths_skips_absolute(self):
+        """http, https, data:, //, and # URLs are NOT rewritten."""
+        html = (
+            '<link href="https://fonts.googleapis.com/css2?family=Roboto">'
+            '<link href="http://example.com/style.css">'
+            '<img src="data:image/png;base64,abc123">'
+            '<img src="//cdn.jsdelivr.net/npm/something.js">'
+            '<a href="#section-1">Jump</a>'
+        )
+        result = _rewrite_asset_paths(html, "https://cdn.example.com")
+        # All original absolute/special URLs must remain untouched
+        assert 'href="https://fonts.googleapis.com/css2?family=Roboto"' in result
+        assert 'href="http://example.com/style.css"' in result
+        assert 'src="data:image/png;base64,abc123"' in result
+        assert 'src="//cdn.jsdelivr.net/npm/something.js"' in result
+        assert 'href="#section-1"' in result
+
+    def test_rewrite_asset_paths_mixed(self):
+        """HTML with both relative and absolute refs — only relative ones are rewritten."""
+        html = (
+            '<link href="theme/base.css">'
+            '<link href="https://fonts.googleapis.com/css2?family=Lato">'
+            '<img src="slide_01.html">'
+            '<a href="#skip">Skip</a>'
+        )
+        result = _rewrite_asset_paths(html, "https://cdn.example.com/decks/xyz")
+        # Relative paths rewritten
+        assert 'href="https://cdn.example.com/decks/xyz/theme/base.css"' in result
+        assert 'src="https://cdn.example.com/decks/xyz/slide_01.html"' in result
+        # Absolute/anchor paths untouched
+        assert 'href="https://fonts.googleapis.com/css2?family=Lato"' in result
+        assert 'href="#skip"' in result
+
+    def test_rewrite_asset_paths_strips_trailing_slash(self):
+        """Trailing slash on base_url is stripped to avoid double slashes."""
+        html = '<link href="theme/variables.css">'
+        result = _rewrite_asset_paths(html, "https://cdn.example.com/")
+        assert 'href="https://cdn.example.com/theme/variables.css"' in result
+        assert "https://cdn.example.com//theme" not in result
+
+
+# ── base_url integration tests ───────────────────────────────────
+
+MINIMAL_CONFIG = {
+    "meta": {"title": "Test Deck"},
+    "theme": {
+        "primary": "#1C2537",
+        "accent": "#C4A962",
+        "fonts": {
+            "heading": "Playfair Display",
+            "subheading": "Montserrat",
+            "body": "Lato",
+        },
+    },
+    "slides": [
+        {"layout": "title", "data": {"title": "Hello"}},
+        {"layout": "closing", "data": {"title": "Bye"}},
+    ],
+}
+
+
+def _make_builder(tmp_path: Path) -> tuple[PresentationBuilder, Path]:
+    """Create a minimal builder + output dir in tmp_path."""
+    config_path = tmp_path / "presentation.yaml"
+    config_path.write_text(yaml.dump(MINIMAL_CONFIG), encoding="utf-8")
+    metrics_path = tmp_path / "metrics.json"
+    metrics_path.write_text("{}", encoding="utf-8")
+    builder = PresentationBuilder(
+        config_path=str(config_path),
+        metrics_path=str(metrics_path),
+    )
+    out_dir = tmp_path / "slides"
+    return builder, out_dir
+
+
+def test_build_with_base_url(tmp_path: Path):
+    """build(base_url=...) rewrites relative paths in all HTML output files."""
+    builder, out_dir = _make_builder(tmp_path)
+    base = "https://cdn.example.com/deck/abc"
+    out = builder.build(output_dir=str(out_dir), base_url=base)
+
+    # Slide file should have absolute theme CSS refs
+    slide_html = (out / "slide_01.html").read_text(encoding="utf-8")
+    assert f'href="{base}/theme/variables.css"' in slide_html
+
+    # Navigator should have absolute slide src refs
+    present_html = (out / "present.html").read_text(encoding="utf-8")
+    # present.html references slides via src= or href= with relative paths
+    # After rewriting, all relative refs become absolute
+    assert base in present_html
+
+
+def test_build_without_base_url(tmp_path: Path):
+    """build() without base_url preserves relative paths (regression guard)."""
+    builder, out_dir = _make_builder(tmp_path)
+    out = builder.build(output_dir=str(out_dir))
+
+    slide_html = (out / "slide_01.html").read_text(encoding="utf-8")
+    # Relative theme CSS reference must still be present
+    assert 'href="theme/variables.css"' in slide_html
+    # No absolute CDN prefix should appear in local builds
+    assert "https://cdn.example.com" not in slide_html

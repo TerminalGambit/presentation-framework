@@ -19,6 +19,31 @@ from pf.contrast import check_contrast
 from pf.registry import LayoutPlugin, LocalLayoutPlugin, PluginCredentialError, PluginRegistry
 
 
+def _rewrite_asset_paths(html: str, base_url: str) -> str:
+    """Rewrite relative href/src paths to absolute URLs by prepending base_url.
+
+    Skips paths that already start with http://, https://, data:, //, or #.
+    These are CDN-hosted or anchor references and must never be double-prefixed.
+
+    Args:
+        html:     Raw HTML string to rewrite.
+        base_url: Absolute base URL (trailing slash will be stripped).
+
+    Returns:
+        HTML string with relative asset paths converted to absolute.
+    """
+    base = base_url.rstrip("/")
+    pattern = r'(href|src)=(["\'])(?!http://|https://|data:|//|#)([^"\']+)\2'
+
+    def replacer(match: re.Match) -> str:
+        attr = match.group(1)
+        quote = match.group(2)
+        path = match.group(3)
+        return f'{attr}={quote}{base}/{path}{quote}'
+
+    return re.sub(pattern, replacer, html)
+
+
 def _hex_to_rgb(hex_color: str) -> tuple[int, int, int]:
     """Convert '#RRGGBB' to (r, g, b) ints."""
     h = hex_color.lstrip("#")
@@ -520,7 +545,7 @@ class PresentationBuilder:
 
     # ── Full Build ──────────────────────────────────────────────
 
-    def build(self, output_dir: str = "slides") -> Path:
+    def build(self, output_dir: str = "slides", base_url: str | None = None) -> Path:
         """
         Full build pipeline:
         1. Load config + metrics
@@ -531,6 +556,7 @@ class PresentationBuilder:
         6. Copy theme CSS files
         7. Generate custom variables.css from theme config
         8. Write everything to output_dir
+        9. (optional) Rewrite relative asset paths to absolute using base_url
         """
         self.load_config()
         self.load_metrics()
@@ -702,5 +728,11 @@ class PresentationBuilder:
         # Generate custom variables.css from presentation.yaml theme
         custom_vars = self.generate_variables_css(theme_cfg)
         (theme_out / "variables.css").write_text(custom_vars, encoding="utf-8")
+
+        # Rewrite relative asset paths to absolute URLs (for CDN/hosted deployments)
+        if base_url:
+            for html_file in out.glob("*.html"):
+                html = html_file.read_text(encoding="utf-8")
+                html_file.write_text(_rewrite_asset_paths(html, base_url), encoding="utf-8")
 
         return out
