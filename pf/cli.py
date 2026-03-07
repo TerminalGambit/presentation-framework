@@ -106,7 +106,8 @@ def init(name: str):
 @click.option("--metrics", "-m", default="metrics.json", help="Path to metrics.json")
 @click.option("--output", "-o", default="slides", help="Output directory for built slides")
 @click.option("--open", "open_browser", is_flag=True, default=False, help="Open present.html in browser after build")
-def build(config: str, metrics: str, output: str, open_browser: bool):
+@click.option("--base-url", default=None, help="Absolute base URL for CDN/hosted asset paths")
+def build(config: str, metrics: str, output: str, open_browser: bool, base_url: str | None):
     """Build slides from presentation.yaml + metrics.json."""
     config_path = Path(config)
     if not config_path.exists():
@@ -115,7 +116,7 @@ def build(config: str, metrics: str, output: str, open_browser: bool):
         raise SystemExit(1)
 
     builder = PresentationBuilder(config_path=config, metrics_path=metrics)
-    out = builder.build(output_dir=output)
+    out = builder.build(output_dir=output, base_url=base_url)
 
     # Print layout warnings
     for w in getattr(builder, '_warnings', []):

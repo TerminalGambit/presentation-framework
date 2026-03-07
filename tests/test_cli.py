@@ -77,3 +77,86 @@ def test_plugins_help():
     assert "list" in result.output
     assert "install" in result.output
     assert "info" in result.output
+
+
+# ── --base-url CLI tests ─────────────────────────────────────────
+
+import json
+import tempfile
+from pathlib import Path
+
+import yaml
+
+_MINIMAL_CONFIG = {
+    "meta": {"title": "CLI Base URL Test"},
+    "theme": {
+        "primary": "#1C2537",
+        "accent": "#C4A962",
+        "fonts": {
+            "heading": "Playfair Display",
+            "subheading": "Montserrat",
+            "body": "Lato",
+        },
+    },
+    "slides": [
+        {"layout": "title", "data": {"title": "Hello"}},
+        {"layout": "closing", "data": {"title": "Bye"}},
+    ],
+}
+
+
+def _write_temp_project(tmpdir: Path) -> tuple[str, str, str]:
+    """Write minimal config + metrics and return (config_path, metrics_path, out_dir)."""
+    config_path = str(tmpdir / "presentation.yaml")
+    metrics_path = str(tmpdir / "metrics.json")
+    out_dir = str(tmpdir / "slides")
+    (tmpdir / "presentation.yaml").write_text(
+        yaml.dump(_MINIMAL_CONFIG), encoding="utf-8"
+    )
+    (tmpdir / "metrics.json").write_text("{}", encoding="utf-8")
+    return config_path, metrics_path, out_dir
+
+
+def test_build_base_url():
+    """pf build --base-url produces HTML with absolute asset paths."""
+    runner = CliRunner()
+    with tempfile.TemporaryDirectory() as tmpdir:
+        config_path, metrics_path, out_dir = _write_temp_project(Path(tmpdir))
+        result = runner.invoke(
+            cli,
+            [
+                "build",
+                "-c", config_path,
+                "-m", metrics_path,
+                "-o", out_dir,
+                "--base-url", "https://cdn.example.com",
+            ],
+        )
+        assert result.exit_code == 0, result.output
+
+        # Check that at least one HTML file has absolute theme paths
+        slide_html = (Path(out_dir) / "slide_01.html").read_text(encoding="utf-8")
+        assert "https://cdn.example.com/theme/" in slide_html
+
+
+def test_build_no_base_url_default():
+    """pf build without --base-url preserves relative paths."""
+    runner = CliRunner()
+    with tempfile.TemporaryDirectory() as tmpdir:
+        config_path, metrics_path, out_dir = _write_temp_project(Path(tmpdir))
+        result = runner.invoke(
+            cli,
+            [
+                "build",
+                "-c", config_path,
+                "-m", metrics_path,
+                "-o", out_dir,
+            ],
+        )
+        assert result.exit_code == 0, result.output
+
+        slide_html = (Path(out_dir) / "slide_01.html").read_text(encoding="utf-8")
+        # Relative reference must remain
+        assert 'href="theme/variables.css"' in slide_html
+        # No accidental CDN prefix
+        assert "https://cdn.example.com" not in slide_html
