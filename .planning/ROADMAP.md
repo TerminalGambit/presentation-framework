@@ -88,15 +88,13 @@ Plans:
   3. REST API `POST /build` accepts `presentation.yaml` + `metrics.json` and returns a download URL for the built HTML deck
   4. Platform dashboard shows total views and per-slide engagement (time-on-slide) for each shared deck
   5. `pf build` accepts `--base-url <url>` so all asset paths in the output are absolute and work correctly when served from a CDN or the hosted platform
-**Plans**: TBD
+**Plans**: 4 plans
 
 Plans:
-- [ ] 04-01: `--base-url` path abstraction (rewrite asset paths in build output; prerequisite for all upload features)
-- [ ] 04-02: FastAPI platform service (`platform/api.py`, `platform/worker.py`) with build job queue and file storage adapter (local fs → S3/R2)
-- [ ] 04-03: Shareable URL viewer + embed codes (iframe snippet generator, public viewer route)
-- [ ] 04-04: REST API endpoints (build, validate, generate) with rate limiting and OpenAPI docs
-- [ ] 04-05: Analytics beacon + dashboard (per-slide view tracking, time-on-slide aggregation)
-- [ ] 04-06: Presenter WebSocket sync (last-writer-wins slide position broadcast for live delivery)
+- [ ] 04-01-PLAN.md — --base-url path rewriting in builder + CLI (asset path abstraction for CDN/hosted serving)
+- [ ] 04-02-PLAN.md — FastAPI platform service core (storage, worker, build/validate/embed endpoints, deck serving, CLI command)
+- [ ] 04-03-PLAN.md — Analytics beacon + SQLite store (per-slide view tracking, time-on-slide, dashboard API)
+- [ ] 04-04-PLAN.md — Presenter WebSocket sync (room-based ConnectionManager, last-writer-wins broadcast)
 
 ## Progress
 
@@ -108,4 +106,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 | 1. Rich Media + Export Polish | 7/7 | Complete   | 2026-03-06 |
 | 2. Plugin Ecosystem | 4/5 | In Progress|  |
 | 3. LLM Integration | 5/5 | Complete   | 2026-03-06 |
-| 4. Hosted Platform | 0/6 | Not started | - |
+| 4. Hosted Platform | 0/4 | Not started | - |
