@@ -153,7 +153,8 @@ async def validate_config(request: Request, config: UploadFile):
     try:
         from pf.builder import PresentationBuilder
 
-        builder = PresentationBuilder(config_path=tmp_path, metrics_path=None)
+        builder = PresentationBuilder(config_path=tmp_path)
+        builder.load_config()
         errors = builder.validate_config()
     except Exception as e:
         errors = [str(e)]
