@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.2
 milestone_name: milestone
 status: completed
-stopped_at: Completed 03-04-PLAN.md
-last_updated: "2026-03-06T20:43:15.346Z"
+stopped_at: Completed 04-01-PLAN.md
+last_updated: "2026-03-07T15:19:18.351Z"
 last_activity: 2026-03-06 — Phase 01 complete, all verification items passed
 progress:
   total_phases: 4
   completed_phases: 3
-  total_plans: 17
-  completed_plans: 17
+  total_plans: 21
+  completed_plans: 18
   percent: 100
 ---
 
@@ -65,6 +65,7 @@ Progress: [██████████] 100% (Phase 1)
 | Phase 03-llm-integration P02 | 2 | 2 tasks | 2 files |
 | Phase 03-llm-integration PP03 | 4 | 2 tasks | 5 files |
 | Phase 03-llm-integration PP04 | 2 | 2 tasks | 3 files |
+| Phase 04-hosted-platform P01 | 8 | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -123,6 +124,8 @@ Recent decisions affecting current work:
 - [Phase 03-llm-integration]: optimize_slide accepts YAML string not dict — MCP tools communicate via JSON-RPC; YAML string keeps the tool interoperable with any client
 - [Phase 03-llm-integration]: suggest_layout defines SlideSuggestion/SuggestionList inline — avoids polluting pf/llm_schemas.py with non-layout models
 - [Phase 03-llm-integration]: MULTI_AGENT_WORKFLOW as module-level string constant — discoverable via MCP introspection and testable at runtime
+- [Phase 04-hosted-platform]: Post-processing pass runs after all HTML files are written — cleaner separation, one glob covers all files including present.html
+- [Phase 04-hosted-platform]: Regex negative lookahead over BeautifulSoup for base_url rewriting — no added dependency, sufficient for href/src attribute pattern
 
 ### Pending Todos
 
@@ -135,6 +138,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-06T20:37:41.205Z
-Stopped at: Completed 03-04-PLAN.md
+Last session: 2026-03-07T15:19:18.349Z
+Stopped at: Completed 04-01-PLAN.md
 Resume file: None

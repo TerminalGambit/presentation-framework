@@ -50,7 +50,7 @@ Requirements for v1.0 release. Each maps to roadmap phases.
 - [ ] **PLAT-03**: Platform tracks presentation analytics (views, slide-level engagement, time-per-slide)
 - [ ] **PLAT-04**: Multiple users can edit the same presentation with real-time WebSocket sync
 - [ ] **PLAT-05**: REST API provides HTTP endpoints for build, validate, and generate operations
-- [ ] **PLAT-06**: Build output supports configurable base URL for CDN/hosted asset paths (`--base-url`)
+- [x] **PLAT-06**: Build output supports configurable base URL for CDN/hosted asset paths (`--base-url`)
 
 ## v2 Requirements
 
@@ -120,7 +120,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | PLAT-03 | Phase 4 | Pending |
 | PLAT-04 | Phase 4 | Pending |
 | PLAT-05 | Phase 4 | Pending |
-| PLAT-06 | Phase 4 | Pending |
+| PLAT-06 | Phase 4 | Complete |
 
 **Coverage:**
 - v1 requirements: 30 total
