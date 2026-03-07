@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.2
 milestone_name: milestone
 status: completed
-stopped_at: Completed 04-02-PLAN.md
-last_updated: "2026-03-07T15:27:19.693Z"
+stopped_at: Completed 04-04-PLAN.md
+last_updated: "2026-03-07T15:32:19.985Z"
 last_activity: 2026-03-06 — Phase 01 complete, all verification items passed
 progress:
   total_phases: 4
   completed_phases: 3
   total_plans: 21
-  completed_plans: 19
+  completed_plans: 20
   percent: 100
 ---
 
@@ -67,6 +67,7 @@ Progress: [██████████] 100% (Phase 1)
 | Phase 03-llm-integration PP04 | 2 | 2 tasks | 3 files |
 | Phase 04-hosted-platform P01 | 8 | 2 tasks | 4 files |
 | Phase 04-hosted-platform P02 | 10 | 3 tasks | 7 files |
+| Phase 04-hosted-platform PP04 | 3 | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -130,6 +131,7 @@ Recent decisions affecting current work:
 - [Phase 04-hosted-platform]: Renamed platform/ to pf_platform/ to avoid shadowing Python stdlib platform module (used by attrs/_compat.py)
 - [Phase 04-hosted-platform]: Lazy StaticFiles mounting per deck — routes registered at import time, mounts added after each build to avoid first-match capture of /api/ routes
 - [Phase 04-hosted-platform]: load_config() must be called before validate_config() in the validate endpoint — __init__ does not auto-load config
+- [Phase 04-hosted-platform]: Single TestClient instance required for multi-connection WS tests — separate TestClient instances run separate ASGI transports and cannot share room state
 
 ### Pending Todos
 
@@ -142,6 +144,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-07T15:27:19.669Z
-Stopped at: Completed 04-02-PLAN.md
+Last session: 2026-03-07T15:32:19.832Z
+Stopped at: Completed 04-04-PLAN.md
 Resume file: None
