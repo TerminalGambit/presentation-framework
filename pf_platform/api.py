@@ -37,6 +37,12 @@ limiter = Limiter(key_func=get_remote_address)
 
 app = FastAPI(title="Presentation Platform API", version="1.0.0")
 
+
+@app.on_event("startup")
+async def _startup() -> None:
+    """Initialise the analytics database on server startup."""
+    init_db()
+
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
@@ -87,6 +93,25 @@ class EmbedResponse(BaseModel):
     deck_id: str
     iframe_html: str
     url: str
+
+
+class EventPayload(BaseModel):
+    deck_id: str
+    slide: int
+    duration_ms: int
+
+
+class DashboardEntry(BaseModel):
+    slide: int
+    views: int
+    total_ms: int
+    avg_ms: float
+
+
+class DashboardResponse(BaseModel):
+    deck_id: str
+    total_views: int
+    slides: list[DashboardEntry]
 
 
 # ---------------------------------------------------------------------------
@@ -195,6 +220,61 @@ async def remove_deck(deck_id: str):
         raise HTTPException(status_code=404, detail="Deck not found")
     _mounted_decks.discard(deck_id)
     return {"deleted": deck_id}
+
+
+# ---------------------------------------------------------------------------
+# Analytics endpoints
+# ---------------------------------------------------------------------------
+
+
+@app.post("/api/events")
+async def ingest_event(payload: EventPayload):
+    """Record a slide view event from the client beacon.
+
+    No rate limiting — beacons are high-frequency by design.
+    """
+    record_event(
+        deck_id=payload.deck_id,
+        slide_idx=payload.slide,
+        duration_ms=payload.duration_ms,
+    )
+    return {"status": "ok"}
+
+
+@app.get("/api/decks/{deck_id}/dashboard", response_model=DashboardResponse)
+async def deck_dashboard(deck_id: str):
+    """Return per-slide engagement analytics for a deck."""
+    slides_raw = get_dashboard(deck_id)
+    slides = [
+        DashboardEntry(
+            slide=row["slide_idx"],
+            views=row["views"],
+            total_ms=row["total_ms"],
+            avg_ms=row["avg_ms"],
+        )
+        for row in slides_raw
+    ]
+    total = get_total_views(deck_id)
+    return DashboardResponse(deck_id=deck_id, total_views=total, slides=slides)
+
+
+@app.get("/api/beacon-script")
+async def beacon_script(deck_id: str):
+    """Return the analytics beacon script with deck context injected.
+
+    The script sets window.__PF_ANALYTICS_URL and window.__PF_DECK_ID
+    so the beacon knows where to POST events.
+    """
+    injected = (
+        f"<script>\n"
+        f"window.__PF_ANALYTICS_URL = '/api/events';\n"
+        f"window.__PF_DECK_ID = '{deck_id}';\n"
+        f"</script>\n"
+        + BEACON_SCRIPT
+    )
+    from fastapi.responses import HTMLResponse
+
+    return HTMLResponse(content=injected, media_type="text/javascript")
 
 
 # ---------------------------------------------------------------------------
