@@ -456,5 +456,30 @@ def plugins_info(plugin_name: str):
     raise SystemExit(1)
 
 
+@cli.group()
+def platform():
+    """Hosted platform commands."""
+    pass
+
+
+@platform.command()
+@click.option("--host", default="0.0.0.0", help="Bind host")
+@click.option("--port", "-p", default=8000, help="Port number")
+@click.option("--reload", is_flag=True, default=False, help="Enable auto-reload for development")
+def serve(host: str, port: int, reload: bool):
+    """Start the platform API server."""
+    try:
+        import uvicorn
+    except ImportError:
+        click.echo("Platform server requires FastAPI + uvicorn. Install with:")
+        click.echo("  pip install presentation-framework[platform]")
+        raise SystemExit(1)
+
+    click.echo(f"Starting platform server at http://{host}:{port}")
+    click.echo(f"API docs: http://{host}:{port}/docs")
+    click.echo("Press Ctrl+C to stop.\n")
+    uvicorn.run("pf_platform.api:app", host=host, port=port, reload=reload)
+
+
 if __name__ == "__main__":
     cli()
