@@ -3,6 +3,7 @@
 import asyncio
 import functools
 import tempfile
+from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Optional
 
@@ -35,13 +36,14 @@ limiter = Limiter(key_func=get_remote_address)
 # App
 # ---------------------------------------------------------------------------
 
-app = FastAPI(title="Presentation Platform API", version="1.0.0")
-
-
-@app.on_event("startup")
-async def _startup() -> None:
-    """Initialise the analytics database on server startup."""
+@asynccontextmanager
+async def _lifespan(app: FastAPI):
+    """FastAPI lifespan: initialise analytics DB on startup."""
     init_db()
+    yield
+
+
+app = FastAPI(title="Presentation Platform API", version="1.0.0", lifespan=_lifespan)
 
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
