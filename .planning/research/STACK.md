@@ -1,8 +1,8 @@
 # Stack Research
 
 **Domain:** Python presentation engine — rich media, plugin architecture, LLM integration, hosted platform
-**Researched:** 2026-03-05
-**Confidence:** HIGH (all Python library versions verified via PyPI; JS library versions from training knowledge cutoff Aug 2025 — flag for spot-check before build)
+**Researched:** 2026-03-05 (v0.2 stack) | 2026-03-08 (v0.3 visual editor additions)
+**Confidence:** HIGH (v0.2 Python layers, verified PyPI) | MEDIUM (v0.3 JS/Next.js — versions verified via web search March 2026; spot-check npm before scaffolding)
 
 ---
 
@@ -21,136 +21,160 @@ Do not re-add these. This table is the baseline the new stack layers onto:
 | Playwright | 1.40+ | PDF export |
 | python-pptx | 1.0.2 | PowerPoint export |
 | FastMCP / mcp[cli] | 3.1.0 / 1.6+ | MCP server |
+| FastAPI | 0.135.1 | REST API (pf_platform) |
+| uvicorn | 0.41.0 | ASGI server |
+| SQLAlchemy | 2.0.48 | Platform database ORM |
 | Plotly.js | CDN | Interactive charts |
 | KaTeX | CDN | Math rendering |
 
 ---
 
-## Recommended Stack: New Capabilities
+## Recommended Stack: v0.3 Visual Editor (NEW CAPABILITIES ONLY)
 
-### Rich Media — Frontend JS Libraries (CDN, no build step)
+### Core Framework
 
 | Technology | Version | Purpose | Why Recommended |
 |------------|---------|---------|-----------------|
-| Highlight.js | 11.x | Code syntax highlighting | Zero-config auto-detection, 190+ languages, one `<link>` + one `<script>`, themeable CSS. Prism.js requires explicit language classes and a build step for language bundles — adds friction to a YAML-driven system where users don't control markup. Highlight.js works on `<pre><code>` blocks with no attributes required. |
-| Mermaid.js | 11.x | Animated diagram rendering | Native ESM CDN import, renders from text definition in `<pre class="mermaid">` blocks, matches YAML-driven philosophy. Supports flowcharts, sequence, ER, Gantt, class diagrams. v11 is the stable branch (v10 deprecated). |
-| Leaflet.js | 1.9.x | Interactive maps (HTML viewer) | 42KB, no API key needed for OSM tiles, straightforward iframe-or-div embed pattern. Google Maps Embed API is an alternative but requires per-user API key management — unacceptable for an open-source CLI. Leaflet + OpenStreetMap is the zero-friction path. |
-| vanilla JS fragments | n/a | Progressive slide builds | No library needed — CSS class toggling (`data-fragment-index`) with keyboard event listener in `present.html.j2`. Reveal.js pattern but implemented natively to avoid the full framework dependency. |
+| Next.js | 16.x (16.1 latest stable) | Visual editor app framework | Next.js 16 is now LTS-stable (released October 2025) with Turbopack as the default bundler (5–10x faster Fast Refresh than webpack), stable React Compiler integration, and explicit opt-in caching that eliminates the aggressive auto-caching footguns in Next.js 13-14. App Router with Server Components is the correct model for this desktop-first tool: shell renders server-side, the slide editor canvas runs client-side. Do NOT use Next.js 15.x — 16 is now stable LTS. |
+| React | 19.x | UI components | Peer dependency of Next.js 16. React 19 is stable and required for the React Compiler that Next.js 16 defaults to. No choice here — it comes with Next.js 16. |
+| TypeScript | 5.x | Type safety | Next.js 16 ships TypeScript-first. The typed route APIs in Next.js 16 (`Route` generics) require TS 5.x. Not optional — type the FastAPI response shapes and they become the single source of truth for the editor. |
 
-**Confidence:** MEDIUM — JS CDN versions from training data (Aug 2025). Verify current CDN URLs at build time for highlight.js (cdnjs.cloudflare.com/ajax/libs/highlight.js/), mermaid (cdn.jsdelivr.net/npm/mermaid/), and leaflet (unpkg.com/leaflet/).
+### State Management
+
+| Technology | Version | Purpose | Why Recommended |
+|------------|---------|---------|-----------------|
+| Zustand | 5.x (5.0.11 latest) | Editor global state — slide list, selected slide, dirty state, editor pane sizes | 3KB gzipped. No Provider wrapper needed (critical for Next.js App Router where context providers are cumbersome to thread through server/client boundaries). Works correctly with React 19. The slide editor has straightforward global state: current deck, selected slide index, unsaved changes flag. Zustand handles this with 20 lines. Redux Toolkit is 20x more ceremony for the same result. Jotai is better for derived/interdependent atoms (spreadsheet-like); this editor is not that. |
+
+### Code Editor (YAML/JSON)
+
+| Technology | Version | Purpose | Why Recommended |
+|------------|---------|---------|-----------------|
+| @uiw/react-codemirror | 4.x (4.25+ latest) | YAML + JSON editing panes in the live editor | CodeMirror 6 over Monaco Editor for this use case. Reasons: (1) Bundle size — Monaco is 2.4MB download; CodeMirror 6 with YAML + JSON extensions is ~300KB. For a desktop-first local tool this matters less, but startup time is still affected. (2) Mobile/embedding — Sourcegraph migrated from Monaco to CodeMirror citing 43% JS download reduction and better mobile behavior. (3) Modular extension system — CodeMirror 6 uses immutable state + facets; YAML and JSON are separate `@codemirror/lang-*` packages pulled in only when needed. `@uiw/react-codemirror` wraps CodeMirror 6 with a clean React API (`value`, `onChange`, `extensions`). |
+| @codemirror/lang-yaml | 6.x | YAML syntax support for `presentation.yaml` editing | Official CodeMirror 6 language package. Provides tokenization and indentation rules for YAML. Exact version follows `@uiw/react-codemirror` peer. |
+| @codemirror/lang-json | 6.x | JSON syntax support for `metrics.json` editing | Same as above. The editor shows YAML on the left, JSON on the right, with live rebuild on save. |
+
+**Do NOT use Monaco Editor.** 2.4MB download, no modular language imports, and overkill for YAML/JSON editing. Monaco shines for VS Code-style full IDE experiences (100k+ line files, IntelliSense, debugging integration). None of those apply here.
+
+### Drag-and-Drop (Slide Reordering)
+
+| Technology | Version | Purpose | Why Recommended |
+|------------|---------|---------|-----------------|
+| @dnd-kit/core | 6.x | Drag-and-drop engine | dnd-kit is the current standard for React drag-and-drop (2024–2026). Accessible (ARIA live regions, keyboard support), zero dependencies, ~10KB core. Unlike react-beautiful-dnd (Atlassian, now unmaintained) it handles grids not just lists — important if the slide panel shows a 2-column grid. |
+| @dnd-kit/sortable | 10.x | Sortable slide panel preset | Thin preset on top of core. `useSortable` + `SortableContext` gives drag-to-reorder in 30 lines. This is the only use case needed: reorder slides in the left panel. |
+
+**Do NOT use react-beautiful-dnd.** Atlassian deprecated it in favor of `pragmatic-drag-and-drop`. The fork `hello-pangea/dnd` is maintained but limited to lists; the slide panel may need grid layout.
+
+### Resizable Panes (Editor Layout)
+
+| Technology | Version | Purpose | Why Recommended |
+|------------|---------|---------|-----------------|
+| react-resizable-panels | 2.x | Three-pane editor layout (slide list | YAML/JSON editors | preview) | Lightweight (8KB), pointer-event based (works on desktop + touch), persistence via `onLayout` callback to localStorage. The editor layout is: narrow slide panel left, code editors middle, 1280×720 preview right. `react-resizable-panels` handles this in 15 lines without a third-party hook. Alternative: CSS `resize` handles are too limited (no min/max constraints, no persistence, no keyboard support). |
+
+### UI Components and Styling
+
+| Technology | Version | Purpose | Why Recommended |
+|------------|---------|---------|-----------------|
+| Tailwind CSS | 4.x | Utility CSS for editor UI | Next.js 16 ships with Tailwind v4 integration out of the box. V4 drops the `tailwind.config.js` in favor of CSS-first config (`@theme` in CSS). The presentation framework's existing slide CSS (1280×720px layouts) is isolated from the editor UI — no conflict. |
+| shadcn/ui | latest (components copied into project) | Buttons, dialogs, dropdowns, command palette, tabs, sidebar | Not a library — components are copied into `src/components/ui/` and owned by the project. Built on Radix UI primitives (accessible) + Tailwind classes. 65k+ GitHub stars, adopted by Vercel themselves. Provides all the chrome the editor needs: sidebar navigation, toolbar buttons, layout picker dropdown, export dialog. Do NOT reach for another component library (Material UI, Chakra) — they add bundle weight and fight Tailwind. |
 
 ---
 
-### Plugin Architecture — Python
+## Python Backend: No Changes Required
 
-| Technology | Version | Purpose | Why Recommended |
-|------------|---------|---------|-----------------|
-| `importlib.metadata` entry_points | stdlib (3.10+) | Plugin discovery | The standard Python packaging mechanism since PEP 517/518. Third-party packages declare `[project.entry-points."pf.layouts"]` in their `pyproject.toml` and the engine discovers them at startup with `importlib.metadata.entry_points(group="pf.layouts")`. No runtime dependency added — it's stdlib. This is how pytest (pluggy), Sphinx, and Babel do it. |
-| pluggy | 1.6.0 | Hook-based plugin invocation | pytest's plugin framework extracted as a standalone library. Use pluggy when plugins need to hook into multiple lifecycle points (pre-build, post-render, export). For simple layout/theme registration, entry_points alone is sufficient — add pluggy only if hook complexity warrants it. |
-| `pathlib` directory scanning | stdlib | Local plugin discovery | For development workflows: scan `~/.config/pf/plugins/` and `./pf-plugins/` directories for Python packages that aren't installed. Enables `pf plugins install <path>` for local development plugins without pip install. |
+The existing `pf_platform/api.py` FastAPI server already has all the endpoints the visual editor needs:
 
-**Rationale for NOT using a custom registry format:** Entry points are pip-native. `pip install pf-layout-mycompany` automatically registers the layout. `pip uninstall` removes it. Zero custom registry code needed for the core mechanism.
+| Existing Endpoint | Editor Uses It For |
+|-------------------|--------------------|
+| `POST /build` | Live preview rebuild when YAML/JSON changes |
+| `POST /validate` | Validate YAML before sending to build |
+| `GET /layouts` | Populate layout picker in editor |
+| `WebSocket /ws/{deck_id}` | Optional: present mode sync |
 
-**Confidence:** HIGH — `importlib.metadata` is stdlib, pluggy is verified at 1.6.0 on PyPI.
+**No new Python packages needed for the editor.** The FastAPI platform already has CORS middleware (`CORSMiddleware` in `pf_platform/api.py`) and all required endpoints.
+
+The one configuration change needed: **ensure `CORSMiddleware` allows `http://localhost:3000`** (Next.js dev server) in the `allow_origins` list.
 
 ---
 
-### LLM Structured Output
+## Frontend-to-Backend Communication
 
-| Technology | Version | Purpose | Why Recommended |
-|------------|---------|---------|-----------------|
-| Pydantic | 2.12.5 | Schema definition for slide layouts | Already heavily used in Python ecosystem, FastAPI depends on it. Define one `BaseModel` per slide layout — these become both the JSON Schema for validation AND the LLM output target. |
-| instructor | 1.14.5 | LLM structured output extraction | Wraps OpenAI, Anthropic, Gemini, and 10+ other providers with a unified `.chat.completions.create(response_model=MyModel)` interface. Returns typed Pydantic instances, not raw JSON. Handles retries, partial extraction, and streaming. The de facto standard for structured LLM output in Python as of 2025. |
-| anthropic | 0.84.0 | Anthropic SDK (Claude) | Direct SDK for Claude models — instructor wraps this. Pin for MCP compatibility since the project already uses Claude workflows. |
-| openai | 2.25.0 | OpenAI SDK (GPT-4o, o1) | Direct SDK — instructor wraps this. Required for provider-agnostic support. |
+### Development: Next.js Rewrites Proxy (No CORS)
 
-**What instructor gives us specifically:**
-
-```python
-import instructor
-from anthropic import Anthropic
-from pydantic import BaseModel
-
-class TwoColumnSlide(BaseModel):
-    title: str
-    left: list[ContentBlock]
-    right: list[ContentBlock]
-
-client = instructor.from_anthropic(Anthropic())
-slide = client.messages.create(
-    model="claude-opus-4-6",
-    max_tokens=2048,
-    messages=[{"role": "user", "content": "Create a slide about Q4 revenue..."}],
-    response_model=TwoColumnSlide,
-)
-# slide is a typed TwoColumnSlide — no JSON parsing needed
+```javascript
+// next.config.ts
+export default {
+  async rewrites() {
+    return [
+      {
+        source: '/api/:path*',
+        destination: 'http://127.0.0.1:8000/:path*',
+      },
+    ]
+  },
+}
 ```
 
-**Confidence:** HIGH — instructor 1.14.5 and pydantic 2.12.5 verified on PyPI. Anthropic 0.84.0 and openai 2.25.0 verified.
+The browser calls `/api/build` → Next.js dev server forwards to `http://127.0.0.1:8000/build` → FastAPI responds. To the browser, both are `localhost:3000`, so zero CORS issues. This is the standard Next.js + separate backend integration pattern.
+
+**Do NOT set up a separate Express proxy, nginx, or API gateway for local development.** The Next.js rewrites config is 6 lines and eliminates the entire CORS problem.
+
+### Production (Desktop Local Server Mode)
+
+Both servers run locally. The Next.js app is built (`next build` → `next start` on port 3000) and FastAPI runs on port 8000. The same rewrites config handles production too when Next.js is used as the frontend server.
 
 ---
 
-### Web Platform — REST API + Hosting
+## Desktop Deployment: Local Dev Server, NOT Electron or Tauri (Yet)
 
-| Technology | Version | Purpose | Why Recommended |
-|------------|---------|---------|-----------------|
-| FastAPI | 0.135.1 | REST API for build/validate/generate endpoints | Async, Pydantic-native (schema generation is automatic), auto-generates OpenAPI docs, shares the same Pydantic models as the LLM layer. The existing FastMCP server is built on a similar async foundation — FastAPI extends this naturally. Flask is synchronous and would conflict with the async WebSocket layer. |
-| uvicorn | 0.41.0 | ASGI server for FastAPI | Standard pairing. `uvicorn[standard]` adds `uvloop` and `httptools` for production throughput. |
-| websockets | 16.0 | Real-time collaboration sync | Stable, well-maintained WebSocket library. FastAPI has native WebSocket support using `starlette.websockets` — use that directly rather than adding `websockets` as a separate dependency, since FastAPI includes Starlette. |
-| SQLAlchemy | 2.0.48 | Database ORM for platform persistence | Async-compatible (2.x), supports SQLite for development and PostgreSQL for production with no code changes. Stores presentation metadata, share tokens, view analytics. |
-| Alembic | 1.18.4 | Database migrations | SQLAlchemy's official migration tool. Defines schema evolution for the platform database. |
-| httpx | 0.28.1 | Async HTTP client for data source plugins | Already installed in this environment. Used for Google Sheets API, external data source plugins. Async-native — pairs with FastAPI's async model. |
+**Decision: Start with local dev server, evaluate Tauri v2 for a future packaging milestone.**
 
-**Confidence:** HIGH — all versions verified on PyPI. FastAPI at 0.135.1, uvicorn at 0.41.0, sqlalchemy at 2.0.48, alembic at 1.18.4, httpx at 0.28.1.
+### Why NOT Electron for v0.3
 
----
+Electron bundles Chromium (~150MB installer) and Node.js. For a tool that already runs as a local CLI and whose users are developers comfortable with `npm run dev`, this is unnecessary overhead. The existing `pf serve` mental model maps directly to `pf editor` launching the Next.js dev server + FastAPI server together. No Electron needed.
 
-### Hosted Platform — Storage and Deployment
+### Why NOT Tauri for v0.3
 
-| Technology | Version | Purpose | Why Recommended |
-|------------|---------|---------|-----------------|
-| boto3 | 1.42.x | S3-compatible file storage | Store built slide HTML bundles. Compatible with AWS S3, Cloudflare R2, Backblaze B2, and MinIO (local dev). Don't lock to a single provider — use the S3 API interface. |
-| SQLite (dev) / PostgreSQL (prod) | — | Platform database | SQLite for zero-config local development. PostgreSQL for production. SQLAlchemy 2.x handles both transparently. |
+Tauri v2 + Next.js + Python sidecar is **technically possible** (there are working examples with FastAPI sidecars), but it adds Rust build toolchain, binary bundling for Python, and platform-specific sidecar compilation. This is a significant implementation cost for a milestone focused on building the editor itself. The payoff (smaller bundle, native menus) is real but premature.
 
-**Deployment target:** Railway, Render, or Fly.io for the hosted platform — all support Python + PostgreSQL + Dockerfile deploys. Avoid AWS-first lock-in given the open-source nature of the project.
+### What to Build for v0.3
 
-**Confidence:** MEDIUM — deployment platform recommendations are based on ecosystem patterns as of Aug 2025. Verify current pricing/free-tier availability before choosing.
+A `pf editor` CLI command that:
+1. Starts the FastAPI platform server in a subprocess (`pf_platform` already exists)
+2. Starts the Next.js app (built and served via `next start` or in dev mode)
+3. Opens the browser to `http://localhost:3000`
+
+This is 20 lines of Python using `subprocess.Popen` and the existing Click CLI — no new framework required.
+
+**If packaging is needed later (v0.4+):** Tauri v2 is the correct choice over Electron. The `dieharders/example-tauri-v2-python-server-sidecar` repository demonstrates the exact pattern (Tauri + Next.js + FastAPI sidecar). Tauri produces 8–10MB installers vs Electron's 120–150MB. When the project is ready to ship a downloadable app, use Tauri v2.
 
 ---
 
 ## Installation
 
 ```bash
-# Rich media — no Python packages needed (CDN-only JS)
-# Mermaid, Highlight.js, and Leaflet are injected via Jinja2 templates
-# when theme.diagrams, theme.code, or theme.maps are enabled
+# Scaffold the editor app (run from repo root)
+npx create-next-app@latest editor --typescript --tailwind --app --src-dir --import-alias "@/*"
+cd editor
 
-# Plugin architecture — stdlib only for entry_points discovery
-# pluggy only if hook complexity warrants it:
-pip install pluggy>=1.6.0
+# State management
+npm install zustand
 
-# LLM structured output
-pip install "instructor>=1.14.0" "pydantic>=2.12.0"
-# LLM provider SDKs (install only what users need)
-pip install "anthropic>=0.84.0"   # for Claude
-pip install "openai>=2.25.0"      # for GPT-4o / o1
+# Code editor
+npm install @uiw/react-codemirror @codemirror/lang-yaml @codemirror/lang-json
 
-# Web platform API
-pip install "fastapi>=0.135.0" "uvicorn[standard]>=0.41.0"
-pip install "sqlalchemy>=2.0.48" "alembic>=1.18.0"
-pip install "httpx>=0.28.0"
+# Drag-and-drop
+npm install @dnd-kit/core @dnd-kit/sortable @dnd-kit/utilities
 
-# Platform storage
-pip install "boto3>=1.42.0"
+# Resizable panes
+npm install react-resizable-panels
+
+# shadcn/ui init (copies components into src/components/ui/)
+npx shadcn@latest init
+# then add individual components as needed:
+npx shadcn@latest add button dialog dropdown-menu tabs sidebar command
 ```
 
-**pyproject.toml extras_require additions:**
-
-```toml
-[project.optional-dependencies]
-llm = ["instructor>=1.14.0", "pydantic>=2.12.0", "anthropic>=0.84.0", "openai>=2.25.0"]
-platform = ["fastapi>=0.135.0", "uvicorn[standard]>=0.41.0", "sqlalchemy>=2.0.48", "alembic>=1.18.0", "httpx>=0.28.0", "boto3>=1.42.0"]
-```
+**pyproject.toml: no changes.** The visual editor is a separate `editor/` directory at the repo root — a Next.js app, not a Python package.
 
 ---
 
@@ -158,13 +182,15 @@ platform = ["fastapi>=0.135.0", "uvicorn[standard]>=0.41.0", "sqlalchemy>=2.0.48
 
 | Recommended | Alternative | When to Use Alternative |
 |-------------|-------------|-------------------------|
-| Highlight.js (CDN) | Prism.js | Use Prism if the project gains a build pipeline and needs line numbers, copy buttons, or diff highlighting — Prism's plugin ecosystem is richer but requires explicit language registration |
-| Mermaid.js 11.x | D3.js or Graphviz | Use D3 if custom force-directed graphs or complex data visualizations are needed beyond Mermaid's diagram types |
-| Leaflet + OSM | Google Maps Embed | Use Google Maps only if users consistently need Street View, business listings, or custom styled maps — requires API key management, not appropriate for CLI default |
-| instructor | LangChain | Use LangChain if the LLM layer needs chains, agents, and retrieval augmentation. For structured output from a fixed schema (our use case), instructor is dramatically simpler — 5 lines vs 50 |
-| FastAPI | Flask | Use Flask if the team needs synchronous request handling only and wants simpler deployment. FastAPI is the right choice here because WebSocket support and Pydantic model integration are needed |
-| SQLAlchemy 2.x async | Tortoise ORM or SQLModel | Use SQLModel if a lighter-weight ORM with direct Pydantic integration is desired — it wraps SQLAlchemy anyway, so no real benefit over raw SQLAlchemy 2.x |
-| importlib.metadata entry_points | Custom plugin registry | Use a custom registry only if pip-based installation is not the distribution model (e.g., browser plugins). For Python packages, entry_points is always correct |
+| Next.js 16 (App Router) | Vite + React SPA | Use Vite if you never need SSR, file-based routing, or server actions. For a desktop-first local tool, Vite would also work — but Next.js 16 App Router gives server-rendered shells with client islands, which is the right model for this editor (server renders layout chrome, client hydrates the editor canvas). |
+| Next.js 16 | Remix | Remix is excellent for web apps with complex nested routing and form-heavy UIs. The presentation editor doesn't have deeply nested routes — it's essentially one editor route with a sidebar. Next.js 16's simpler mental model wins here. |
+| @uiw/react-codemirror | @monaco-editor/react | Use Monaco if the project needs VS Code-level features: multi-cursor, global find/replace, diff view, IntelliSense. For YAML and JSON editing in a two-pane layout, this is 2.4MB you don't need. |
+| @dnd-kit | react-beautiful-dnd / hello-pangea/dnd | Use hello-pangea/dnd if slide reordering is list-only and you want the simplest possible API. It's a maintained fork with a great DX. But dnd-kit's grid support and accessibility-first design make it the safer long-term choice. |
+| react-resizable-panels | allotment | allotment is a solid alternative (VS Code-style panels) with slightly more features. Either works. react-resizable-panels is smaller and has simpler API for a three-pane layout. |
+| Local dev server (pf editor) | Electron | Use Electron only if the user base expects a downloadable `.app` / `.exe` with no runtime dependencies. Developer tooling users (the target audience) run CLI tools; `pf editor` launching a browser is expected and sufficient. |
+| Tauri v2 (future) | Electron (future) | When packaging becomes a priority, Tauri produces 8–10MB installers vs 120–150MB for Electron. Tauri v2 has confirmed Next.js + FastAPI sidecar support. Use Tauri. |
+| Zustand | Jotai | Use Jotai if the editor needs complex derived/interdependent state (e.g., a spreadsheet where changing cell A recomputes B and C). The slide editor's state graph is simple: selected slide index drives preview, dirty flag gates save. Zustand's flat store is cleaner for this. |
+| shadcn/ui | Radix UI (raw) | Use raw Radix UI if you don't want Tailwind. If Tailwind is already in the project (it is), shadcn/ui is strictly better — you get the styled components for free, own the source, and can customize without fighting a component library's styling system. |
 
 ---
 
@@ -172,37 +198,36 @@ platform = ["fastapi>=0.135.0", "uvicorn[standard]>=0.41.0", "sqlalchemy>=2.0.48
 
 | Avoid | Why | Use Instead |
 |-------|-----|-------------|
-| reveal.js as a rendering engine | Would require migrating the existing HTML template system — the current Jinja2 + vanilla JS system is already functional and presentation-framework-specific. reveal.js solves problems we've already solved | Continue with the existing template system; add Mermaid/Highlight.js as opt-in CDN layers |
-| LangChain for structured output | 10x the dependency surface area for a problem that instructor solves with one decorator. LangChain v0.3+ improved but is still framework-heavy | instructor |
-| Pydantic v1 | v1 is in maintenance mode, v2 is 5-20x faster due to Rust core, and instructor 1.x requires Pydantic v2. No reason to use v1 in a new codebase | Pydantic 2.12.x |
-| Django for the platform API | Full MVC framework adds ORM, admin, auth, templates — most of which conflict with or duplicate the existing system. The platform needs a thin API layer, not a web framework | FastAPI |
-| Celery for async builds | Adds Redis/RabbitMQ broker dependency for what should be a stateless build process. FastAPI's `BackgroundTasks` or Python's `asyncio` is sufficient for presentation build jobs | FastAPI BackgroundTasks |
-| WebSockets via a separate websockets library | FastAPI includes Starlette's WebSocket support natively — adding the `websockets` package separately creates version conflicts | `from fastapi import WebSocket` |
-| PyWebview or Electron for a desktop wrapper | Out of scope per PROJECT.md — web-first only | — |
+| @monaco-editor/react | 2.4MB bundle for YAML/JSON editing. VS Code in a browser is overkill when the user is editing 50-line YAML files. Slows initial load noticeably even on localhost. | @uiw/react-codemirror with @codemirror/lang-yaml and @codemirror/lang-json |
+| react-beautiful-dnd | Officially deprecated by Atlassian in 2024. The fork hello-pangea/dnd is maintained but limited to list-only drag and has no keyboard ARIA support for grid layouts. | @dnd-kit/core + @dnd-kit/sortable |
+| Next.js Pages Router | Next.js 16 App Router is now stable LTS. Pages Router is in maintenance mode. No new project should use it. | Next.js 16 App Router |
+| Electron for v0.3 | Adds Rust/Chromium build complexity, 120–150MB binary, and weeks of packaging work to a milestone focused on building the editor. The target users are developers who run CLI tools. | `pf editor` CLI command launching local servers + browser |
+| Redux Toolkit | 20x ceremony over Zustand for global state that amounts to: current deck path, selected slide index, dirty flag, pane sizes. Redux is the right call when you have time-travel debugging, complex middleware pipelines, or a large team. | Zustand 5.x |
+| next-auth | The visual editor is a local desktop tool — no authentication needed for v0.3. Users run it locally. | No auth — file system access via FastAPI |
+| tRPC | tRPC replaces REST with type-safe RPC. Value is highest when both the Next.js app and the backend are in the same TypeScript repo. The backend here is Python/FastAPI. tRPC would duplicate the API layer rather than simplify it. | HTTP fetch to FastAPI REST endpoints, TypeScript types generated from OpenAPI spec |
+| SWR or React Query for build calls | Build calls are imperative mutations (user clicks "Build"), not auto-polling data subscriptions. SWR/React Query's cache invalidation and refetch logic adds complexity where `fetch()` + loading state in Zustand is sufficient. | Direct `fetch()` with Zustand loading state |
 
 ---
 
 ## Stack Patterns by Variant
 
-**If rich media only (v0.3 milestone):**
-- Add Highlight.js, Mermaid.js, Leaflet via conditional template injection (`{% if theme.code %}`, `{% if theme.diagrams %}`, `{% if theme.maps %}`)
-- No new Python dependencies
-- Fragment animation via vanilla JS in `present.html.j2`
+**If deployment as a standalone app is needed (v0.4+):**
+- Add Tauri v2 wrapping the Next.js build
+- Bundle FastAPI as a Tauri sidecar (Python binary via PyInstaller)
+- Reference: `dieharders/example-tauri-v2-python-server-sidecar` on GitHub
+- Rust toolchain requirement: developers must install `rustup`
+- Do NOT add Tauri to v0.3 — it doubles the implementation surface
 
-**If plugin system only (v0.4 milestone):**
-- Use `importlib.metadata.entry_points(group="pf.layouts")` — stdlib, zero new deps
-- Add pluggy only when hook complexity exceeds simple registration
-- Build `pf plugins list` / `pf plugins install` CLI commands on top of pip subprocess calls
+**If the editor needs collaborative multi-user editing (v1.0+):**
+- Add Yjs (CRDT library) for conflict-free concurrent editing of the YAML document
+- The existing WebSocket sync in `pf_platform/sync.py` handles presenter-push; Yjs handles bidirectional collaborative editing
+- Do NOT implement collaborative editing in v0.3 — last-writer-wins via the FastAPI build endpoint is sufficient
 
-**If LLM integration only (v0.5 milestone):**
-- `pip install pf[llm]` installs instructor + pydantic + provider SDKs
-- One Pydantic model per layout, derived from the existing `schema.json`
-- New MCP tool `generate_presentation(prompt, theme, slide_count)` added to `mcp_server.py`
-
-**If hosted platform only (v0.7+ milestone):**
-- FastAPI app lives in `pf/api/` directory, separate from CLI
-- SQLite for local dev (`pf platform serve`), PostgreSQL for production deployment
-- Build pipeline runs the existing `PresentationBuilder` as a FastAPI background task
+**If the editor is deployed as a cloud-hosted web app (not local-only):**
+- Move Next.js to Vercel (zero-config deployment, edge functions)
+- FastAPI remains on Railway/Render/Fly.io
+- Add authentication (Auth.js v5 with GitHub OAuth is the simplest path)
+- This is a separate milestone from the local-first v0.3 editor
 
 ---
 
@@ -210,25 +235,32 @@ platform = ["fastapi>=0.135.0", "uvicorn[standard]>=0.41.0", "sqlalchemy>=2.0.48
 
 | Package A | Compatible With | Notes |
 |-----------|-----------------|-------|
-| instructor 1.14.x | pydantic 2.x (required) | instructor 1.x drops pydantic v1 support entirely |
-| instructor 1.14.x | anthropic 0.84.x | instructor wraps the Anthropic client; keep anthropic updated with instructor releases |
-| FastAPI 0.135.x | pydantic 2.x | FastAPI 0.100+ requires pydantic v2 |
-| FastAPI 0.135.x | SQLAlchemy 2.0.x | No direct dependency but async session patterns require SA 2.x |
-| SQLAlchemy 2.0.x | alembic 1.18.x | Always keep alembic in sync with SQLAlchemy major version |
-| mcp[cli] 1.6+ | fastmcp 3.1.0 | Project uses `mcp.server.fastmcp.FastMCP` — fastmcp 3.x is the refactored version; verify import path before upgrading |
+| Next.js 16.x | React 19.x (required) | Next.js 16 requires React 19. Do not downgrade to React 18. |
+| Next.js 16.x | Tailwind CSS 4.x | Next.js 16 ships Tailwind v4 integration; v3 config format (`tailwind.config.js`) is deprecated |
+| Zustand 5.x | React 19.x | Zustand 5 supports React 19. Earlier Zustand 4.x also works but misses React 19 concurrent features. |
+| @uiw/react-codemirror 4.x | React 18 and 19 | Confirmed React 19 compatible as of v4.25+ |
+| @dnd-kit/core 6.x | @dnd-kit/sortable 10.x | Always use the same dnd-kit release family. Core 6 + sortable 10 is the latest matching pair. |
+| shadcn/ui components | Tailwind 4.x | shadcn/ui updated all components for Tailwind v4 and React 19 in 2025. Run `npx shadcn@latest` for the current version. |
+| FastAPI 0.135.x (existing) | Next.js rewrites proxy | No version dependency — Next.js rewrites forward HTTP/1.1 requests to FastAPI. Any FastAPI version works. |
 
 ---
 
 ## Sources
 
-- PyPI `pip index versions` — verified versions for: instructor (1.14.5), pydantic (2.12.5), fastapi (0.135.1), uvicorn (0.41.0), sqlalchemy (2.0.48), alembic (1.18.4), httpx (0.28.1), websockets (16.0), boto3 (1.42.62), pluggy (1.6.0), anthropic (0.84.0), openai (2.25.0), fastmcp (3.1.0), python-pptx (1.0.2) — HIGH confidence
-- Existing `setup.py` — confirmed current dependency pinning in v0.2.0 — HIGH confidence
-- `pf/mcp_server.py` — confirmed FastMCP import pattern (`from mcp.server.fastmcp import FastMCP`) — HIGH confidence
-- JS library versions (Highlight.js 11.x, Mermaid.js 11.x, Leaflet 1.9.x) — training knowledge cutoff Aug 2025, CDN available — MEDIUM confidence, verify CDN URLs before implementing
-- Python Packaging Guide (packaging.python.org/en/latest/guides/creating-and-discovering-plugins/) — entry_points pattern — HIGH confidence (stdlib, well-documented)
-- instructor project patterns — training knowledge through Aug 2025, confirmed active development by version history on PyPI — HIGH confidence
+- [Next.js 16 release blog](https://nextjs.org/blog/next-16) — stable release October 2025, Turbopack default, React Compiler stable — MEDIUM confidence (web search verified, official source)
+- [Next.js 15.5 blog](https://nextjs.org/blog/next-15-5) — Turbopack builds beta, Node.js middleware stable — MEDIUM confidence
+- [Next.js Proxy/Rewrites docs](https://nextjs.org/docs/app/getting-started/proxy) — rewrites as CORS-free FastAPI proxy — HIGH confidence (official docs)
+- [dnd-kit documentation](https://dndkit.com/) — sortable preset, accessibility — MEDIUM confidence (web search, official site)
+- [Top 5 Drag-and-Drop Libraries for React 2026, Puck](https://puckeditor.com/blog/top-5-drag-and-drop-libraries-for-react) — dnd-kit current recommendation — LOW confidence (vendor blog, but aligns with npm data)
+- [Sourcegraph: Migrating from Monaco to CodeMirror](https://sourcegraph.com/blog/migrating-monaco-codemirror) — 43% JS reduction, bundle size comparison — HIGH confidence (official engineering blog with measured data)
+- [shadcn/ui Tailwind v4 docs](https://ui.shadcn.com/docs/tailwind-v4) — Tailwind v4 compatibility confirmed — HIGH confidence (official docs)
+- [Zustand npm](https://www.npmjs.com/package/zustand) — v5.0.11 latest, React 19 compatible — MEDIUM confidence (web search, corroborated by npm)
+- [Tauri v2 Next.js guide](https://v2.tauri.app/start/frontend/nextjs/) — Next.js integration pattern — HIGH confidence (official Tauri docs)
+- [dieharders/example-tauri-v2-python-server-sidecar](https://github.com/dieharders/example-tauri-v2-python-server-sidecar) — Tauri v2 + Next.js + FastAPI sidecar working example — MEDIUM confidence (community example, not official)
+- [Zustand React 19 discussion](https://github.com/pmndrs/zustand/discussions/2686) — React 19 compatibility confirmed — MEDIUM confidence
+- `pf_platform/api.py` (codebase) — confirmed `CORSMiddleware` already configured, existing endpoints sufficient — HIGH confidence
 
 ---
 
-*Stack research for: presentation-framework rich media, plugins, LLM, platform*
-*Researched: 2026-03-05*
+*Stack research for: presentation-framework v0.3 visual editor (Next.js + React additions)*
+*Researched: 2026-03-08*

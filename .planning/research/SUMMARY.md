@@ -1,193 +1,245 @@
 # Project Research Summary
 
-**Project:** presentation-framework
-**Domain:** Python presentation engine — rich media, plugin ecosystem, LLM integration, hosted platform
-**Researched:** 2026-03-05
-**Confidence:** HIGH (stack and pitfalls verified against codebase; features from codebase + training data; architecture from direct code analysis)
+**Project:** presentation-framework v0.3 Visual Editor
+**Domain:** Next.js visual editor layered over a Python YAML-to-HTML slide deck build engine
+**Researched:** 2026-03-08 (visual editor additions); 2026-03-05 (engine expansion baseline)
+**Confidence:** HIGH (existing codebase inspected directly; stack verified via official docs and npm; features cross-validated against Slidev, Marp, Gamma, Beautiful.ai, Pitch; architecture derived from live code analysis)
+
+---
 
 ## Executive Summary
 
-The presentation-framework is a YAML + JSON -> Jinja2 -> HTML slide deck generator that has shipped a solid v0.2.0 baseline. The roadmap through v1.0 adds four concentric capability rings: rich media (v0.3), plugin ecosystem (v0.4), LLM integration (v0.5), and a hosted platform (v1.0). Each ring is additive — no existing behavior needs to change to build the next layer. This is a genuine architectural strength: the core `PresentationBuilder` should remain untouched across all four expansion phases.
+The presentation-framework v0.3 milestone adds a browser-based visual editor to a production-complete Python build engine. The engine (YAML + JSON to Jinja2 to HTML) shipped a solid v0.2.0 baseline and does not change. The v0.3 work is a GUI layer that lets non-CLI users create and manage decks without writing YAML by hand. Research across all four domains converges on a single critical architectural constraint: the editor must never re-implement slide rendering. The Python Jinja2 output is the source of truth, and any attempt to mirror slide layouts in React will immediately diverge and produce fidelity bugs that are impossible to maintain. The entire preview strategy must use an iframe embedding the real Python-built HTML.
 
-The recommended approach follows well-established Python patterns throughout. Rich media is pure template work — no new Python dependencies needed, just CDN-loaded JS libraries (Highlight.js, Mermaid.js, Leaflet) gated by `theme.*` feature flags. Plugin architecture uses Python's standard `importlib.metadata` entry points, the same mechanism as pytest and Sphinx. LLM integration uses `instructor` + Pydantic to produce typed structured output per slide layout, cleanly separating generation concerns from rendering. The platform layer wraps the existing build pipeline in a FastAPI service with a job queue and S3-compatible storage. Each component has clear boundaries and can be built and tested independently.
+The recommended stack is Next.js 16 (App Router, TypeScript, Tailwind v4) for the editor frontend, with Zustand 5 for state management, CodeMirror 6 for YAML/JSON editing, and dnd-kit for slide reordering. The existing FastAPI platform already has all the endpoints the editor needs — no new Python packages are required. The backend integration uses Next.js rewrites to proxy to FastAPI, eliminating CORS complexity. For v0.3, the editor runs as a local dev server launched via a new `pf editor` CLI command. Packaging as a distributable app (Tauri v2) is explicitly deferred to a future milestone.
 
-The most important risk to manage across all phases is the existing `autoescape=False` Jinja2 configuration, which is safe today (CLI users own their input) but becomes a critical XSS vulnerability the moment LLM-generated content or a hosted REST API reaches templates. This must be addressed in v0.5 before `generate_presentation` ships. The second most important risk is the Mermaid.js async export race condition: diagrams render correctly in the browser but not in Playwright PDF/PPTX exports unless a `data-pf-ready` sentinel is added. This must be solved in v0.3 before Mermaid ships. Both are well-understood, tractable fixes — they just must not be deferred.
+The highest risks are two state synchronization problems and one infrastructure constraint: (1) keeping the YAML code editor and visual form editor in sync must use a single Zustand store as the source of truth, with one serialization module as the only path between raw YAML and parsed state — never `useEffect` chains; (2) the existing `/api/build` rate limit of 10 requests/minute is incompatible with live preview editing cadence and must be raised before Phase 2 ships; (3) relative asset paths in the build output must be abstracted before any hosted/CDN serving is attempted. All three have clear, bounded mitigations and do not require architectural rethinking.
+
+---
 
 ## Key Findings
 
 ### Recommended Stack
 
-The v0.2.0 baseline already contains all core Python dependencies. New capability layers add optional dependency groups via `pyproject.toml` extras. Rich media requires zero new Python packages — Highlight.js 11.x, Mermaid.js 11.x, and Leaflet 1.9.x are injected via Jinja2 templates only when the corresponding `theme.*` flag is set. The plugin architecture requires only `importlib.metadata` (stdlib) for the common case, with `pluggy 1.6.0` as an optional addition if hook complexity warrants it. LLM integration adds `instructor 1.14.5` + `pydantic 2.12.5` plus provider SDKs (`anthropic 0.84.0` / `openai 2.25.0`) as a `pf[llm]` optional group. The platform layer adds `fastapi 0.135.1` + `uvicorn 0.41.0` + `sqlalchemy 2.0.48` + `alembic 1.18.4` + `boto3 1.42.x` as `pf[platform]`.
+The editor is a separate `editor/` Node.js project at the repo root, not a Python module. The existing Python backend (`pf_platform/`) requires no new packages and no changes to existing endpoints for the editor to function. Three new FastAPI routes (`GET/PUT /api/projects/*`) handle local file read/write; one small change to `present.html.j2` adds a `postMessage` listener for slide navigation.
 
-**Core technologies for new capabilities:**
-- Highlight.js 11.x: code syntax highlighting — zero-config auto-detection, CDN-only, no build step
-- Mermaid.js 11.x: animated diagram rendering — ESM CDN, text-definition in `<pre class="mermaid">`, matches YAML-driven philosophy
-- `importlib.metadata` entry_points: plugin discovery — stdlib, pip-native, same mechanism as pytest/Sphinx/Babel
-- instructor 1.14.5: LLM structured output — wraps Anthropic/OpenAI/Gemini with Pydantic response models; returns typed instances, not raw JSON
-- Pydantic 2.12.5: schema definition for LLM layout contracts — also required by FastAPI 0.135.x
-- FastAPI 0.135.1: REST API for platform layer — async, Pydantic-native, auto-generates OpenAPI docs, shares Pydantic models with LLM layer
-- SQLAlchemy 2.0.48 + Alembic 1.18.4: platform persistence — async-compatible, SQLite dev / PostgreSQL prod with no code changes
+**Core technologies:**
+- **Next.js 16 (App Router) + React 19 + TypeScript 5**: Editor framework — LTS stable since October 2025; Turbopack default; App Router server/client model maps cleanly to this editor's shell-renders-server, canvas-runs-client pattern. Do not use Next.js 15.x or Pages Router.
+- **Zustand 5**: Editor global state — 3KB, no Provider wrapper, selector-based subscriptions, works cleanly with App Router server/client boundaries. Replaces Redux Toolkit (excessive ceremony) and React Context (no selector support = full-tree re-renders).
+- **@uiw/react-codemirror + @codemirror/lang-yaml + @codemirror/lang-json**: YAML and JSON editing — 300KB total vs Monaco's 2.4MB; CodeMirror 6 modular extensions, React 19 compatible. Do not use Monaco Editor for this use case.
+- **@dnd-kit/core + @dnd-kit/sortable**: Slide panel drag-to-reorder — accessible, grid-capable, actively maintained. Do not use react-beautiful-dnd (officially deprecated by Atlassian).
+- **react-resizable-panels**: Three-pane editor layout — 8KB, `onLayout` persistence to localStorage, keyboard support.
+- **Tailwind CSS 4 + shadcn/ui**: Editor UI chrome — Next.js 16 ships Tailwind v4 integration out of the box; shadcn/ui components are copied into the project (no external library dependency), built on Radix UI primitives.
+- **FastAPI (existing, unchanged for core routes)**: All required `/api/build`, `/api/validate`, `/api/decks/*`, and `/ws/{deck_id}` endpoints already present; CORS already configured.
 
-JS CDN library versions (Highlight.js, Mermaid.js, Leaflet) are from training data through Aug 2025 and should be verified against current CDN URLs before implementation.
+**Explicitly ruled out:** Monaco Editor (2.4MB bundle), react-beautiful-dnd (deprecated), Redux Toolkit (overhead), Electron (wrong deployment model for developer tool users), Next.js Pages Router (maintenance mode), tRPC (Python backend means no shared TypeScript types), SWR/React Query for build calls (imperative mutations, not subscriptions).
 
 ### Expected Features
 
-The v0.2.0 engine is missing two table-stakes developer features — code syntax highlighting and slide fragments — that every open-source competitor (reveal.js, Marp, Slidev) has shipped. These are the most urgent gaps and must close in v0.3 or developer credibility suffers. The engine already leads all open-source competitors on AI-agent features (structured data model, MCP server, idempotent builds).
+Research surveyed Slidev, Marp, Gamma, Beautiful.ai, Pitch, and Slides.com. The primary user persona is non-technical users (marketers, PMs, consultants) who cannot write YAML. Developers and power users are a secondary persona served by the YAML escape hatch.
 
-**Must have (table stakes not yet shipped):**
-- Code syntax highlighting — the single biggest credibility gap vs. reveal.js/Marp/Slidev; every demo deck has code
-- Slide fragments / progressive builds — needed for teaching decks, the #1 developer use case
-- Video embed — expected in any media-capable tool; low complexity (iframe)
-- Finish editable PPTX — image-based export is a partial solution; native shapes allow post-generation editing
+**Must have (table stakes):**
+- Live slide preview in editor — core value proposition; users abandon if preview lags; must use iframe embedding real Python-built HTML
+- Presentation management dashboard — "My presentations" grid for multi-deck workflows
+- Template gallery with categories — non-developers always start from templates, not blank YAML
+- Add / delete / duplicate / reorder slides — basic editing muscle memory
+- Export from editor (HTML, PDF, PPTX) — every editor has download
+- Autosave with status indicator — prevents anxiety about lost work
+- Undo/redo (Ctrl+Z/Y) — universal expectation; highest-complexity table-stakes feature
+- Error display for build failures — YAML invalidity must surface in UI, not silently fail
 
-**Should have (competitive differentiators):**
-- Mermaid.js diagram support — developers use Mermaid in every README; they expect it in slides
-- Plugin layout system — until v0.4, all layouts live in core; community cannot contribute; this is the ecosystem unlock
-- Structured output schemas per layout — gates reliable AI generation; without `maxItems` constraints, LLMs fill slides to maximum capacity
-- `generate_presentation(prompt)` MCP tool — highest-value AI feature; no open-source competitor offers this
+**Should have (competitive differentiation):**
+- Side-by-side YAML editor + live preview — developer "escape hatch"; unique value of code-based tools
+- Build overflow warnings as slide thumbnail badges — unique to this engine; no competitor offers this
+- WCAG contrast warnings in UI — unique to this engine
+- JSON metrics editor companion pane — power user feature; referenced paths surfaced visually
+- Form-based slide editing per layout — structured fields generate valid YAML without exposing syntax
+- Layout picker (visual grid of 16 layouts) — required when adding slides
 
-**Defer (v2+):**
-- Real-time collaborative editing (OT/CRDT) — last-writer-wins WebSocket presenter sync is sufficient for v1.0; full CRDT is v2+
-- WYSIWYG drag-and-drop editor — destroys the code-as-configuration model and breaks AI generation
-- AI content writing / text generation — engine renders, doesn't author; `generate_presentation` delegates content to the calling LLM
-- Offline mobile app — viewing works fine on mobile via responsive HTML; editing on mobile is a different product
+**Defer to v2+:**
+- Full WYSIWYG drag-and-drop element positioning — destroys code-as-configuration model
+- Real-time collaborative editing — OT on YAML is non-trivial; WebSocket presenter sync already exists for viewing
+- Built-in AI content writing — MCP tools handle the agent path; in-editor LLM is unbounded scope
+- Git integration / version history — "export as YAML" gives users git-ready files they manage themselves
+- Custom slide dimensions — fixed 1280x720 is a core engine constraint; not negotiable in v0.3
+
+**Critical blocker (must fix in Phase 2):** The existing `/api/build` rate limit is 10 requests/minute. A debounced live preview at one build per 1.5 seconds would hit 40 builds/minute. The rate limit must be raised or removed for local editor mode before Phase 2 ships. This is not optional — without it, the live preview UX cannot be delivered.
 
 ### Architecture Approach
 
-The architecture follows a "four concentric rings" model. Each ring wraps the existing core build pipeline without modifying it. Ring 1 (v0.3) is template-layer only — new Jinja2 block types and CDN JS libraries, no Python changes. Ring 2 (v0.4) adds `pf/registry.py` for plugin discovery, injected into `PresentationBuilder` via dependency injection — fully backward-compatible. Ring 3 (v0.5) adds `pf/llm_schemas.py` and `pf/optimizer.py` with new MCP tools — no builder changes. Ring 4 (v1.0) adds a `platform/` directory as a separate service that calls `PresentationBuilder` as a library — zero coupling to the existing CLI or MCP server.
+The system is three-tier: Next.js editor frontend communicates via Route Handler proxies to the existing FastAPI Python backend, which drives the unchanged PresentationBuilder core. The editor never calls FastAPI directly from the browser — all calls go through `lib/api.ts` to Next.js Route Handlers at `app/api/*`. Built slide HTML is served via `next.config.ts` rewrites (zero-latency, no Route Handler hop). The preview pane is an `<iframe>` embedding `present.html` with `postMessage` for slide navigation.
+
+State is managed in three Zustand stores split by concern (editor, build, project). A single `lib/yaml-utils.ts` module handles bidirectional serialization between parsed `slides[]` and raw `rawYaml` — no `useEffect` chains. Forms write to the store via `updateSlide()` which re-serializes to `rawYaml`. YAML edits call `setRawYaml()` which parses into `slides[]`. These are the only two state mutation paths.
 
 **Major components:**
-1. `pf/registry.py` (v0.4) — discovers layout, theme, and data source plugins via entry points and directory scanning; injected into builder via DI
-2. `pf/llm_schemas.py` (v0.5) — per-layout structured output schemas with `maxItems` generation constraints distinct from the validation schemas in `schema.json`
-3. `pf/optimizer.py` (v0.5) — content density optimizer that uses the existing `LayoutAnalyzer` to split overflowing slides; purely algorithmic, no LLM needed
-4. `platform/api.py` (v1.0) — FastAPI service wrapping `PresentationBuilder` as a background task; file-based storage first, then S3-compatible
-5. `platform/worker.py` (v1.0) — build worker that runs the same `PresentationBuilder` as the CLI; job queue starts with SQLite, moves to Redis at scale
+1. **Next.js editor app** (`editor/`) — dashboard, template gallery, slide editor pages, Route Handler API proxies
+2. **Zustand stores** — `editor-store` (slides, rawYaml, active slide, dirty flag), `build-store` (deckId, warnings, status), `project-store` (project list, current project)
+3. **PreviewPane** — iframe embedding `present.html`, postMessage navigation control; never renders slides in React
+4. **YamlEditor / MetricsEditor** — CodeMirror 6 wrappers for YAML and JSON; schema validation from `pf/schema.json`
+5. **SlideForm** — per-layout form fields that generate YAML (form-to-YAML one direction only)
+6. **FastAPI platform** — unchanged for all existing routes; gains `GET/PUT /api/projects/*` file-access routes for local mode
+7. **pf CLI** — gains `pf editor` subcommand (20 lines of `subprocess.Popen` to start both servers + open browser)
 
-The `pf/` package must remain a pure library with no platform dependencies. The `platform/` directory is an optional service that imports from `pf/` — not the reverse.
+The only modifications to existing Python code: (1) add `window.addEventListener('message')` to `present.html.j2` (~10 lines), (2) add `GET/PUT /api/projects/*` routes to `pf_platform/api.py`, (3) add `pf editor` command to `pf/cli.py`.
+
+Build layer ordering: Infrastructure (Next.js scaffold + Route Handlers + rewrites) → Preview pane → YAML editor + stores + build hook → Dashboard + file I/O → Visual slide editor → Template gallery + export.
 
 ### Critical Pitfalls
 
-1. **Mermaid.js async export race condition** — `wait_for_load_state("networkidle")` fires before Mermaid's Promise-based render completes, capturing raw `<pre>` text in PDF/PPTX exports. Fix: add `document.body.dataset.pfReady = 'true'` sentinel after render; replace networkidle wait with `page.wait_for_function("document.body.dataset.pfReady === 'true'")`. Must be solved before Mermaid ships in v0.3.
+1. **Preview fidelity divergence (day-one architecture decision)** — Building React components that render slide layouts produces two rendering engines that diverge immediately and permanently. Typography, CSS Grid math, chart rendering, and KaTeX all differ from the Python Jinja2 output. Use iframe embedding the real built HTML. Scale the 1280x720 canvas via `transform: scale(panelWidth / 1280)`. This must be the architecture decision on day one — retrofitting after building React layout components requires a partial rewrite.
 
-2. **`autoescape=False` + LLM / hosted API input** — Jinja2 autoescape is disabled for the CLI (users own their YAML). When LLM-generated content or user-submitted data from a REST API reaches templates, this becomes a stored XSS vector. Fix: enable `autoescape=True` for any code path where template variables originate from LLM output or user-submitted data; use `| safe` only on builder-internal HTML. Must be addressed before `generate_presentation` ships in v0.5.
+2. **Two sources of truth for slide state** — YAML code editor and visual form editor cannot both be authoritative. Single Zustand store is the source of truth. All mutations go through `updateSlide()` (re-serializes to rawYaml) or `setRawYaml()` (parses to slides[]). Never sync via `useEffect`. No component should update both `rawYaml` and `slides[]` independently.
 
-3. **Schema tightening breaks existing decks** — Adding per-layout discriminated unions to `schema.json` (needed for LLM structured output) will break existing `presentation.yaml` files that have extra fields. Fix: per-layout schemas for LLM use (`llm_schemas.py`) must be separate from validation schemas; use `additionalProperties: true` when first introducing per-layout data validation; strict mode is opt-in via `--strict` flag. Must be designed correctly at the start of v0.4.
+3. **Rate limit blocking live preview** — The existing 10/minute rate limit on `/api/build` is incompatible with editing cadence. Fix before Phase 2 ships or the editor's core value proposition cannot be delivered.
 
-4. **Plugin CSS leaking into core slides** — Global CSS injection from plugin layouts breaks all slides that don't use that layout. Fix: plugin CSS must be scoped to the slide that uses the layout, injected via `{% block head_extra %}` with layout-prefixed class selectors; never appended to shared `theme/` files. Must be in the plugin spec before the first plugin is written in v0.4.
+4. **Mermaid async export race condition** — Mermaid.js renders after `networkidle`, so Playwright captures the `<pre>` placeholder in PDF/PPTX exports. Fix: `document.body.dataset.pfReady = 'true'` sentinel after Mermaid resolves; `page.wait_for_function()` in `pdf.py`/`pptx.py`. Must be solved before Mermaid ships.
 
-5. **Hosted platform relative path breakage** — The build output uses relative paths (`theme/variables.css`, `slide_01.html`) that work for `file://` and local `http://` but break when slides are served from a CDN. Fix: add `--base-url` option to the build pipeline that rewrites asset paths before platform upload. Must be added at the end of v0.3 or the start of v1.0, before any upload feature ships.
+5. **Hosted platform relative asset paths** — All built HTML uses relative paths (`theme/variables.css`, `slide_NN.html`) that break when served from a CDN. Fix: `--base-url` build option or asset manifest before any upload feature. Plan this at end of v0.3 / start of v1.0.
+
+6. **Schema tightening breaks existing decks** — When per-layout JSON schemas are introduced for LLM structured output, use `additionalProperties: true` and keep strict validation opt-in behind `--strict`. Existing v0.2 YAML files must continue building. Address at start of v0.4 before per-layout schemas are written.
+
+---
 
 ## Implications for Roadmap
 
-Based on the combined research, the roadmap should follow the four-ring structure exactly as the architecture prescribes, with one critical addition: the `--base-url` path abstraction should be threaded into the end of v0.3 (before v1.0 work begins) so it doesn't require backtracking.
+Research supports a layered build strategy where each phase delivers a working increment that validates assumptions before the next phase adds complexity. The feature research MVP definition maps directly to a three-phase editor build, followed by hardening phases aligned with the original v0.3-v1.0 engine expansion roadmap.
 
-### Phase 1: Rich Media (v0.3)
+### Phase 1: Editor Infrastructure + Dashboard + Template Gallery
 
-**Rationale:** Two table-stakes developer features (code highlighting, fragments) are missing. Developer credibility is the prerequisite for ecosystem growth. These are template-layer changes only — low risk, high visibility. Must ship before plugin or LLM work or those layers will be built for an engine that can't render code examples.
+**Rationale:** The largest barrier for the target user (non-technical) is "I don't know YAML." Templates solve this without requiring the full editor. Building infrastructure and template gallery first validates that the user persona exists before investing in the complex YAML editor. API contracts defined first mean all subsequent UI is built on stable interfaces.
 
-**Delivers:** Code highlighting, Mermaid diagrams, video embeds, slide fragments, finish editable PPTX. Optional additions: Google Maps embed, PDF speaker notes. End-of-phase: `--base-url` path abstraction.
+**Delivers:** Working browser app where users browse templates, fill a guided form, and export a PDF/PPTX with zero YAML exposure. Also establishes: Next.js scaffolding, API proxy layer, Zustand stores, FastAPI file-access routes (`/api/projects/*`), `pf editor` CLI command, postMessage listener in `present.html.j2`.
 
-**Addresses (FEATURES.md):** Code syntax highlighting (P1), slide fragments (P1), Mermaid diagrams (P1), video embed (P1), editable PPTX completion (P2).
+**Addresses from FEATURES.md:** Project dashboard, template gallery with categories, template content forms, export from gallery
 
-**Avoids (PITFALLS.md):** Mermaid async export race condition (must add `data-pf-ready` sentinel before Mermaid ships); Playwright per-slide browser spawn in `_render_image_fallback()` (fix before expanding native PPTX renderers).
+**Avoids from PITFALLS.md:** Preview fidelity divergence (iframe-first architecture decided here before any React layout components are written); state management single-source-of-truth established before complexity is added
 
-**Stack:** Highlight.js 11.x, Mermaid.js 11.x, Leaflet 1.9.x (all CDN-only); vanilla JS for fragments; no new Python dependencies.
+**Research flag:** SKIP — Next.js App Router scaffold, rewrites proxy, Zustand setup, static template manifest are all official-docs-level patterns. No research phase needed.
 
-**Research flag:** Standard patterns — well-documented CDN integration, no phase research needed.
+### Phase 2: Live YAML Editor + Slide Management
 
-### Phase 2: Plugin Ecosystem (v0.4)
+**Rationale:** Power users and developers want raw YAML access. This phase makes the editor a viable CLI replacement for iterative editing. The rate limit fix is a hard dependency — must be resolved before this phase ships. YAML editor before form editor because the form editor is a layer on top of the YAML state model and requires a tested serialization pipeline first.
 
-**Rationale:** Until plugins exist, all layouts live in core and community cannot contribute. The plugin registry is also a prerequisite for the LLM layer — `list_layouts()` and `get_layout_schema()` must be plugin-aware or a two-tier system emerges. Schema isolation decisions made here (per-layout data schemas, CSS scoping) cannot be easily reversed later.
+**Delivers:** Split-pane CodeMirror YAML editor + live iframe preview, slide thumbnail panel with drag-to-reorder, autosave, undo/redo, build warnings surfaced in UI, JSON metrics editor, export from editor toolbar.
 
-**Delivers:** `pf/registry.py` (entry point + directory discovery), `PresentationBuilder` registry injection (backward-compatible), `pf plugins` CLI command group, data source plugins interface, updated `list_layouts()` MCP tool.
+**Addresses from FEATURES.md:** YAML + live preview (P1), slide thumbnail panel (P1), autosave (P1), export (P1), drag-to-reorder (P2), build warnings (P2), undo/redo (P2), JSON metrics editor (P2)
 
-**Addresses (FEATURES.md):** Layout plugin system (P1), data source plugins (P1), theme plugin system (P2), plugin registry/CLI (P2).
+**Avoids from PITFALLS.md:** Rate limit blocker (fix before this phase ships), state two-source-of-truth (single `yaml-utils.ts` established here), `useEffect` sync anti-pattern, `deckId` in URL causing history pollution (deckId lives in `build-store`, not URL)
 
-**Avoids (PITFALLS.md):** Schema tightening backward compatibility (design `additionalProperties: true` first); plugin CSS isolation (must be in spec before first plugin); hardcoded `LAYOUT_DESCRIPTIONS` dict in MCP server (move to registry).
+**Uses from STACK.md:** @uiw/react-codemirror, @codemirror/lang-yaml, @codemirror/lang-json, @dnd-kit/sortable, react-resizable-panels, Zustand with Immer middleware, js-yaml for client-side YAML parsing
 
-**Stack:** `importlib.metadata` entry_points (stdlib); `pluggy 1.6.0` if hook complexity warrants it.
+**Research flag:** NEEDS research on two items before planning: (1) undo/redo YAML snapshot stack design — memory cap, interaction with form mode edits, maximum history depth trade-offs; (2) CodeMirror 6 controlled-value pattern performance with large YAML files (500+ lines) — whether the `value` prop approach causes input lag that warrants uncontrolled mode with `initialDoc`.
 
-**Research flag:** Entry points pattern is well-documented (HIGH confidence). Data source plugin credential management may need deeper research — OAuth2 for Google Sheets is non-trivial.
+### Phase 3: Visual Form Editor
 
-### Phase 3: LLM Integration (v0.5)
+**Rationale:** The most complex phase. Form-to-YAML state management requires typed form definitions for all 16 layouts. The bidirectional sync problem is the hardest engineering problem in the editor. Only worth building once Phases 1 and 2 confirm the user base and usage patterns — this is a significant investment to make before validating demand.
 
-**Rationale:** Structured schemas must come before `generate_presentation` — without `maxItems` generation constraints, LLMs fill every slide to maximum capacity and overflow warnings hit 60%+ of slides. The content density optimizer (pure algorithmic, no LLM) must also precede the generation tool. This order prevents a generation tool that produces broken output from day one.
+**Delivers:** Form-based slide editing with per-layout field UI (no YAML syntax exposure), layout picker (visual grid of 16 layouts when adding a slide), theme controls UI (color pickers, font selector, style preset), speaker notes input, slide transitions picker.
 
-**Delivers:** `pf/llm_schemas.py` (per-layout generation schemas with cardinality constraints), `pf/optimizer.py` (content density splitter), new MCP tools: `get_layout_schema()`, `optimize_slide()`, `suggest_layout()`, `generate_from_prompt()`. Also: `autoescape` hardening for LLM input paths.
+**Addresses from FEATURES.md:** Form-based slide editing (P2), layout picker (P2), theme controls UI (P2), speaker notes (P3), transitions (P3)
 
-**Addresses (FEATURES.md):** Structured output schemas per layout (P1), generate_presentation MCP tool (P1), content density optimizer (P1), slide suggestion engine (P2).
+**Avoids from PITFALLS.md:** Form-YAML sync explosion (one-directional: forms generate YAML; YAML is never parsed back to form state; conflict mode is either form mode or YAML mode, not both simultaneously); YAML comment loss documented as known limitation upfront
 
-**Avoids (PITFALLS.md):** LLM generates overloaded slides (separate LLM schemas from validation schemas; add `maxItems`); `autoescape=False` XSS risk (enable autoescape for LLM code paths before `generate_presentation` ships); `generate_presentation` tool that passes full `schema.json` to LLM (use constrained `llm_schemas.py` instead).
+**Research flag:** NEEDS research before planning: (1) Per-layout form schema design — choose between generating forms from `pf/schema.json` (single source of truth, complex) vs hand-authored form definitions per layout (simpler, duplicated); (2) YAML comment preservation — `js-yaml` drops comments on round-trip; assess whether `yaml` package with CST API is worth the complexity for the target user persona.
 
-**Stack:** `instructor 1.14.5`, `pydantic 2.12.5`, `anthropic 0.84.0`, `openai 2.25.0` — all as `pf[llm]` optional group.
+### Phase 4: Rich Media + Export Hardening
 
-**Research flag:** `instructor` integration pattern is well-documented (HIGH confidence). Multi-agent workflow contracts and slide suggestion engine heuristics may benefit from phase research — niche problem space.
+**Rationale:** Covers the v0.3 rich media engine work (Mermaid, code highlighting, map layout, video embed) and ensures all async library render issues are solved before the export pipeline is expanded. The Playwright race condition must be fixed here. The `--base-url` path abstraction needed for hosted mode also lands at the end of this phase.
 
-### Phase 4: Hosted Platform (v1.0)
+**Delivers:** Mermaid.js diagram support with `data-pf-ready` sentinel, code syntax highlighting (Highlight.js), Google Maps embed layout, video embed layout, editable PPTX native renderer expansion, Playwright single-context browser pool refactor, `--base-url` build option for CDN-safe output.
 
-**Rationale:** Platform depends on plugin ecosystem being stable (hosted builds must match local builds; plugin instability produces unreliable hosted output). Platform also requires the `--base-url` path abstraction from v0.3 — if that wasn't shipped there, it must be the first task here before any upload feature is built. Start with the simplest viable path: synchronous build, file storage, shareable URL. Add async job queue, embed codes, analytics, and collaboration in that order.
+**Addresses from FEATURES.md:** Code highlighting (P1 missed from v0.2), Mermaid diagrams (P1), video embed (P1), editable PPTX completion (P2)
 
-**Delivers:** `platform/api.py` (FastAPI service), `platform/worker.py` (build worker), `platform/storage.py` (local fs -> S3/R2 adapter), shareable URL viewer, embed codes, optional analytics beacon, presenter WebSocket sync.
+**Avoids from PITFALLS.md:** Mermaid async export race condition (sentinel pattern), Playwright per-slide browser spawn (single-context refactor in `_render_image_fallback()`), external font download for offline export, hosted platform relative path breakage (`--base-url` fix)
 
-**Addresses (FEATURES.md):** Hosted web viewer (P1), embed codes (P1), REST API (P1), presentation analytics (P2), template marketplace (P2), real-time collaboration presenter sync (P3, last).
+**Research flag:** SKIP for Mermaid sentinel and Playwright refactor (well-documented patterns). NEEDS brief research on Google Maps API key handling for hosted mode — Static API vs Embed API security model (API key must not appear in output HTML).
 
-**Avoids (PITFALLS.md):** Hosted platform relative path breakage (fix `--base-url` first); API rate limiting for build endpoint (required before public launch); SSE-based live-reload blocks threads (replace with async FastAPI/Starlette for multi-user hosting); Playwright in the API worker for PDF (separate worker pool or defer to client).
+### Phase 5: Plugin Ecosystem + Platform Hardening (v0.4–v1.0)
 
-**Stack:** `fastapi 0.135.1`, `uvicorn 0.41.0`, `sqlalchemy 2.0.48`, `alembic 1.18.4`, `boto3 1.42.x` — all as `pf[platform]` optional group. SQLite for dev, PostgreSQL for production.
+**Rationale:** Plugin architecture is a prerequisite for the LLM layer (list_layouts and get_layout_schema must be plugin-aware). Platform requires plugin stability (hosted builds must match local builds). Schema isolation decisions made here cannot be easily reversed. The `autoescape` XSS hardening must happen before `generate_presentation` processes untrusted LLM output.
 
-**Research flag:** FastAPI + SQLAlchemy 2.x async patterns are well-documented. Collaboration (WebSocket presenter sync) and real-time analytics are low-complexity for the presenter-push model planned — no phase research needed. Storage adapter pattern (S3/R2/local) is standard.
+**Delivers:** `pf/registry.py` (entry point + directory plugin discovery), per-layout LLM generation schemas with `maxItems` constraints (`pf/llm_schemas.py`), content density optimizer (`pf/optimizer.py`), new MCP tools (`generate_from_prompt`, `optimize_slide`, `suggest_layout`), FastAPI platform service (`pf_platform/` expansion), Jinja2 autoescape hardening for LLM input paths, API rate limiting for hosted REST API.
+
+**Addresses from FEATURES.md:** Plugin layout system, generate_presentation MCP tool, hosted web viewer, embed codes, REST API
+
+**Avoids from PITFALLS.md:** Schema tightening backward compatibility (`additionalProperties: true`, strict mode opt-in), plugin CSS isolation (scoped to slides that use the layout), LLM overloaded slides (separate LLM schemas with `maxItems`), autoescape XSS, hosted API rate limiting
+
+**Research flag:** NEEDS research for data source plugin credential management (OAuth2 for Google Sheets in a CLI context — keychain vs env vars vs config file pattern). Multi-agent workflow contracts and suggest_layout heuristics may also benefit from phase research.
 
 ### Phase Ordering Rationale
 
-- Rich media before plugins because adding new block types in core first validates the template contract that plugin authors will later follow. Dogfooding before opening to external contributors prevents the plugin spec from being designed around theoretical constraints.
-- Registry before LLM schemas because the LLM tooling must describe plugin layouts (not just built-ins). Building LLM schemas before the registry forces a rewrite the moment plugins exist.
-- Platform last because it requires both plugin stability (consistent build output) and the path abstraction that should be added at the end of v0.3.
-- `autoescape` hardening belongs in v0.5 (not deferred to v1.0) because the attack surface opens the moment LLM-generated content reaches templates, which happens in v0.5 — not when the REST API ships.
+- Infrastructure before UI because API contracts must be stable before UI is built on top; rework cost is lowest if contracts are defined first
+- Template gallery before YAML editor because it validates the non-developer user persona cheaply before investing in the complex code editor
+- YAML editor before form editor because forms are a layer on top of the YAML state model; testing the serialization path first ensures forms can be verified against a known-good pipeline
+- Rich media after both editor phases because export hardening work (Playwright, Mermaid sentinel) benefits from having real editor-triggered builds to test against end-to-end
+- Plugin ecosystem before LLM integration because LLM tools must describe plugin layouts; building LLM schemas before the registry forces a rewrite the moment plugins exist
+- Platform last because it requires plugin stability (consistent build output) and the `--base-url` path abstraction
 
 ### Research Flags
 
-Phases needing deeper research during planning:
-- **Phase 2 (Plugin Ecosystem):** Google Sheets OAuth2 + Sheets API v4 for the first data source plugin is non-trivial. Credential management for data source plugins in a CLI context needs a clear pattern (keychain? env vars? config file?). Recommend `/gsd:research-phase` for the data source plugin sub-component.
-- **Phase 3 (LLM Integration):** Multi-agent workflow contracts and slide suggestion engine heuristics are niche problem spaces with few established patterns. Recommend `/gsd:research-phase` for `suggest_layout()` and multi-agent documentation if those are in scope for the phase.
+**Needs deeper research before planning:**
+- Phase 2: Undo/redo YAML snapshot stack design — memory cap, interaction with form mode
+- Phase 2: CodeMirror 6 controlled-value performance with large YAML files
+- Phase 3: Per-layout form schema design strategy (derived vs hand-authored)
+- Phase 3: YAML comment preservation options and trade-offs
+- Phase 4: Google Maps API key security model for hosted mode
+- Phase 5: Data source plugin credential management (OAuth2 in CLI context)
 
-Phases with standard patterns (skip research-phase):
-- **Phase 1 (Rich Media):** CDN JS integration (Highlight.js, Mermaid.js, Leaflet), Playwright sentinel pattern, fragment JS state machine — all well-documented, established patterns.
-- **Phase 4 (Platform):** FastAPI + SQLAlchemy 2.x + S3/R2 storage adapter + job queue — standard Python web platform patterns; extensive documentation available.
+**Standard patterns (skip research-phase):**
+- Phase 1: Next.js App Router scaffold, rewrites proxy, Zustand setup, static template manifest
+- Phase 4: Mermaid `data-pf-ready` sentinel, Playwright single-context browser pool
+- Phase 5 (platform layer): FastAPI + SQLAlchemy 2.x + S3 storage adapter — standard Python web platform patterns
+
+---
 
 ## Confidence Assessment
 
 | Area | Confidence | Notes |
 |------|------------|-------|
-| Stack | HIGH | Python package versions verified via PyPI; JS CDN versions from training data (Aug 2025) — spot-check CDN URLs before v0.3 build |
-| Features | MEDIUM | Competitor feature analysis from training data through Aug 2025; Gamma/Beautiful.ai feature sets should be re-verified when web access is available |
-| Architecture | HIGH | Based on direct codebase analysis; established Python patterns (entry points, FastAPI, SQLAlchemy 2.x) |
-| Pitfalls | HIGH | Derived from direct codebase inspection of `pf/builder.py`, `pf/pptx_native.py`, `pf/pdf.py`, `pf/mcp_server.py`; not generic advice |
+| Stack | MEDIUM-HIGH | Next.js 16 and React 19 verified via official release blogs (October 2025); npm package versions spot-checked. Next.js 16 is recent enough that some edge cases may not have community solutions yet. Spot-check npm packages before scaffolding. |
+| Features | HIGH | Cross-validated against 6 competitor tools. Rate limit issue is a concrete, measured constraint from live codebase. MVP definition is well-grounded in competitor UX research. |
+| Architecture | HIGH | Primary sources are direct codebase inspection and official Next.js 16 docs. Build latency estimates from existing system behavior. Integration patterns from live `pf_platform/api.py` code. |
+| Pitfalls | HIGH | Pitfalls derived from direct codebase analysis, not generic advice. Mermaid race condition, Playwright browser spawn, rate limit, schema tightening, and relative path issues all confirmed against actual code. |
 
 **Overall confidence:** HIGH
 
 ### Gaps to Address
 
-- **JS CDN library versions:** Highlight.js 11.x, Mermaid.js 11.x, Leaflet 1.9.x versions are from training data. Verify current CDN URLs and latest stable versions before v0.3 build starts.
-- **Competitor feature sets:** Gamma and Beautiful.ai feature tables reflect Aug 2025 training data. Re-verify when web access is available — the AI generation features in those products move fast.
-- **Data source plugin credential management:** No established pattern researched for how CLI tools manage OAuth2 credentials for data source plugins. Needs resolution before v0.4 data source work starts.
-- **`pf serve` SSE threading model:** The current `SimpleHTTPRequestHandler`-based SSE server blocks a thread per client. This is documented as a pitfall for the hosted platform but needs a concrete migration plan before v1.0 lands.
-- **Deployment platform selection:** Railway vs. Render vs. Fly.io for the hosted service — pricing and free tier availability should be verified at decision time (v1.0 planning), not now.
+- **Rate limit design:** Remove entirely for local `pf editor` mode (single user, no abuse vector); keep for hosted REST API with per-token limits. Decision needed at Phase 2 planning.
+- **YAML comment preservation:** `js-yaml` drops comments on round-trip. Document this as a known limitation for Phase 2 (YAML editor round-trips via store don't preserve comments), and revisit at Phase 3 planning (form editor has the same issue). The `yaml` package with CST API preserves comments but adds complexity.
+- **Template library scope:** Research assumes templates are static YAML files checked into the repo. No decision on count, categories, or maintenance ownership. This is a content gap, not a technical gap — decide at Phase 1 planning.
+- **Tauri v2 packaging (future):** Deferred to v0.4+. Research confirms the `dieharders/example-tauri-v2-python-server-sidecar` pattern works, but Rust toolchain and Python binary bundling have not been tested in this repo.
+
+---
 
 ## Sources
 
 ### Primary (HIGH confidence)
-- Codebase direct analysis: `pf/builder.py`, `pf/analyzer.py`, `pf/mcp_server.py`, `pf/pptx_native.py`, `pf/pdf.py`, `pf/schema.json`, `templates/` — architectural patterns and pitfall identification
-- PyPI `pip index versions` — instructor (1.14.5), pydantic (2.12.5), fastapi (0.135.1), uvicorn (0.41.0), sqlalchemy (2.0.48), alembic (1.18.4), httpx (0.28.1), pluggy (1.6.0), anthropic (0.84.0), openai (2.25.0)
-- Python Packaging Guide entry_points pattern — `importlib.metadata` stdlib, well-documented
+- `pf_platform/api.py` — existing endpoints, CORS config, rate limits; direct codebase read
+- `pf/builder.py`, `pf/analyzer.py`, `pf/pdf.py`, `pf/pptx_native.py` — build pipeline behavior; direct codebase read
+- `templates/present.html.j2`, `pf/schema.json` — output format and validation schema; direct codebase read
+- [Next.js rewrites/proxy docs](https://nextjs.org/docs/app/getting-started/proxy) — rewrite configuration pattern for FastAPI proxy
+- [Next.js BFF pattern](https://nextjs.org/docs/app/guides/backend-for-frontend) — Route Handler as API proxy
+- [shadcn/ui Tailwind v4 docs](https://ui.shadcn.com/docs/tailwind-v4) — Tailwind v4 compatibility confirmed
+- [Sourcegraph: Monaco to CodeMirror migration](https://sourcegraph.com/blog/migrating-monaco-codemirror) — 43% JS size reduction (measured data)
+- [Tauri v2 Next.js guide](https://v2.tauri.app/start/frontend/nextjs/) — future packaging reference
 
 ### Secondary (MEDIUM confidence)
-- Training data through Aug 2025 — instructor, Pydantic v2, FastAPI patterns, Mermaid.js v11 async initialization, Playwright sentinel patterns
-- `docs/plans/2026-03-05-roadmap-design.md` and `docs/plans/2026-03-05-editable-pptx-poc.md` — project direction and existing architectural decisions
+- [Next.js 16 release blog](https://nextjs.org/blog/next-16) — Turbopack default, React Compiler stable, LTS status; web search verified March 2026
+- [Zustand npm](https://www.npmjs.com/package/zustand) — v5.0.11; React 19 compatible
+- [@uiw/react-codemirror GitHub](https://github.com/uiwjs/react-codemirror) — React 19 compatibility confirmed v4.25+
+- [dnd-kit docs](https://dndkit.com/) — sortable preset, accessibility model
+- [Slidev UI Guide](https://sli.dev/guide/ui) — side editor pattern; presenter mode
+- [Gamma creation flow](https://help.gamma.app/en/articles/7838093) — template-first onboarding UX research
+- [Beautiful.ai Smart Slides](https://www.beautiful.ai/smart-slides) — form-based editing model research
+- [dieharders/example-tauri-v2-python-server-sidecar](https://github.com/dieharders/example-tauri-v2-python-server-sidecar) — Tauri + FastAPI sidecar community example
+- PyPI package versions — instructor, pydantic, fastapi, uvicorn, sqlalchemy, alembic, anthropic, openai; verified via pip index
 
 ### Tertiary (LOW confidence)
-- Competitor feature analysis (Gamma, Beautiful.ai, Tome) — training data, may be stale; verify before making positioning decisions
-- JS CDN library versions (Highlight.js 11.x, Mermaid.js 11.x, Leaflet 1.9.x) — training data cutoff Aug 2025; verify CDN URLs before use
+- [Puck: Top 5 DnD Libraries 2026](https://puckeditor.com/blog/top-5-drag-and-drop-libraries-for-react) — dnd-kit as current standard (vendor blog; corroborated by npm download data)
+- Competitor feature analysis (Gamma, Beautiful.ai, Pitch) — web search March 2026; some feature sets move fast, re-verify at implementation time
 
 ---
-*Research completed: 2026-03-05*
+
+*Research completed: 2026-03-08*
 *Ready for roadmap: yes*
