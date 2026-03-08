@@ -97,42 +97,42 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| INFRA-01 | — | Pending |
-| INFRA-02 | — | Pending |
-| INFRA-03 | — | Pending |
-| INFRA-04 | — | Pending |
-| DASH-01 | — | Pending |
-| DASH-02 | — | Pending |
-| DASH-03 | — | Pending |
-| DASH-04 | — | Pending |
-| TMPL-01 | — | Pending |
-| TMPL-02 | — | Pending |
-| TMPL-03 | — | Pending |
-| TMPL-04 | — | Pending |
-| TMPL-05 | — | Pending |
-| TMPL-06 | — | Pending |
-| EDIT-01 | — | Pending |
-| EDIT-02 | — | Pending |
-| EDIT-03 | — | Pending |
-| EDIT-04 | — | Pending |
-| EDIT-05 | — | Pending |
-| EDIT-06 | — | Pending |
-| EDIT-07 | — | Pending |
-| EDIT-08 | — | Pending |
-| EDIT-09 | — | Pending |
-| FORM-01 | — | Pending |
-| FORM-02 | — | Pending |
-| FORM-03 | — | Pending |
-| FORM-04 | — | Pending |
-| THEME-01 | — | Pending |
-| THEME-02 | — | Pending |
-| THEME-03 | — | Pending |
+| INFRA-01 | Phase 5 | Pending |
+| INFRA-02 | Phase 5 | Pending |
+| INFRA-03 | Phase 5 | Pending |
+| INFRA-04 | Phase 5 | Pending |
+| DASH-01 | Phase 6 | Pending |
+| DASH-02 | Phase 6 | Pending |
+| DASH-03 | Phase 6 | Pending |
+| DASH-04 | Phase 6 | Pending |
+| TMPL-01 | Phase 6 | Pending |
+| TMPL-02 | Phase 6 | Pending |
+| TMPL-03 | Phase 6 | Pending |
+| TMPL-04 | Phase 6 | Pending |
+| TMPL-05 | Phase 6 | Pending |
+| TMPL-06 | Phase 6 | Pending |
+| EDIT-01 | Phase 7 | Pending |
+| EDIT-02 | Phase 7 | Pending |
+| EDIT-03 | Phase 7 | Pending |
+| EDIT-04 | Phase 7 | Pending |
+| EDIT-05 | Phase 7 | Pending |
+| EDIT-06 | Phase 7 | Pending |
+| EDIT-07 | Phase 7 | Pending |
+| EDIT-08 | Phase 7 | Pending |
+| EDIT-09 | Phase 7 | Pending |
+| FORM-01 | Phase 8 | Pending |
+| FORM-02 | Phase 8 | Pending |
+| FORM-03 | Phase 8 | Pending |
+| FORM-04 | Phase 8 | Pending |
+| THEME-01 | Phase 8 | Pending |
+| THEME-02 | Phase 8 | Pending |
+| THEME-03 | Phase 8 | Pending |
 
 **Coverage:**
-- v0.3 requirements: 28 total
-- Mapped to phases: 0
-- Unmapped: 28
+- v0.3 requirements: 30 total
+- Mapped to phases: 30
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-08*
-*Last updated: 2026-03-08 after initial definition*
+*Last updated: 2026-03-08 — traceability complete, all 30 requirements mapped to phases 5-8*
