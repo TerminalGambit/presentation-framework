@@ -64,9 +64,24 @@ AI agents and humans can generate high-quality, branded presentations from struc
 
 ### Active
 
-<!-- Next milestone scope -->
+<!-- Current milestone: v0.3 Visual Editor -->
 
-(None yet — define with `/gsd:new-milestone`)
+- [ ] Next.js + React visual editor application (desktop-first)
+- [ ] Project dashboard to browse, create, and manage presentations
+- [ ] Template gallery with pre-built templates and content forms
+- [ ] Export to HTML, PDF, PPTX from the editor
+- [ ] Live YAML/JSON editor with side-by-side slide preview
+- [ ] Visual slide editor with form-based editing and drag-and-drop reordering
+
+## Current Milestone: v0.3 Visual Editor
+
+**Goal:** Build a Next.js + React desktop-first application that gives users a visual interface for creating, editing, and exporting presentations — progressively layering template gallery, live editor, and visual slide editing.
+
+**Target features:**
+- Project dashboard (browse, create, manage decks)
+- Template gallery with content forms and export
+- Live YAML/JSON editor with side-by-side preview
+- Visual slide editor (form-based editing, drag-and-drop, layout picker)
 
 ### Out of Scope
 
@@ -114,4 +129,4 @@ AI agents and humans can generate high-quality, branded presentations from struc
 | Open-source with no monetization yet | Build the best tool first, let the business model emerge | — Pending |
 
 ---
-*Last updated: 2026-03-07 after v0.2 milestone*
+*Last updated: 2026-03-08 after v0.3 milestone started*

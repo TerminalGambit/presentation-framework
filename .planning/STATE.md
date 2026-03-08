@@ -1,46 +1,34 @@
 ---
 gsd_state_version: 1.0
-milestone: v0.2
-milestone_name: v1.0 Feature Complete
-status: completed
-stopped_at: Milestone v0.2 complete
-last_updated: "2026-03-07T17:00:00Z"
-last_activity: 2026-03-07 — Milestone v0.2 archived and completed
+milestone: v0.3
+milestone_name: Visual Editor
+status: requirements
+stopped_at: Defining requirements
+last_updated: "2026-03-08T00:00:00Z"
+last_activity: 2026-03-08 — Milestone v0.3 started
 progress:
-  total_phases: 4
-  completed_phases: 4
-  total_plans: 21
-  completed_plans: 21
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-03-07)
+See: .planning/PROJECT.md (updated 2026-03-08)
 
 **Core value:** AI agents and humans can generate high-quality, branded presentations from structured data with a single command or tool call.
-**Current focus:** Planning next milestone
+**Current focus:** v0.3 Visual Editor — defining requirements
 
 ## Current Position
 
-Milestone: v0.2 — SHIPPED 2026-03-07
-All 4 phases complete (21 plans)
-Status: Milestone Complete
-
-Progress: [██████████] 100%
-
-## Performance Metrics
-
-**Milestone v0.2:**
-- Phases: 4
-- Plans: 21
-- Commits: 74
-- Files modified: 106
-- Lines of code: 11,528 Python
-- Tests: 482 passing
-- Timeline: 7 days (2026-02-28 → 2026-03-07)
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-03-08 — Milestone v0.3 started
 
 ## Accumulated Context
 
@@ -48,16 +36,22 @@ Progress: [██████████] 100%
 
 See PROJECT.md Key Decisions table (updated 2026-03-07).
 
+**v0.3 decisions:**
+- Next.js + React for visual editor frontend
+- Python engine stays as build backend (FastAPI API)
+- Desktop-first, web deployment deferred to future milestone
+- Progressive layering: templates → live editor → visual editor
+
 ### Pending Todos
 
-None — milestone complete.
+None — fresh milestone.
 
 ### Blockers/Concerns
 
-None — ready for next milestone.
+None.
 
 ## Session Continuity
 
-Last session: 2026-03-07
-Stopped at: Milestone v0.2 archived
+Last session: 2026-03-08
+Stopped at: Milestone v0.3 started, defining requirements
 Resume file: None
