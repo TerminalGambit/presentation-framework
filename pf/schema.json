@@ -22,6 +22,8 @@
         "style": {"type": "string", "enum": ["modern", "minimal", "bold"]},
         "math": {"type": "boolean"},
         "charts": {"type": "boolean"},
+        "animations": {"type": "boolean"},
+        "transition_style": {"type": "string", "enum": ["fade", "wipe", "none"]},
         "fonts": {
           "type": "object",
           "properties": {

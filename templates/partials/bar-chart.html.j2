@@ -39,7 +39,7 @@
 {% endmacro %}
 
 {# Data table — pass headers (list of strings) and rows (list of lists) #}
-{% macro data_table(headers, rows, winner_rows=[], total_row=none) %}
+{% macro data_table(headers, rows, winner_rows=[], total_row=none, reveal=none) %}
 <table class="data-table">
   <thead>
     <tr>
@@ -50,7 +50,7 @@
   </thead>
   <tbody>
     {% for row in rows %}
-    <tr{% if loop.index0 in winner_rows %} class="winner-row"{% endif %}>
+    <tr{% if loop.index0 in winner_rows %} class="winner-row{% if reveal == 'step' %} pf-fragment{% endif %}"{% elif reveal == 'step' %} class="pf-fragment"{% endif %}>
       {% for cell in row %}
       <td{% if loop.first %} class="model-name"{% endif %}>{{ cell }}</td>
       {% endfor %}

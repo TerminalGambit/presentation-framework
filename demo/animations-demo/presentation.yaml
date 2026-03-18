@@ -1,0 +1,122 @@
+meta:
+  title: Animation System Demo
+  authors: [Presentation Framework]
+  date: "2026-03-18"
+
+theme:
+  primary: "#1C2537"
+  accent: "#C4A962"
+  secondary_accent: "#5B8FA8"
+  style: modern
+  charts: true
+  fonts:
+    heading: Playfair Display
+    subheading: Montserrat
+    body: Lato
+  animations: true
+  transition_style: wipe
+
+slides:
+  # Slide 1 — Title: introduce the 5 animation features
+  - layout: title
+    data:
+      title: Animation System
+      subtitle: Five progressive-enhancement features for polished slide decks
+      features:
+        - icon: fa-solid fa-arrow-up-right-dots
+          label: Count-Up Counters
+        - icon: fa-solid fa-table-list
+          label: Sequential Reveal
+        - icon: fa-solid fa-chart-bar
+          label: Chart Animation
+        - icon: fa-solid fa-film
+          label: Slide Wipe
+        - icon: fa-solid fa-star
+          label: Highlight Pulse
+
+  # Slide 2 — Stat Grid: count-up counters animate from 0 on slide enter
+  - layout: stat-grid
+    notes: "Stats animate from 0 when the slide loads. All four values count up simultaneously with an ease-out curve over 900ms."
+    data:
+      title: Fund Performance
+      subtitle: Counters animate from 0 on slide enter (theme.animations enabled)
+      columns:
+        - - type: stat-grid
+            cols: 2
+            stats:
+              - value: "{{ metrics.fund.aum }}"
+                label: Assets Under Management
+                highlight: true
+              - value: "{{ metrics.fund.irr }}"
+                label: Net IRR
+              - value: "{{ metrics.fund.moic }}"
+                label: Total MOIC
+              - value: "{{ metrics.fund.deals }}"
+                label: Portfolio Companies
+        - - type: insight
+            text: "Count-up runs on DOMContentLoaded inside the slide iframe. Values are parsed into prefix + number + suffix so \"€135M\" animates the 135 portion while preserving formatting."
+            icon: info-circle
+
+  # Slide 3 — Data Table: sequential reveal, one row per keypress
+  - layout: data-table
+    notes: "Press → to reveal each fund row one at a time. Press ← to hide the last revealed row."
+    data:
+      title: Portfolio — Sequential Reveal
+      subtitle: Press → to reveal each fund row
+      sections:
+        - table:
+            reveal: step
+            headers: [Fund, Vintage, Net IRR, MOIC]
+            rows: "{{ metrics.portfolio }}"
+            winner_rows: [5]
+            footnote: "Returns as of Q4 2025. Highlighted row = top performer."
+
+  # Slide 4 — Chart: animated bar chart entry over 800ms
+  - layout: chart
+    notes: "The bar chart grows from zero height over 800ms using Plotly.animate(). Works on bar and line chart types."
+    data:
+      title: Revenue Growth
+      subtitle: "Chart animates from zero on load (animate: true)"
+      type: bar
+      animate: true
+      labels: "{{ metrics.revenue.labels }}"
+      values: "{{ metrics.revenue.values }}"
+      y_label: Revenue (€M)
+
+  # Slide 5 — Two-column: highlight pulse on key metric
+  - layout: two-column
+    notes: "The primary metric glows with a gold pulse animation on slide enter. Triggered by data-highlight=\"primary\" attribute."
+    data:
+      title: Highlight Pulse
+      subtitle: Key data point glows on slide enter
+      columns:
+        - - type: stat-grid
+            cols: 1
+            stats:
+              - value: "{{ metrics.highlight.metric }}"
+                label: "{{ metrics.highlight.label }}"
+                highlight: true
+              - value: "{{ metrics.fund.irr }}"
+                label: Net IRR
+              - value: "{{ metrics.fund.moic }}"
+                label: Total MOIC
+        - - type: insight
+            text: "Set highlight: true on any stat to trigger the pulse animation on slide entry. Works independently of theme.animations — driven by data-highlight=\"primary\" attribute."
+            icon: star
+          - type: insight
+            text: "The pulse uses --pf-accent-rgb, a new CSS variable emitted at build time by generate_variables_css(), so it always matches the deck's accent color."
+            icon: palette
+
+  # Slide 6 — Closing: Q&A — wipe transition visible navigating to/from this slide
+  - layout: closing
+    notes: "Navigate back to slide 1 to see the wipe transition in both directions."
+    data:
+      title: Animation System
+      subtitle: All five features active in this deck
+      info_items:
+        - icon: fa-solid fa-circle-check
+          text: "theme.animations: true"
+        - icon: fa-solid fa-film
+          text: "transition_style: wipe"
+        - icon: fa-brands fa-github
+          text: presentation-framework

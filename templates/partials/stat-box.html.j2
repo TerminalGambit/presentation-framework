@@ -3,18 +3,20 @@
 #}
 
 {# Single stat display #}
-{% macro stat_box(value, label, compact=false, span=1) %}
+{% macro stat_box(value, label, compact=false, span=1, highlight=false) %}
 <div class="stat-box{% if compact %} compact{% endif %}"{% if span > 1 %} style="grid-column: span {{ span }};"{% endif %}>
-  <div class="stat-value">{{ value }}</div>
+  <div class="stat-value"
+    {% if theme.animations %} data-count-up="true"{% endif %}
+    {% if highlight %} data-highlight="primary"{% endif %}>{{ value }}</div>
   <div class="stat-label">{{ label }}</div>
 </div>
 {% endmacro %}
 
-{# Grid of stats — pass a list of {value, label} dicts #}
+{# Grid of stats — pass a list of {value, label, highlight} dicts #}
 {% macro stat_grid(stats, cols=2) %}
 <div class="stat-grid{% if cols == 3 %} cols-3{% elif cols == 4 %} cols-4{% endif %}">
   {% for stat in stats %}
-  {{ stat_box(stat.value, stat.label, stat.compact | default(false), stat.span | default(1)) }}
+  {{ stat_box(stat.value, stat.label, stat.compact | default(false), stat.span | default(1), stat.highlight | default(false)) }}
   {% endfor %}
 </div>
 {% endmacro %}

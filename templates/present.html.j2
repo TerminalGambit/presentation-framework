@@ -28,10 +28,16 @@
     width: 1280px; height: 720px;
     border: none;
     transform-origin: center center;
-    transition: opacity 0.3s ease, transform 0s;
+    transition: opacity 0.25s ease, transform 0.25s ease;
     flex-shrink: 0;
   }
   #slide-frame.fading { opacity: 0; }
+  /* Wipe transition classes — forward: exit left, enter from right;
+     backward: exit right, enter from left */
+  #slide-frame.exiting       { opacity: 0; transform: translateX(-40px) scale(0.98); }
+  #slide-frame.exiting-right { opacity: 0; transform: translateX(40px) scale(0.98); }
+  #slide-frame.entering      { opacity: 0; transform: translateX(40px) scale(0.98); }
+  #slide-frame.entering-back { opacity: 0; transform: translateX(-40px) scale(0.98); }
   .progress-bar {
     position: fixed; bottom: 0; left: 0;
     height: 3px;
@@ -235,8 +241,10 @@ const TOTAL = SLIDES.length;
 const TITLES = {{ titles_json }};
 const TRANSITIONS = {{ transitions_json }};
 const NOTES = {{ notes_json }};
+const TRANSITION_STYLE = "{{ transition_style | default('fade') }}";
 
 let current = 1;
+let prevSlide = 1;
 let uiVisible = true;
 let uiTimeout;
 let notesVisible = false;
@@ -301,35 +309,60 @@ function revealAllFragments() {
 }
 
 function show(n, instant, showAllFragments) {
+  const prev = current;
   current = Math.max(1, Math.min(TOTAL, n));
   const file = SLIDES[current - 1];
-  const transition = TRANSITIONS[current - 1] || 'fade';
-  if (instant || transition === 'none') {
+  const isForward = current >= prev;
+
+  curEl.textContent = current;
+  slideNumEl.textContent = 'SLIDE ' + String(current).padStart(2, '0');
+  progress.style.width = ((current / TOTAL) * 100) + '%';
+  document.querySelectorAll('.thumb').forEach((t, i) => { t.classList.toggle('active', i === current - 1); });
+  if (notesVisible) loadNotes();
+
+  if (instant || TRANSITION_STYLE === 'none') {
     frame.src = file;
     frame.addEventListener('load', function onLoad() {
       frame.removeEventListener('load', onLoad);
-      if (showAllFragments) { revealAllFragments(); }
+      if (showAllFragments) revealAllFragments();
       enableLightbox();
       enableChartModals();
     }, { once: true });
+  } else if (TRANSITION_STYLE === 'wipe') {
+    const exitClass = isForward ? 'exiting' : 'exiting-right';
+    const enterClass = isForward ? 'entering' : 'entering-back';
+    frame.classList.add(exitClass);
+    setTimeout(() => {
+      frame.src = file;
+      frame.classList.remove(exitClass);
+      frame.classList.add(enterClass);
+      frame.addEventListener('load', function onLoad() {
+        frame.removeEventListener('load', onLoad);
+        // Double rAF: ensures entering state is painted before the transition fires
+        requestAnimationFrame(() => requestAnimationFrame(() => {
+          frame.classList.remove(enterClass);
+          if (showAllFragments) revealAllFragments();
+          enableLightbox();
+          enableChartModals();
+        }));
+      }, { once: true });
+    }, 220);
   } else {
+    // fade (default)
     frame.classList.add('fading');
     setTimeout(() => {
       frame.src = file;
       frame.classList.remove('fading');
       frame.addEventListener('load', function onLoad() {
         frame.removeEventListener('load', onLoad);
-        if (showAllFragments) { revealAllFragments(); }
+        if (showAllFragments) revealAllFragments();
         enableLightbox();
         enableChartModals();
       }, { once: true });
     }, 200);
   }
-  curEl.textContent = current;
-  slideNumEl.textContent = 'SLIDE ' + String(current).padStart(2, '0');
-  progress.style.width = ((current / TOTAL) * 100) + '%';
-  document.querySelectorAll('.thumb').forEach((t, i) => { t.classList.toggle('active', i === current - 1); });
-  if (notesVisible) loadNotes();
+
+  prevSlide = current;
 }
 function next() {
   if (!revealNextFragment()) {
