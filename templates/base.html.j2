@@ -34,6 +34,7 @@
     textColor: getComputedStyle(document.documentElement).getPropertyValue('--pf-contrast-text').trim() || '#ffffff',
     axisColor: getComputedStyle(document.documentElement).getPropertyValue('--pf-text-muted').trim() || '#aaa',
     gridColor: getComputedStyle(document.documentElement).getPropertyValue('--pf-text-faint').trim() || 'rgba(255,255,255,0.1)',
+    animations: {{ 'true' if theme.animations else 'false' }},
   };
   function _pfBuildTrace(chartType, labels, values, name, color, palette) {
     switch (chartType) {
@@ -78,9 +79,28 @@
       layout.xaxis = {gridcolor:t.gridColor, zerolinecolor:t.gridColor, tickfont:{color:t.axisColor}};
       layout.yaxis = {gridcolor:t.gridColor, zerolinecolor:t.gridColor, tickfont:{color:t.axisColor}};
     }
-    Plotly.newPlot(el, traces, layout, {responsive:true, displayModeBar:false});
+    var shouldAnimate = config.animate || t.animations;
+    if (shouldAnimate && (chartType === 'bar' || chartType === 'line')) {
+      var zeroTraces = traces.map(function(tr) {
+        var z = Object.assign({}, tr);
+        z.y = tr.y ? tr.y.map(function() { return 0; }) : tr.y;
+        return z;
+      });
+      Plotly.newPlot(el, zeroTraces, layout, {responsive:true, displayModeBar:false});
+      setTimeout(function() {
+        Plotly.animate(el, { data: traces }, {
+          transition: { duration: 800, easing: 'cubic-in-out' },
+          frame: { duration: 800, redraw: false }
+        });
+      }, 80);
+    } else {
+      Plotly.newPlot(el, traces, layout, {responsive:true, displayModeBar:false});
+    }
   }
   </script>
+  {% endif %}
+  {% if theme.animations %}
+  <script src="theme/animations.js"></script>
   {% endif %}
   {% if features.code %}
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/{{ 'github' if is_light else 'github-dark' }}.min.css"/>

@@ -1,7 +1,7 @@
 {% extends "base.html.j2" %}
 {% from "partials/card.html.j2" import insight %}
 {% from "partials/bar-chart.html.j2" import data_table, section_title, dist_bars %}
-{% from "partials/stat-box.html.j2" import unit_grid %}
+{% from "partials/stat-box.html.j2" import unit_grid with context %}
 
 {% block content %}
 {% include "partials/header.html.j2" %}
@@ -15,7 +15,7 @@
 
     {% if section.table %}
     <div class="table-card">
-      {{ data_table(section.table.headers, section.table.rows, section.table.winner_rows | default([]), section.table.total_row | default(none)) }}
+      {{ data_table(section.table.headers, section.table.rows, section.table.winner_rows | default([]), section.table.total_row | default(none), section.table.reveal | default(none)) }}
     </div>
     {% if section.table.footnote %}
     <p class="table-footnote">{{ section.table.footnote }}</p>

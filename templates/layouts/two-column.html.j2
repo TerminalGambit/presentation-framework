@@ -1,6 +1,6 @@
 {% extends "base.html.j2" %}
 {% from "partials/card.html.j2" import challenge_card, solution_box, insight, value_prop, takeaway %}
-{% from "partials/stat-box.html.j2" import stat_grid, unit_grid %}
+{% from "partials/stat-box.html.j2" import stat_grid, unit_grid with context %}
 {% from "partials/bar-chart.html.j2" import dist_bars, data_table, section_title, val_bars %}
 {% from "partials/plotly-chart.html.j2" import plotly_chart %}
 {% from "partials/code-block.html.j2" import code_block %}

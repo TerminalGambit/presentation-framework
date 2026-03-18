@@ -1,6 +1,6 @@
 {% extends "base.html.j2" %}
 {% from "partials/card.html.j2" import insight, value_prop %}
-{% from "partials/stat-box.html.j2" import stat_grid %}
+{% from "partials/stat-box.html.j2" import stat_grid with context %}
 {% from "partials/bar-chart.html.j2" import data_table, val_bars, section_title %}
 {% from "partials/plotly-chart.html.j2" import plotly_chart %}
 {% from "partials/code-block.html.j2" import code_block %}

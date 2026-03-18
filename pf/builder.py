@@ -340,6 +340,10 @@ class PresentationBuilder:
         theme = self.config.get("theme", {})
         transitions = slide_transitions or ["fade"] * len(slide_files)
         notes = slide_notes or [""] * len(slide_files)
+        transition_style = theme.get(
+            "transition_style",
+            "wipe" if theme.get("animations") else "fade",
+        )
 
         return template.render(
             meta=meta,
@@ -350,6 +354,7 @@ class PresentationBuilder:
             transitions_json=json.dumps(transitions),
             notes_json=json.dumps(notes),
             total=len(slide_files),
+            transition_style=transition_style,
         )
 
     # ── Theme Generation ───────────────────────────────────────
@@ -400,6 +405,7 @@ class PresentationBuilder:
   --pf-primary:       {primary};
   --pf-primary-dark:  {primary_dark};
   --pf-accent:        {accent};
+  --pf-accent-rgb:    {ar}, {ag}, {ab};
   --pf-accent-dim:    rgba({ar}, {ag}, {ab}, 0.5);
   --pf-accent-glow:   rgba({ar}, {ag}, {ab}, 0.12);
   --pf-accent-border: rgba({ar}, {ag}, {ab}, 0.25);
@@ -425,6 +431,7 @@ class PresentationBuilder:
   --pf-primary:       {primary};
   --pf-primary-dark:  {primary_dark};
   --pf-accent:        {accent};
+  --pf-accent-rgb:    {ar}, {ag}, {ab};
   --pf-accent-dim:    rgba({ar}, {ag}, {ab}, 0.4);
   --pf-accent-glow:   rgba({ar}, {ag}, {ab}, 0.15);
   --pf-accent-border: rgba({ar}, {ag}, {ab}, 0.3);
