@@ -412,6 +412,7 @@ class PresentationBuilder:
   --pf-text-muted:    rgba({ar}, {ag}, {ab}, 0.7);
   --pf-text-dim:      rgba({ar}, {ag}, {ab}, 0.5);
   --pf-text-faint:    rgba({ar}, {ag}, {ab}, 0.2);
+  --pf-contrast-text: {primary};
 
   --pf-card-bg:       rgba({ar}, {ag}, {ab}, 0.03);
   --pf-card-bg-hover: rgba({ar}, {ag}, {ab}, 0.06);
@@ -436,6 +437,7 @@ class PresentationBuilder:
   --pf-text-muted:    #aaaaaa;
   --pf-text-dim:      #888888;
   --pf-text-faint:    rgba(255, 255, 255, 0.3);
+  --pf-contrast-text: #ffffff;
 
   --pf-card-bg:       rgba(255, 255, 255, 0.03);
   --pf-card-bg-hover: rgba(255, 255, 255, 0.06);

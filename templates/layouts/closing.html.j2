@@ -11,7 +11,7 @@
   <div style="font-family: var(--pf-font-heading); font-size: {{ slide.data.title_size | default('72px') }}; font-weight: 700; color: var(--pf-accent); line-height: 1.1; text-align: center; letter-spacing: -1px; margin-bottom: 20px;">{{ slide.data.title }}</div>
 
   {% if slide.data.subtitle %}
-  <div style="font-family: var(--pf-font-subheading); font-size: 24px; font-weight: 300; color: var(--pf-white); text-transform: uppercase; letter-spacing: 4px; text-align: center; margin-bottom: 28px;">{{ slide.data.subtitle }}</div>
+  <div style="font-family: var(--pf-font-subheading); font-size: 24px; font-weight: 300; color: var(--pf-contrast-text); text-transform: uppercase; letter-spacing: 4px; text-align: center; margin-bottom: 28px;">{{ slide.data.subtitle }}</div>
   {% endif %}
 
   <div class="divider"></div>
@@ -39,6 +39,6 @@
 </div>
 
 {% if slide.data.footer %}
-<div style="position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%); font-family: var(--pf-font-subheading); font-size: 14px; font-weight: 300; color: rgba(255,255,255,0.6); letter-spacing: 1.5px; white-space: nowrap; text-align: center;">{{ slide.data.footer }}</div>
+<div style="position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%); font-family: var(--pf-font-subheading); font-size: 14px; font-weight: 300; color: var(--pf-text-muted); letter-spacing: 1.5px; white-space: nowrap; text-align: center;">{{ slide.data.footer }}</div>
 {% endif %}
 {% endblock %}

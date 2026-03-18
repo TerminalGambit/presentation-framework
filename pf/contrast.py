@@ -62,11 +62,18 @@ def contrast_ratio(color1: str, color2: str) -> float:
     return round(_raw_contrast_ratio(color1, color2), 1)
 
 
-# Text colors hardcoded in generate_variables_css
-_TEXT_COLORS = {
+# Text colors for dark backgrounds (light text)
+_DARK_BG_TEXT_COLORS = {
     "text (#e0e0e0)": "#e0e0e0",
     "text-light (#cccccc)": "#cccccc",
     "text-muted (#aaaaaa)": "#aaaaaa",
+}
+
+# Text colors for light backgrounds (dark text)
+_LIGHT_BG_TEXT_COLORS = {
+    "text (#1a1a1a)": "#1a1a1a",
+    "text-light (#333333)": "#333333",
+    "text-muted (#555555)": "#555555",
 }
 
 # Minimum contrast ratios (WCAG 2.1 AA)
@@ -86,8 +93,13 @@ def check_contrast(
     """
     warnings = []
 
+    # Choose text colors based on whether primary is light or dark
+    light_bg = relative_luminance(primary) > 0.5
+    text_colors = _LIGHT_BG_TEXT_COLORS if light_bg else _DARK_BG_TEXT_COLORS
+    body_text = "#1a1a1a" if light_bg else "#e0e0e0"
+
     # Text colors on primary background
-    for name, color in _TEXT_COLORS.items():
+    for name, color in text_colors.items():
         raw = _raw_contrast_ratio(color, primary)
         threshold = _MIN_TEXT_RATIO if "muted" not in name else _MIN_LARGE_TEXT_RATIO
         if raw < threshold:
@@ -107,11 +119,11 @@ def check_contrast(
         )
 
     # Accent vs body text — distinguishability check
-    raw_accent_text = _raw_contrast_ratio(accent, "#e0e0e0")
+    raw_accent_text = _raw_contrast_ratio(accent, body_text)
     if raw_accent_text < _MIN_ACCENT_TEXT_RATIO:
-        display_accent_text = contrast_ratio(accent, "#e0e0e0")
+        display_accent_text = contrast_ratio(accent, body_text)
         warnings.append(
-            f"accent ({accent}) vs text (#e0e0e0): contrast {display_accent_text}:1 "
+            f"accent ({accent}) vs text ({body_text}): contrast {display_accent_text}:1 "
             f"(need {_MIN_ACCENT_TEXT_RATIO}:1 for distinguishability)"
         )
 
