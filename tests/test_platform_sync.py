@@ -100,7 +100,10 @@ def test_disconnect_cleanup(client):
     with client.websocket_connect("/ws/deck-c") as ws:
         ws.receive_json()  # consume sync
         assert manager.connections_in_room("deck-c") == 1
-    # After context exit, the WebSocket is closed and disconnect() runs
+    # After context exit, the WebSocket close frame is sent synchronously, but
+    # the server-side WebSocketDisconnect handler runs asynchronously in the
+    # ASGI thread — allow it time to complete before asserting.
+    time.sleep(0.05)
     assert manager.connections_in_room("deck-c") == 0
 
 
