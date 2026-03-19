@@ -195,6 +195,7 @@
 
 <div class="hints" id="hints">
   <kbd>&#8592;</kbd> <kbd>&#8594;</kbd> navigate<br/>
+  <kbd>&#8595;</kbd> reveal / <kbd>&#8593;</kbd> hide<br/>
   <kbd>F</kbd> fullscreen<br/>
   <kbd>G</kbd> grid overview<br/>
   <kbd>N</kbd> speaker notes<br/>
@@ -268,44 +269,32 @@ document.addEventListener('fullscreenchange', () => { requestAnimationFrame(resi
 resize();
 
 // ── Fragment state machine ──────────────────────────────
-function getFragments() {
-  try {
-    return Array.from(frame.contentDocument.querySelectorAll('.pf-fragment'));
-  } catch(e) { return []; }
-}
-
-function getHiddenFragments() {
-  try {
-    return Array.from(frame.contentDocument.querySelectorAll('.pf-fragment:not(.visible)'));
-  } catch(e) { return []; }
-}
-
-function getVisibleFragments() {
-  try {
-    return Array.from(frame.contentDocument.querySelectorAll('.pf-fragment.visible'));
-  } catch(e) { return []; }
+// Uses postMessage as primary channel (works on file:// with local restrictions).
+// Falls back to direct contentDocument access when served over HTTP.
+function _pfMsg(type) {
+  try { frame.contentWindow.postMessage({ __pf: type }, '*'); } catch(e) {}
 }
 
 function revealNextFragment() {
-  var hidden = getHiddenFragments();
-  if (hidden.length > 0) {
-    hidden[0].classList.add('visible');
-    return true;
-  }
-  return false;
+  try {
+    var hidden = Array.from(frame.contentDocument.querySelectorAll('.pf-fragment:not(.visible)'));
+    if (hidden.length > 0) { hidden[0].classList.add('visible'); return true; }
+    return false;
+  } catch(e) { _pfMsg('reveal-fragment'); return false; }
 }
 
 function hideLastFragment() {
-  var visible = getVisibleFragments();
-  if (visible.length > 0) {
-    visible[visible.length - 1].classList.remove('visible');
-    return true;
-  }
-  return false;
+  try {
+    var vis = Array.from(frame.contentDocument.querySelectorAll('.pf-fragment.visible'));
+    if (vis.length > 0) { vis[vis.length - 1].classList.remove('visible'); return true; }
+    return false;
+  } catch(e) { _pfMsg('hide-fragment'); return false; }
 }
 
 function revealAllFragments() {
-  getFragments().forEach(function(f) { f.classList.add('visible'); });
+  try {
+    Array.from(frame.contentDocument.querySelectorAll('.pf-fragment')).forEach(function(f) { f.classList.add('visible'); });
+  } catch(e) { _pfMsg('reveal-all'); }
 }
 
 function show(n, instant, showAllFragments) {
@@ -365,14 +354,10 @@ function show(n, instant, showAllFragments) {
   prevSlide = current;
 }
 function next() {
-  if (!revealNextFragment()) {
-    show(current + 1);
-  }
+  show(current + 1);
 }
 function prev() {
-  if (!hideLastFragment()) {
-    show(current - 1, false, true); // showAllFragments=true on backward nav
-  }
+  show(current - 1, false, true); // showAllFragments=true on backward nav
 }
 
 function toggleNotes() {
@@ -487,6 +472,8 @@ document.addEventListener('keydown', e => {
   if (gridOverlay.classList.contains('visible')) { if (e.key === 'Escape' || e.key === 'g' || e.key === 'G') { e.preventDefault(); gridOverlay.classList.remove('visible'); } return; }
   switch(e.key) {
     case 'ArrowRight': case ' ': case 'PageDown': e.preventDefault(); next(); break;
+    case 'ArrowDown': e.preventDefault(); revealNextFragment(); break;
+    case 'ArrowUp': e.preventDefault(); hideLastFragment(); break;
     case 'ArrowLeft': case 'PageUp': e.preventDefault(); prev(); break;
     case 'Home': e.preventDefault(); show(1); break;
     case 'End': e.preventDefault(); show(TOTAL); break;

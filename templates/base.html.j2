@@ -176,6 +176,28 @@
   })();
   </script>
   <script>
+  // Fragment control via postMessage — works on file:// regardless of browser restrictions
+  window.addEventListener('message', function(e) {
+    if (!e.data || !e.data.__pf) return;
+    switch (e.data.__pf) {
+      case 'reveal-fragment': {
+        var frags = document.querySelectorAll('.pf-fragment:not(.visible)');
+        if (frags.length > 0) frags[0].classList.add('visible');
+        break;
+      }
+      case 'hide-fragment': {
+        var vis = Array.from(document.querySelectorAll('.pf-fragment.visible'));
+        if (vis.length > 0) vis[vis.length - 1].classList.remove('visible');
+        break;
+      }
+      case 'reveal-all': {
+        document.querySelectorAll('.pf-fragment').forEach(function(f) { f.classList.add('visible'); });
+        break;
+      }
+    }
+  });
+  </script>
+  <script>
   {% if not features.mermaid %}
   document.addEventListener('DOMContentLoaded', () => {
     {% if features.map %}
