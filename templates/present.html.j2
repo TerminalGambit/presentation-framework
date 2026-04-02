@@ -520,9 +520,74 @@ function resizePresenterFrames() {
   });
 }
 
-// Timer state (declared here, functions defined in Task 4)
+// ── Timer ──────────────────────────────────────
+// timerStarted was forward-declared in Task 3 — now we replace the placeholder
 var timerStarted = false;
-function startTimer() {} // placeholder — replaced in Task 4
+var timerInterval = null;
+var timerElapsed = 0;       // seconds elapsed
+var timerMode = 'elapsed';  // 'elapsed' or 'countdown'
+var countdownTotal = 0;     // seconds for countdown
+var countdownRemaining = 0;
+
+function startTimer() {
+  if (timerStarted || !IS_PRESENTER) return;
+  timerStarted = true;
+  timerElapsed = 0;
+  timerInterval = setInterval(function() {
+    timerElapsed++;
+    updateTimerDisplay();
+  }, 1000);
+}
+
+function updateTimerDisplay() {
+  if (!presenterTimer) return;
+  var display, seconds;
+  if (timerMode === 'elapsed') {
+    seconds = timerElapsed;
+    display = '\u23F1 ' + formatTime(seconds);
+    presenterTimer.className = 'presenter-controls-timer';
+  } else {
+    countdownRemaining = Math.max(0, countdownTotal - timerElapsed);
+    seconds = countdownRemaining;
+    display = '\u23F3 ' + formatTime(seconds);
+    if (countdownRemaining <= 0) {
+      presenterTimer.className = 'presenter-controls-timer countdown expired';
+    } else {
+      presenterTimer.className = 'presenter-controls-timer countdown';
+    }
+  }
+  presenterTimer.textContent = display;
+}
+
+function formatTime(totalSeconds) {
+  var m = Math.floor(totalSeconds / 60);
+  var s = totalSeconds % 60;
+  return String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
+}
+
+function toggleTimerMode() {
+  if (!IS_PRESENTER) return;
+  if (timerMode === 'elapsed') {
+    var minutes = prompt('Countdown duration in minutes:', '30');
+    if (minutes === null) return;
+    var parsed = parseInt(minutes, 10);
+    if (isNaN(parsed) || parsed <= 0) return;
+    timerMode = 'countdown';
+    countdownTotal = parsed * 60;
+    countdownRemaining = Math.max(0, countdownTotal - timerElapsed);
+  } else {
+    timerMode = 'elapsed';
+  }
+  updateTimerDisplay();
+}
+
+function resetTimer() {
+  timerElapsed = 0;
+  if (timerMode === 'countdown') {
+    countdownRemaining = countdownTotal;
+  }
+  updateTimerDisplay();
+}
 
 var _origShow = show;
 function presenterShow(n, instant, showAllFragments) {
@@ -832,6 +897,13 @@ document.addEventListener('keydown', e => {
     case 'h': case 'H': toggleUI(); break;
     case 'p': case 'P':
       if (!IS_PRESENTER) window.open(location.href.split('#')[0] + '#presenter', 'pf-presenter');
+      break;
+    case 't':
+      if (IS_PRESENTER && !e.shiftKey) toggleTimerMode();
+      break;
+    case 'T':
+      if (IS_PRESENTER && e.shiftKey) resetTimer();
+      else if (IS_PRESENTER) toggleTimerMode();
       break;
     case 'Escape': if (document.fullscreenElement) document.exitFullscreen(); break;
     default: const num = parseInt(e.key); if (num >= 1 && num <= 9) show(num); if (e.key === '0') show(10);
