@@ -251,6 +251,43 @@ let uiTimeout;
 let notesVisible = false;
 let lightboxActive = false;
 
+// ── BroadcastChannel sync ──────────────────────────────
+const IS_PRESENTER = location.hash === '#presenter';
+let _bcReceiving = false;
+let _bc = null;
+try { _bc = new BroadcastChannel('pf-presenter'); } catch(e) {}
+
+function bcSend(msg) {
+  if (_bcReceiving || !_bc) return;
+  _bc.postMessage(msg);
+}
+
+if (_bc) {
+  _bc.onmessage = function(e) {
+    var msg = e.data;
+    if (!msg || !msg.type) return;
+    _bcReceiving = true;
+    try {
+      switch (msg.type) {
+        case 'navigate':
+          show(msg.slide, false, msg.showAllFragments);
+          break;
+        case 'fragment':
+          if (msg.action === 'reveal') revealNextFragment();
+          else if (msg.action === 'hide') hideLastFragment();
+          else if (msg.action === 'reveal-all') revealAllFragments();
+          break;
+        case 'sync-request':
+          bcSend({ type: 'sync-response', slide: current });
+          break;
+        case 'sync-response':
+          show(msg.slide, true); // instant=true: skip transition on initial sync
+          break;
+      }
+    } finally { _bcReceiving = false; }
+  };
+}
+
 const frame = document.getElementById('slide-frame');
 const progress = document.getElementById('progress');
 const curEl = document.getElementById('cur');
@@ -276,25 +313,30 @@ function _pfMsg(type) {
 }
 
 function revealNextFragment() {
+  var revealed = false;
   try {
     var hidden = Array.from(frame.contentDocument.querySelectorAll('.pf-fragment:not(.visible)'));
-    if (hidden.length > 0) { hidden[0].classList.add('visible'); return true; }
-    return false;
-  } catch(e) { _pfMsg('reveal-fragment'); return false; }
+    if (hidden.length > 0) { hidden[0].classList.add('visible'); revealed = true; }
+  } catch(e) { _pfMsg('reveal-fragment'); }
+  if (revealed) bcSend({ type: 'fragment', action: 'reveal' });
+  return revealed;
 }
 
 function hideLastFragment() {
+  var hidden = false;
   try {
     var vis = Array.from(frame.contentDocument.querySelectorAll('.pf-fragment.visible'));
-    if (vis.length > 0) { vis[vis.length - 1].classList.remove('visible'); return true; }
-    return false;
-  } catch(e) { _pfMsg('hide-fragment'); return false; }
+    if (vis.length > 0) { vis[vis.length - 1].classList.remove('visible'); hidden = true; }
+  } catch(e) { _pfMsg('hide-fragment'); }
+  if (hidden) bcSend({ type: 'fragment', action: 'hide' });
+  return hidden;
 }
 
 function revealAllFragments() {
   try {
     Array.from(frame.contentDocument.querySelectorAll('.pf-fragment')).forEach(function(f) { f.classList.add('visible'); });
   } catch(e) { _pfMsg('reveal-all'); }
+  bcSend({ type: 'fragment', action: 'reveal-all' });
 }
 
 function show(n, instant, showAllFragments) {
@@ -352,6 +394,7 @@ function show(n, instant, showAllFragments) {
   }
 
   prevSlide = current;
+  bcSend({ type: 'navigate', slide: current, showAllFragments: !!showAllFragments });
 }
 function next() {
   show(current + 1);
@@ -481,6 +524,9 @@ document.addEventListener('keydown', e => {
     case 'g': case 'G': toggleGrid(); break;
     case 'n': case 'N': toggleNotes(); break;
     case 'h': case 'H': toggleUI(); break;
+    case 'p': case 'P':
+      if (!IS_PRESENTER) window.open(location.href.split('#')[0] + '#presenter', 'pf-presenter');
+      break;
     case 'Escape': if (document.fullscreenElement) document.exitFullscreen(); break;
     default: const num = parseInt(e.key); if (num >= 1 && num <= 9) show(num); if (e.key === '0') show(10);
   }
@@ -488,6 +534,9 @@ document.addEventListener('keydown', e => {
 
 show(1, true);
 resetUITimer();
+
+// Request current slide from any existing window
+if (_bc) bcSend({ type: 'sync-request' });
 
 // Live-reload via SSE
 if (window.location.protocol !== 'file:') {
