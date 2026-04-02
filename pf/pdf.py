@@ -82,7 +82,6 @@ def export_pdf(
                 width="1280px",
                 height="720px",
                 print_background=True,
-                landscape=True,
             )
             pdf_pages.append(pdf_bytes)
             page.close()
@@ -99,7 +98,6 @@ def export_pdf(
                         width="1280px",
                         height="720px",
                         print_background=True,
-                        landscape=True,
                     )
                     pdf_pages.append(notes_pdf)
                     notes_page.close()
