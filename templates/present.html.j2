@@ -405,6 +405,40 @@
   <div class="grid" id="gridContainer"></div>
 </div>
 
+<!-- ── Presenter Mode Layout ─────────────────── -->
+<div class="presenter-layout" id="presenterLayout">
+  <div class="presenter-slide current-slide" id="presenterCurrent">
+    <div class="presenter-slide-label">CURRENT</div>
+    <iframe id="presenterCurrentFrame"></iframe>
+  </div>
+  <div class="presenter-slide next-slide" id="presenterNext">
+    <div class="presenter-slide-label">NEXT</div>
+    <iframe id="presenterNextFrame"></iframe>
+  </div>
+  <div class="presenter-notes">
+    <div class="presenter-notes-header">SPEAKER NOTES</div>
+    <div class="presenter-notes-body" id="presenterNotesBody">
+      <span class="no-notes">No notes for this slide.</span>
+    </div>
+  </div>
+  <div class="presenter-controls">
+    <div class="presenter-controls-nav">
+      <button onclick="prev()">&#8592;</button>
+      <span class="presenter-controls-counter"><span class="current" id="presCur">1</span> / {{ total }}</span>
+      <button onclick="next()">&#8594;</button>
+    </div>
+    <div class="presenter-controls-timer" id="presenterTimer" onclick="toggleTimerMode()" title="Click to toggle elapsed/countdown. Shift+T to reset.">&#9201; 00:00</div>
+    <div class="presenter-controls-keys">
+      <kbd>&#8592;</kbd><kbd>&#8594;</kbd> nav
+      <kbd>&#8595;</kbd><kbd>&#8593;</kbd> fragments
+      <kbd>F</kbd> full
+      <kbd>G</kbd> grid
+      <kbd>T</kbd> timer
+      <kbd>H</kbd> hide
+    </div>
+  </div>
+</div>
+
 <script>
 const SLIDES = {{ slides_json }};
 const TOTAL = SLIDES.length;
@@ -454,6 +488,109 @@ if (_bc) {
           break;
       }
     } finally { _bcReceiving = false; }
+  };
+}
+
+// ── Presenter mode ─────────────────────────────
+var presenterCurrentFrame, presenterNextFrame, presenterNotesBody, presCurEl, presenterTimer;
+
+function initPresenter() {
+  document.body.classList.add('presenter-mode');
+  document.title = 'Presenter — ' + document.title;
+
+  presenterCurrentFrame = document.getElementById('presenterCurrentFrame');
+  presenterNextFrame = document.getElementById('presenterNextFrame');
+  presenterNotesBody = document.getElementById('presenterNotesBody');
+  presCurEl = document.getElementById('presCur');
+  presenterTimer = document.getElementById('presenterTimer');
+
+  resizePresenterFrames();
+  window.addEventListener('resize', resizePresenterFrames);
+}
+
+function resizePresenterFrames() {
+  var slides = document.querySelectorAll('.presenter-slide');
+  slides.forEach(function(container) {
+    var iframe = container.querySelector('iframe');
+    if (!iframe) return;
+    var w = container.clientWidth;
+    var h = container.clientHeight;
+    var scale = Math.min(w / 1280, h / 720);
+    iframe.style.transform = 'scale(' + scale + ')';
+  });
+}
+
+// Timer state (declared here, functions defined in Task 4)
+var timerStarted = false;
+function startTimer() {} // placeholder — replaced in Task 4
+
+var _origShow = show;
+function presenterShow(n, instant, showAllFragments) {
+  var prevN = current;
+  current = Math.max(1, Math.min(TOTAL, n));
+  var file = SLIDES[current - 1];
+  var nextFile = current < TOTAL ? SLIDES[current] : null;
+
+  // Update presenter iframes
+  presenterCurrentFrame.src = file;
+  if (nextFile) {
+    presenterNextFrame.src = nextFile;
+    presenterNextFrame.style.visibility = 'visible';
+  } else {
+    presenterNextFrame.src = 'about:blank';
+    presenterNextFrame.style.visibility = 'hidden';
+  }
+
+  // Update counter
+  presCurEl.textContent = current;
+
+  // Update notes
+  var note = NOTES[current - 1];
+  presenterNotesBody.innerHTML = note
+    ? '<p>' + note.replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</p>'
+    : '<span class="no-notes">No notes for this slide.</span>';
+
+  // Broadcast
+  bcSend({ type: 'navigate', slide: current, showAllFragments: !!showAllFragments });
+
+  // Start timer on first navigation
+  if (!timerStarted) startTimer();
+
+  prevSlide = current;
+}
+
+if (IS_PRESENTER) {
+  // Override fragment functions to target presenter's current iframe
+  revealNextFragment = function() {
+    var revealed = false;
+    try {
+      var hidden = Array.from(presenterCurrentFrame.contentDocument.querySelectorAll('.pf-fragment:not(.visible)'));
+      if (hidden.length > 0) { hidden[0].classList.add('visible'); revealed = true; }
+    } catch(e) {
+      try { presenterCurrentFrame.contentWindow.postMessage({ __pf: 'reveal-fragment' }, '*'); } catch(e2) {}
+    }
+    if (revealed) bcSend({ type: 'fragment', action: 'reveal' });
+    return revealed;
+  };
+
+  hideLastFragment = function() {
+    var hidden = false;
+    try {
+      var vis = Array.from(presenterCurrentFrame.contentDocument.querySelectorAll('.pf-fragment.visible'));
+      if (vis.length > 0) { vis[vis.length - 1].classList.remove('visible'); hidden = true; }
+    } catch(e) {
+      try { presenterCurrentFrame.contentWindow.postMessage({ __pf: 'hide-fragment' }, '*'); } catch(e2) {}
+    }
+    if (hidden) bcSend({ type: 'fragment', action: 'hide' });
+    return hidden;
+  };
+
+  revealAllFragments = function() {
+    try {
+      Array.from(presenterCurrentFrame.contentDocument.querySelectorAll('.pf-fragment')).forEach(function(f) { f.classList.add('visible'); });
+    } catch(e) {
+      try { presenterCurrentFrame.contentWindow.postMessage({ __pf: 'reveal-all' }, '*'); } catch(e2) {}
+    }
   };
 }
 
@@ -701,7 +838,13 @@ document.addEventListener('keydown', e => {
   }
 });
 
-show(1, true);
+if (IS_PRESENTER) {
+  initPresenter();
+  show = presenterShow;
+  show(1, true);
+} else {
+  show(1, true);
+}
 resetUITimer();
 
 // Request current slide from any existing window
