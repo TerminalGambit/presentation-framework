@@ -89,23 +89,24 @@ slides:
     data:
       title: Highlight Pulse
       subtitle: Key data point glows on slide enter
-      columns:
-        - - type: stat-grid
-            cols: 1
-            stats:
-              - value: "{{ metrics.highlight.metric }}"
-                label: "{{ metrics.highlight.label }}"
-                highlight: true
-              - value: "{{ metrics.fund.irr }}"
-                label: Net IRR
-              - value: "{{ metrics.fund.moic }}"
-                label: Total MOIC
-        - - type: insight
-            text: "Set highlight: true on any stat to trigger the pulse animation on slide entry. Works independently of theme.animations — driven by data-highlight=\"primary\" attribute."
-            icon: star
-          - type: insight
-            text: "The pulse uses --pf-accent-rgb, a new CSS variable emitted at build time by generate_variables_css(), so it always matches the deck's accent color."
-            icon: palette
+      left:
+        - type: stat-grid
+          cols: 1
+          stats:
+            - value: "{{ metrics.highlight.metric }}"
+              label: "{{ metrics.highlight.label }}"
+              highlight: true
+            - value: "{{ metrics.fund.irr }}"
+              label: Net IRR
+            - value: "{{ metrics.fund.moic }}"
+              label: Total MOIC
+      right:
+        - type: insight
+          text: "Set highlight: true on any stat to trigger the pulse animation on slide entry. Works independently of theme.animations — driven by data-highlight=\"primary\" attribute."
+          icon: star
+        - type: insight
+          text: "The pulse uses --pf-accent-rgb, a new CSS variable emitted at build time by generate_variables_css(), so it always matches the deck's accent color."
+          icon: palette
 
   # Slide 6 — Closing: Q&A — wipe transition visible navigating to/from this slide
   - layout: closing
