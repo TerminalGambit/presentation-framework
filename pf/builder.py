@@ -345,7 +345,7 @@ class PresentationBuilder:
             )
 
         meta = self.config.get("meta", {})
-        theme = self.config.get("theme", {})
+        theme = self._resolve_preset(self.config.get("theme", {}))
 
         # Page number formatting
         page_number = slide_config.get("page_number", f"{index + 1:02d}")
@@ -373,7 +373,7 @@ class PresentationBuilder:
         """Render the present.html navigator shell."""
         template = self.env.get_template("present.html.j2")
         meta = self.config.get("meta", {})
-        theme = self.config.get("theme", {})
+        theme = self._resolve_preset(self.config.get("theme", {}))
         transitions = slide_transitions or ["fade"] * len(slide_files)
         notes = slide_notes or [""] * len(slide_files)
         transition_style = theme.get(
@@ -395,6 +395,24 @@ class PresentationBuilder:
 
     # ── Theme Generation ───────────────────────────────────────
 
+    def _resolve_preset(self, theme: dict) -> dict:
+        """
+        Apply theme.preset to the user's theme dict.
+
+        Returns a new dict with the preset's defaults merged underneath the
+        user's overrides (scalars replace, dicts merge recursively — D3
+        default per PLAN appendix). The ``preset`` key is dropped from the
+        result so this method is idempotent.
+
+        When ``preset`` is unset, returns ``theme`` unchanged so existing
+        decks hit the hard-coded fallback path in ``generate_variables_css``.
+        """
+        if not theme.get("preset"):
+            return theme
+        preset_data = _load_preset(theme["preset"])
+        user_overrides = {k: v for k, v in theme.items() if k != "preset"}
+        return _deep_merge(preset_data, user_overrides)
+
     def generate_variables_css(self, theme: dict) -> str:
         """
         Generate a custom variables.css from the presentation.yaml theme section.
@@ -402,16 +420,11 @@ class PresentationBuilder:
         Falls back to defaults for any missing values.
 
         If ``theme["preset"]`` is set, the preset YAML is loaded from
-        ``theme/presets/<name>.yaml`` and deep-merged *under* the user's overrides:
-        scalar keys in user config win, dict keys merge recursively. When
-        ``preset`` is unset, this method runs the original hard-coded fallback
-        path unchanged (backwards compatibility for existing decks).
+        ``theme/presets/<name>.yaml`` and deep-merged *under* the user's overrides
+        via ``_resolve_preset``. When ``preset`` is unset, this method runs the
+        original hard-coded fallback path unchanged.
         """
-        if theme.get("preset"):
-            preset_name = theme["preset"]
-            preset_data = _load_preset(preset_name)
-            user_overrides = {k: v for k, v in theme.items() if k != "preset"}
-            theme = _deep_merge(preset_data, user_overrides)
+        theme = self._resolve_preset(theme)
 
         primary = theme.get("primary", "#1C2537")
         accent = theme.get("accent", "#C4A962")
@@ -722,6 +735,11 @@ class PresentationBuilder:
                         continue  # already deep-merged above
                     merged[k] = v
                 theme_cfg = merged
+
+        # ── Preset resolution ────────────────────────────────────
+        # Apply theme.preset (if set) so contrast checks and downstream
+        # consumers see merged tokens, not the bare {preset: name} shell.
+        theme_cfg = self._resolve_preset(theme_cfg)
 
         # ── Contrast checks ──────────────────────────────────────
         self._contrast_warnings = check_contrast(

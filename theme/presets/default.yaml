@@ -1,0 +1,14 @@
+name: default
+description: Dark navy background with gold accent — the original PF look (Playfair / Montserrat / Lato).
+
+primary: "#1C2537"
+accent: "#C4A962"
+secondary_accent: "#5B8FA8"
+
+fonts:
+  heading: "Playfair Display"
+  subheading: "Montserrat"
+  body: "Lato"
+  mono: "IBM Plex Mono"
+
+style: modern

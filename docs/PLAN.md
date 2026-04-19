@@ -95,7 +95,7 @@ Same YAML + different `theme.preset` value produces visibly distinct first rende
   - **Ask human if**: a precedence ambiguity emerges that the spec's D3 default (user-overrides-preset, deep-merge dict-into-dict) doesn't cleanly resolve.
   - **Effort**: M
 
-- [ ] **T1.2** — Create `theme/presets/` with the `default` preset
+- [x] **T1.2** — Create `theme/presets/` with the `default` preset
   - **Creates/modifies**: `theme/presets/default.yaml` (new)
   - **Depends on**: T1.1
   - **Description**: Extract the current dark-navy + gold + Playfair/Montserrat/Lato + IBM Plex Mono token set from `theme/variables.css` lines 9–48 into `theme/presets/default.yaml`. Schema: `name`, `description`, `primary`, `accent`, `secondary_accent`, `fonts: {heading, subheading, body, mono}`, `style`. Loader in T1.1 reads from `theme/presets/<name>.yaml` first, then any plugin-registered themes. Existing decks that omit `theme.preset` still hit the same hard-coded fallback in `generate_variables_css` — they must not be re-routed through preset loading.
