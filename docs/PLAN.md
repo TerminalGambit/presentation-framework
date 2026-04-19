@@ -58,7 +58,7 @@ Confirm the v0.2.1 release work in the spec's §4 is fully landed, the working t
   - **Ask human if**: never.
   - **Effort**: S
 
-- [ ] **T0.3** — Stage docs/SPEC.md + docs/PLAN.md as the only intended additions
+- [x] **T0.3** — Stage docs/SPEC.md + docs/PLAN.md as the only intended additions
   - **Creates/modifies**: commits `docs/SPEC.md`, `docs/PLAN.md`
   - **Depends on**: T0.1, T0.2
   - **Description**: Stage and commit only `docs/SPEC.md` and `docs/PLAN.md`. Leave the other untracked items (`.planning/AUDIT-2026-04-20-vs-claude-design.md`, `demo/*`, `.superpowers/`, `docs/plans/2026-03-05-*.md`, `docs/release-notes/presenter-view.md`, `examples/slides/`, `slides/`, `.mcp.json`) for Jack to triage — they predate v0.3 and are out of scope.
