@@ -1,4 +1,6 @@
 """Tests for slide fragments / progressive reveal (MEDIA-02)."""
+import re
+
 import pytest
 from pf.builder import PresentationBuilder
 
@@ -7,6 +9,8 @@ THEME_BASE = {
     "accent": "#C4A962",
     "fonts": {"heading": "Playfair Display", "subheading": "Montserrat", "body": "Lato"},
 }
+
+_SCRIPT_RE = re.compile(r"<script\b[^>]*>.*?</script>", re.DOTALL | re.IGNORECASE)
 
 
 def _render(slides):
@@ -20,6 +24,15 @@ def _render(slides):
     b.metrics = {}
     features = b._scan_features(slides)
     return [b.render_slide(s, i, features=features) for i, s in enumerate(slides)]
+
+
+def _slide_body(html):
+    """Strip <script> blocks so negative class-presence assertions only see slide markup.
+
+    The base template's postMessage handler always references the .pf-fragment
+    selector, which would otherwise leak into 'pf-fragment not in html' checks.
+    """
+    return _SCRIPT_RE.sub("", html)
 
 
 class TestBlockFragment:
@@ -41,7 +54,7 @@ class TestBlockFragment:
             "right": [],
         }}]
         htmls = _render(slides)
-        assert "pf-fragment" not in htmls[0]
+        assert "pf-fragment" not in _slide_body(htmls[0])
 
     def test_code_block_with_fragment(self):
         slides = [{"layout": "two-column", "data": {
@@ -86,7 +99,7 @@ class TestBulletFragment:
         htmls = _render(slides)
         assert "Point A" in htmls[0]
         assert "Point B" in htmls[0]
-        assert "pf-fragment" not in htmls[0]
+        assert "pf-fragment" not in _slide_body(htmls[0])
 
 
 class TestFragmentCSS:
