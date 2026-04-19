@@ -16,6 +16,7 @@
       "type": "object",
       "properties": {
         "name": {"type": "string"},
+        "preset": {"type": "string"},
         "primary": {"type": "string"},
         "accent": {"type": "string"},
         "secondary_accent": {"type": "string"},

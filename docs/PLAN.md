@@ -87,7 +87,7 @@ Same YAML + different `theme.preset` value produces visibly distinct first rende
 
 ### Tasks
 
-- [ ] **T1.1** — Add `theme.preset` schema key + precedence rule
+- [x] **T1.1** — Add `theme.preset` schema key + precedence rule
   - **Creates/modifies**: `pf/schema.json`, `pf/builder.py` (new helper `_load_preset`, called from `generate_variables_css`)
   - **Depends on**: T0.4
   - **Description**: Add optional `preset` string to the `theme` object in `pf/schema.json` (no `enum` — discovered at load time so plugin themes work too). In `pf/builder.py:generate_variables_css`, before reading `theme.primary`/`theme.accent`/`theme.fonts`, deep-merge the preset's defaults under the user's overrides: scalar keys in user config win, dict keys merge recursively. Write the merge helper in builder.py — no new module. If `theme.preset` is set but unresolvable, raise a Click exception with the available preset list. Default behavior (no `preset` key) is unchanged.

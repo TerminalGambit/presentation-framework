@@ -71,6 +71,42 @@ def _is_light(hex_color: str) -> bool:
 PACKAGE_ROOT = Path(__file__).resolve().parent.parent
 TEMPLATES_DIR = PACKAGE_ROOT / "templates"
 THEME_DIR = PACKAGE_ROOT / "theme"
+PRESETS_DIR = THEME_DIR / "presets"
+
+
+def _list_presets() -> list[str]:
+    """Return sorted preset names available in theme/presets/."""
+    if not PRESETS_DIR.is_dir():
+        return []
+    return sorted(p.stem for p in PRESETS_DIR.glob("*.yaml"))
+
+
+def _load_preset(name: str) -> dict:
+    """Load a preset YAML by name. Raises ClickException if unknown."""
+    preset_path = PRESETS_DIR / f"{name}.yaml"
+    if not preset_path.is_file():
+        available = ", ".join(_list_presets()) or "<none>"
+        raise click.ClickException(
+            f"Unknown theme preset '{name}'. Available: {available}"
+        )
+    with open(preset_path, encoding="utf-8") as f:
+        loaded = yaml.safe_load(f) or {}
+    if not isinstance(loaded, dict):
+        raise click.ClickException(
+            f"Preset '{name}' at {preset_path} did not parse to a YAML mapping."
+        )
+    return loaded
+
+
+def _deep_merge(base: dict, override: dict) -> dict:
+    """Deep-merge override into base. Scalars in override win; dict keys recurse."""
+    out = dict(base)
+    for key, value in override.items():
+        if key in out and isinstance(out[key], dict) and isinstance(value, dict):
+            out[key] = _deep_merge(out[key], value)
+        else:
+            out[key] = value
+    return out
 
 
 class PresentationBuilder:
@@ -364,7 +400,19 @@ class PresentationBuilder:
         Generate a custom variables.css from the presentation.yaml theme section.
         Derives accent variants (dim, glow, border, bg) from the hex accent color.
         Falls back to defaults for any missing values.
+
+        If ``theme["preset"]`` is set, the preset YAML is loaded from
+        ``theme/presets/<name>.yaml`` and deep-merged *under* the user's overrides:
+        scalar keys in user config win, dict keys merge recursively. When
+        ``preset`` is unset, this method runs the original hard-coded fallback
+        path unchanged (backwards compatibility for existing decks).
         """
+        if theme.get("preset"):
+            preset_name = theme["preset"]
+            preset_data = _load_preset(preset_name)
+            user_overrides = {k: v for k, v in theme.items() if k != "preset"}
+            theme = _deep_merge(preset_data, user_overrides)
+
         primary = theme.get("primary", "#1C2537")
         accent = theme.get("accent", "#C4A962")
         fonts = theme.get("fonts", {})

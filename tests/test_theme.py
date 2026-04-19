@@ -3,9 +3,21 @@ import json
 import tempfile
 from pathlib import Path
 
+import click
+import pytest
 import yaml
 
-from pf.builder import PresentationBuilder
+from pf import builder as builder_mod
+from pf.builder import PresentationBuilder, _deep_merge
+
+
+@pytest.fixture
+def preset_dir(tmp_path, monkeypatch):
+    """Point PRESETS_DIR at a tmpdir so tests don't depend on the real preset registry."""
+    presets = tmp_path / "presets"
+    presets.mkdir()
+    monkeypatch.setattr(builder_mod, "PRESETS_DIR", presets)
+    return presets
 
 
 class TestExpandedTheme:
@@ -162,3 +174,88 @@ class TestContrastWarnings:
             )
             builder.build(output_dir=str(Path(tmp) / "slides"))
             assert len(builder._contrast_warnings) == 0
+
+
+class TestDeepMerge:
+    """Unit tests for the preset/override merge helper."""
+
+    def test_scalars_in_override_win(self):
+        merged = _deep_merge({"a": 1, "b": 2}, {"b": 99})
+        assert merged == {"a": 1, "b": 99}
+
+    def test_dict_keys_recurse(self):
+        base = {"fonts": {"heading": "Serif", "body": "Sans"}}
+        override = {"fonts": {"heading": "Mono"}}
+        merged = _deep_merge(base, override)
+        assert merged == {"fonts": {"heading": "Mono", "body": "Sans"}}
+
+    def test_dict_replaces_scalar(self):
+        merged = _deep_merge({"x": 1}, {"x": {"nested": True}})
+        assert merged == {"x": {"nested": True}}
+
+    def test_does_not_mutate_inputs(self):
+        base = {"fonts": {"heading": "Serif"}}
+        override = {"fonts": {"heading": "Mono"}}
+        _deep_merge(base, override)
+        assert base == {"fonts": {"heading": "Serif"}}
+        assert override == {"fonts": {"heading": "Mono"}}
+
+
+class TestThemePreset:
+    """T1.1 — theme.preset key + precedence rule."""
+
+    def test_preset_alone_loads_tokens(self, preset_dir):
+        (preset_dir / "demo.yaml").write_text(yaml.dump({
+            "primary": "#001122",
+            "accent": "#FFAA00",
+            "secondary_accent": "#00AAFF",
+            "fonts": {"heading": "Inter", "subheading": "Inter", "body": "Inter"},
+            "style": "minimal",
+        }))
+        b = PresentationBuilder()
+        css = b.generate_variables_css({"preset": "demo"})
+        assert "#001122" in css
+        assert "#FFAA00" in css
+        assert "Inter" in css
+
+    def test_preset_with_user_overrides(self, preset_dir):
+        """User scalar keys win; user dict keys merge into preset dict keys."""
+        (preset_dir / "demo.yaml").write_text(yaml.dump({
+            "primary": "#001122",
+            "accent": "#FFAA00",
+            "fonts": {"heading": "Inter", "subheading": "Inter", "body": "Inter"},
+        }))
+        b = PresentationBuilder()
+        css = b.generate_variables_css({
+            "preset": "demo",
+            "accent": "#FF0000",  # user override wins
+            "fonts": {"heading": "Roboto"},  # merges into preset fonts
+        })
+        assert "#FF0000" in css
+        assert "#001122" in css  # preset primary preserved
+        assert "Roboto" in css  # user heading wins
+        assert "Inter" in css  # subheading/body still from preset
+
+    def test_unknown_preset_raises_with_available_list(self, preset_dir):
+        (preset_dir / "alpha.yaml").write_text(yaml.dump({"primary": "#000000", "accent": "#ffffff"}))
+        b = PresentationBuilder()
+        with pytest.raises(click.ClickException) as exc:
+            b.generate_variables_css({"preset": "missing"})
+        assert "missing" in str(exc.value.message)
+        assert "alpha" in str(exc.value.message)
+
+    def test_no_preset_unchanged(self):
+        """Without preset key: identical output to pre-T1.1 code path."""
+        b = PresentationBuilder()
+        css_no_preset = b.generate_variables_css({
+            "primary": "#1C2537",
+            "accent": "#C4A962",
+            "fonts": {"heading": "Playfair Display", "subheading": "Montserrat", "body": "Lato"},
+        })
+        # The hard-coded fallback path still uses these defaults — sanity-check that
+        # the absence of `preset` does NOT trigger preset loading (no exception even
+        # if PRESETS_DIR doesn't exist on the system).
+        assert "#1C2537" in css_no_preset
+        assert "Playfair Display" in css_no_preset
+        # Without preset, nothing from a preset dir gets read
+        assert "Inter" not in css_no_preset
