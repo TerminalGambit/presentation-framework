@@ -1,17 +1,19 @@
 ---
 gsd_state_version: 1.0
 milestone: v0.3
-milestone_name: — Visual Editor
-status: planning
-stopped_at: Phase 5 context gathered
-last_updated: "2026-03-08T19:13:50.025Z"
-last_activity: 2026-03-08 — v0.3 roadmap created (phases 5-8 defined, 30 requirements mapped)
+milestone_name: — Visual Editor (SUPERSEDED)
+status: superseded
+stopped_at: superseded by docs/SPEC.md on 2026-04-20
+last_updated: "2026-04-20T00:00:00.000Z"
+last_activity: 2026-04-20 — frozen; v0.3 retargeted to Post-CD Response milestone
 progress:
   total_phases: 4
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
 ---
+
+> **FROZEN 2026-04-20.** The v0.3 "Visual Editor" milestone described below is **deferred to v0.4**. Live planning moved to the superpowers workflow: see `docs/SPEC.md` for the current v0.3 "Post-CD Response" scope, and `docs/PLAN.md` (to be generated) for tasks. This file and the rest of `.planning/` are retained as historical context only — do not update them.
 
 # Project State
 
