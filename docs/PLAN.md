@@ -66,7 +66,7 @@ Confirm the v0.2.1 release work in the spec's §4 is fully landed, the working t
   - **Ask human if**: any of the listed untracked items now contain content that Phase 1 would overwrite (e.g., a partial `theme/presets/` already exists). If so, surface the path.
   - **Effort**: S
 
-- [ ] **T0.4** — Baseline test suite green
+- [x] **T0.4** — Baseline test suite green
   - **Creates/modifies**: none
   - **Depends on**: T0.3
   - **Description**: Run the full suite once on `main` so every later phase has a known-green baseline. If anything is red on `main`, that's a Phase 0 finding, not Phase 1's problem.
