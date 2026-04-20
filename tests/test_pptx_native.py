@@ -691,7 +691,7 @@ def _slide_has_editable_content(slide):
     return False
 
 
-_UNIMPLEMENTED_LAYOUTS = {"video"}
+_UNIMPLEMENTED_LAYOUTS: set[str] = set()
 
 
 def _layout_param(name):
@@ -717,6 +717,74 @@ def test_each_layout_editable(layout, tmp_path):
     assert _slide_has_editable_content(slide), (
         f"{layout}: no editable shape (text/chart/movie) in PPTX export"
     )
+
+
+class TestVideoLayout:
+    """Native PPTX renderer for video layout — local files embed via
+    add_movie, remote URLs fall back to poster + editable hyperlinked label.
+    """
+
+    def _make_slide(self):
+        from pf.pptx_native import _pptx_theme, SLIDE_WIDTH, SLIDE_HEIGHT
+        prs = PptxPresentation()
+        prs.slide_width = SLIDE_WIDTH
+        prs.slide_height = SLIDE_HEIGHT
+        slide = prs.slides.add_slide(prs.slide_layouts[6])
+        theme = _pptx_theme({"primary": "#1C2537", "accent": "#C4A962",
+                             "fonts": {"heading": "H", "subheading": "S",
+                                       "body": "B", "mono": "M"}})
+        return slide, theme
+
+    def test_video_in_native_renderers(self):
+        from pf.pptx_native import NATIVE_RENDERERS
+        assert "video" in NATIVE_RENDERERS
+
+    def test_remote_url_falls_back_to_hyperlink(self):
+        """YouTube/Vimeo/remote mp4 URLs can't be inlined — the renderer
+        emits a captioned text box with an HYPERLINK click_action."""
+        from pf.pptx_native import NATIVE_RENDERERS
+        from pptx.enum.action import PP_ACTION
+        slide, theme = self._make_slide()
+        NATIVE_RENDERERS["video"](slide, {
+            "title": "Demo",
+            "url": "https://example.com/demo.mp4",
+            "caption": "Product walkthrough",
+        }, theme)
+        hyperlink_hits = [
+            s for s in slide.shapes
+            if s.has_text_frame and s.click_action.action == PP_ACTION.HYPERLINK
+        ]
+        assert hyperlink_hits, "remote video must produce a hyperlink text box"
+        label_text = hyperlink_hits[0].text_frame.text
+        assert "Product walkthrough" in label_text
+
+    def test_local_mp4_embeds_movie(self, tmp_path):
+        """A local file path produces a MEDIA shape (via add_movie)."""
+        from pf.pptx_native import NATIVE_RENDERERS
+        from pptx.enum.shapes import MSO_SHAPE_TYPE
+        # 12-byte fake mp4 — enough for python-pptx to accept as a media part
+        fake_mp4 = tmp_path / "clip.mp4"
+        fake_mp4.write_bytes(b"\x00\x00\x00\x20ftypmp42")
+        slide, theme = self._make_slide()
+        NATIVE_RENDERERS["video"](slide, {
+            "url": str(fake_mp4),
+            "caption": "Local file",
+        }, theme)
+        media_shapes = [
+            s for s in slide.shapes
+            if s.shape_type == MSO_SHAPE_TYPE.MEDIA
+        ]
+        assert media_shapes, "local video path must produce a MEDIA shape"
+
+    def test_missing_local_path_falls_back_like_remote(self, tmp_path):
+        from pf.pptx_native import NATIVE_RENDERERS
+        slide, theme = self._make_slide()
+        NATIVE_RENDERERS["video"](slide, {
+            "url": str(tmp_path / "nonexistent.mp4"),
+            "caption": "Gone",
+        }, theme)
+        texts = [s.text_frame.text for s in slide.shapes if s.has_text_frame]
+        assert any("Video" in t for t in texts)
 
 
 class TestMermaidLayout:

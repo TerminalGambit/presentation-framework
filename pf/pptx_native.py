@@ -1110,6 +1110,108 @@ def _rasterize_slide(slide_file, pw_context):
             browser.close()
 
 
+def _render_video(slide, data: dict, theme: dict):
+    """Render the video layout: embed a local mp4 via add_movie, or a poster
+    + captioned URL hyperlink for remote/unreachable videos.
+
+    python-pptx can only embed *local* movie files — remote URLs (YouTube,
+    Vimeo, any http/https mp4) can't be inlined, so the plan (T2.7)
+    degrades to a poster image plus an editable "▶ Video: caption" text
+    box whose click_action points at the original URL.
+    """
+    _add_bg(slide, theme["primary"])
+    center_x = SLIDE_WIDTH // 2
+
+    # Title
+    title_h = Inches(0.7)
+    top = Inches(0.25)
+    if data.get("title"):
+        box_w = Inches(12)
+        txBox = slide.shapes.add_textbox(
+            center_x - box_w // 2, top, box_w, title_h
+        )
+        _set_text(
+            txBox.text_frame, data["title"], theme["font_heading"],
+            28, theme["accent"], bold=True, alignment=PP_ALIGN.LEFT,
+        )
+        top += title_h + Inches(0.1)
+
+    caption = data.get("caption", "")
+    url = data.get("url", "")
+    poster = data.get("poster") or data.get("_thumbnail", "")
+    has_caption = bool(caption)
+
+    # Video frame area (leave room for caption below if present)
+    frame_x = Inches(1.5)
+    frame_w = Inches(10.3)
+    frame_y = top + Inches(0.1)
+    available_h = SLIDE_HEIGHT - frame_y - Inches(0.3)
+    frame_h = available_h - (Inches(0.7) if has_caption else Emu(0))
+
+    is_remote = url.startswith("http://") or url.startswith("https://")
+    embedded_movie = False
+    if url and not is_remote:
+        try:
+            video_path = Path(url)
+            if video_path.exists():
+                poster_file = None
+                if poster and not poster.startswith("http"):
+                    pp = Path(poster)
+                    if pp.exists():
+                        poster_file = str(pp)
+                slide.shapes.add_movie(
+                    str(video_path), frame_x, frame_y, frame_w, frame_h,
+                    poster_frame_image=poster_file,
+                )
+                embedded_movie = True
+        except Exception:
+            embedded_movie = False
+
+    if not embedded_movie:
+        # Remote / missing → poster image (if local) + editable hyperlink text
+        poster_embedded = False
+        if poster and not poster.startswith("http"):
+            try:
+                pp = Path(poster)
+                if pp.exists():
+                    slide.shapes.add_picture(
+                        str(pp), frame_x, frame_y, frame_w, frame_h
+                    )
+                    poster_embedded = True
+            except Exception:
+                poster_embedded = False
+        if not poster_embedded:
+            _add_rect(slide, frame_x, frame_y, frame_w, frame_h, _hex_to_rgb("#1a2236"))
+
+        # Editable label with URL hyperlink
+        label_h = Inches(0.7)
+        label_y = frame_y + frame_h - label_h - Inches(0.2)
+        label_text = f"▶ Video: {caption}" if caption else "▶ Video"
+        txBox = slide.shapes.add_textbox(
+            frame_x + Inches(0.4), label_y, frame_w - Inches(0.8), label_h
+        )
+        _set_text(
+            txBox.text_frame, label_text, theme["font_heading"],
+            18, theme["white"], bold=True, alignment=PP_ALIGN.CENTER,
+        )
+        if url:
+            try:
+                txBox.click_action.hyperlink.address = url
+            except Exception:
+                pass
+
+    # Caption text below the frame
+    if has_caption:
+        cap_y = frame_y + frame_h + Inches(0.15)
+        txBox = slide.shapes.add_textbox(
+            frame_x, cap_y, frame_w, Inches(0.6)
+        )
+        _set_text(
+            txBox.text_frame, caption, theme["font_body"],
+            14, theme["text_muted"], alignment=PP_ALIGN.CENTER,
+        )
+
+
 def _render_mermaid(slide, data: dict, theme: dict, *,
                     slide_file=None, pw_context=None, slide_cfg=None):
     """Render the Mermaid layout: rasterized diagram image + Mermaid source
@@ -1255,6 +1357,7 @@ NATIVE_RENDERERS = {
     "chart": _render_chart,
     "map": _render_map,
     "mermaid": _render_mermaid,
+    "video": _render_video,
 }
 
 
