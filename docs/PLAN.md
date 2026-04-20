@@ -326,7 +326,7 @@ A new `video-maf` layout exists behind a `theme.experimental.maf_video: true` fe
   - **Ask human if**: never.
   - **Effort**: M
 
-- [ ] **T3.7** — PPTX fallback for `video-maf`
+- [x] **T3.7** — PPTX fallback for `video-maf`
   - **Creates/modifies**: `pf/pptx_native.py` (`_render_video_maf`), `LAYOUT_NAMES` extended to 17
   - **Depends on**: T3.4, T2.1
   - **Description**: PPTX render path uses the rendered mp4 (if present in cache) via `add_movie`, OR poster + hyperlink + caption if not. Per spec §7.4 explicit non-goal, no editability beyond the caption. Add `video-maf` to `LAYOUT_NAMES` so T2.1's coverage test runs against it (it should pass on the strength of the caption text box alone).
