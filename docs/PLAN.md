@@ -278,7 +278,7 @@ A new `video-maf` layout exists behind a `theme.experimental.maf_video: true` fe
 
 ### Tasks
 
-- [ ] **T3.1** — Freeze the integration contract
+- [x] **T3.1** — Freeze the integration contract
   - **Creates/modifies**: `docs/maf-integration-contract.md` (new)
   - **Depends on**: T0.4
   - **Description**: Single document covering: (a) `video-maf` layout's accepted YAML fields (`manifest_path`, `inline_spec`, `cache_key_strategy`, `caption_output`, `poster`); (b) PF→MAF subprocess call shape — `maf render <manifest> --quiet --json` (exact CLI string), expected stdout JSON shape (`{ "render_result": {...}, "artifacts": {"mp4": "...", "srt": "...", "vtt": "..."} }`), expected stderr taxonomy; (c) cache key formula `sha256(manifest_bytes + maf_version + env_digest)` and where each component comes from; (d) PPTX fallback contract (poster + hyperlink + caption text); (e) pinned target `MAF v0.1.0+`, with an explicit note that v0.3 spike runs only against the stub binary (D6 default — MAF still pre-alpha at plan-time per its own `docs/PLAN.md`); (f) explicit non-goals from spec §7.4.
@@ -286,7 +286,7 @@ A new `video-maf` layout exists behind a `theme.experimental.maf_video: true` fe
   - **Ask human if**: Jack hasn't approved the contract before downstream tasks begin.
   - **Effort**: M
 
-- [ ] **T3.2** — Stub `maf` binary fixture
+- [x] **T3.2** — Stub `maf` binary fixture
   - **Creates/modifies**: `tests/fixtures/video-maf-placeholder/maf` (executable shell script), `tests/fixtures/video-maf-placeholder/manifest.maf.yaml`, `tests/fixtures/video-maf-placeholder/expected/*.mp4`, `expected/*.srt`, `expected/*.vtt`, `expected/render_result.json`
   - **Depends on**: T3.1
   - **Description**: Shell script that mimics `maf render`: parses `--json` flag, reads the manifest path, copies pre-baked artifacts from `expected/` to a `--out`-specified directory (or default `./maf-out/`), and prints the documented JSON to stdout. Exits 0 on happy path, 2 on missing manifest. The pre-baked mp4 can be a 1-second silent black video (use `ffmpeg -f lavfi -i color=c=black:s=320x180:d=1 -c:v libx264 black.mp4` once, commit the result — single-digit KB).
