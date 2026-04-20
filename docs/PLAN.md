@@ -143,7 +143,7 @@ Same YAML + different `theme.preset` value produces visibly distinct first rende
   - **Ask human if**: never.
   - **Effort**: S
 
-- [ ] **T1.8** — MCP `list_themes()` tool
+- [x] **T1.8** — MCP `list_themes()` tool
   - **Creates/modifies**: `pf/mcp_server.py`
   - **Depends on**: T1.2
   - **Description**: Add a new `@mcp.tool()`-decorated function `list_themes()` returning `list[dict]` with shape `[{"name": str, "description": str, "screenshot_path": str}]`. `screenshot_path` is the relative path under the repo root (e.g., `docs/themes/nord.png`); D2 default is filesystem paths, not base64 (token cost). Plugin themes registered via entry points are included alongside built-in presets. Do not modify any existing tool's signature.

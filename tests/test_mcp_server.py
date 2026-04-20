@@ -18,6 +18,7 @@ from pf.mcp_server import (
     get_layout_schema,
     init_presentation,
     list_layouts,
+    list_themes,
     optimize_slide,
     suggest_layout,
     validate_config,
@@ -133,6 +134,34 @@ class TestListLayouts:
             assert "description" in layout
             assert isinstance(layout["name"], str)
             assert isinstance(layout["description"], str)
+
+
+# ── list_themes ──────────────────────────────────────────────────
+
+class TestListThemes:
+    def test_list_themes_returns_five_builtin_presets(self):
+        themes = list_themes()
+        names = {t["name"] for t in themes}
+        # Built-in presets ship with PF
+        for expected in ("default", "editorial", "terminal", "plex", "nord"):
+            assert expected in names, f"Expected built-in preset '{expected}' missing"
+
+    def test_list_themes_each_entry_has_required_keys(self):
+        themes = list_themes()
+        assert themes, "list_themes returned no entries"
+        for theme in themes:
+            assert "name" in theme
+            assert "description" in theme
+            assert "screenshot_path" in theme
+            assert isinstance(theme["name"], str)
+            assert isinstance(theme["description"], str)
+            assert isinstance(theme["screenshot_path"], str)
+
+    def test_list_themes_screenshot_paths_under_docs_themes(self):
+        themes = list_themes()
+        for theme in themes:
+            assert theme["screenshot_path"].startswith("docs/themes/")
+            assert theme["screenshot_path"].endswith(".png")
 
 
 # ── init_presentation ────────────────────────────────────────────

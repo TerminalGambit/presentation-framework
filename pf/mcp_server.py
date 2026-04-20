@@ -355,6 +355,61 @@ def list_layouts() -> list[dict]:
 
 
 @mcp.tool()
+def list_themes() -> list[dict]:
+    """List all available theme presets with descriptions and screenshot paths.
+
+    Returns built-in presets shipped under theme/presets/<name>.yaml plus any
+    plugin themes registered via entry points. Each entry has:
+
+      - name: preset id (the value used in `theme.preset: <name>`)
+      - description: one-line summary from the preset YAML
+      - screenshot_path: repo-relative path to a 1280x720 preview PNG
+        (may not exist until `scripts/generate_theme_screenshots.py` runs)
+    """
+    import yaml
+
+    from pf.builder import PRESETS_DIR
+    from pf.registry import PluginRegistry
+
+    results: list[dict] = []
+
+    # Built-in presets from theme/presets/*.yaml
+    if PRESETS_DIR.is_dir():
+        for preset_file in sorted(PRESETS_DIR.glob("*.yaml")):
+            try:
+                data = yaml.safe_load(preset_file.read_text(encoding="utf-8")) or {}
+            except Exception:
+                continue
+            name = preset_file.stem
+            results.append({
+                "name": name,
+                "description": data.get("description", ""),
+                "screenshot_path": f"docs/themes/{name}.png",
+            })
+
+    # Plugin themes registered via entry points
+    try:
+        registry = PluginRegistry()
+        registry.discover()
+        builtin_names = {r["name"] for r in results}
+        for theme_name in registry.theme_names:
+            if theme_name in builtin_names:
+                continue
+            plugin = registry.get_theme(theme_name)
+            description = getattr(plugin, "description", "") or ""
+            results.append({
+                "name": theme_name,
+                "description": description,
+                "screenshot_path": f"docs/themes/{theme_name}.png",
+            })
+    except Exception:
+        # Registry discovery is best-effort — never block the MCP tool
+        pass
+
+    return results
+
+
+@mcp.tool()
 def get_layout_example(layout_name: str) -> dict:
     """Get the YAML data shape and example for a specific slide layout.
 
