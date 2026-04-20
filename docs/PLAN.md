@@ -194,7 +194,7 @@ Same YAML + different `theme.preset` value produces visibly distinct first rende
   - **Ask human if**: never.
   - **Effort**: M
 
-- [ ] **T2.2** — Editable `code` layout
+- [x] **T2.2** — Editable `code` layout
   - **Creates/modifies**: `pf/pptx_native.py` (`_render_code` + `NATIVE_RENDERERS["code"]`)
   - **Depends on**: T2.1
   - **Description**: Render the `code` layout's source as a single text box in the theme's mono font (`theme["font_mono"]` — add it to `_pptx_theme()` if not present). Apply per-token color spans by walking the same Pygments / Highlight.js token output the HTML side uses — if Pygments isn't installed (it's optional), emit one uncolored run rather than failing. Background is theme primary; text wraps within slide bounds.
