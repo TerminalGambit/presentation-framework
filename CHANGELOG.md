@@ -2,6 +2,67 @@
 
 All notable changes to presentation-framework are documented here. This project follows semantic versioning.
 
+## [0.3.0] — 2026-04-20
+
+Post-CD-audit milestone: a curated theme pack, editable-PPTX parity
+across every built-in layout, and a feature-flagged MAF integration
+spike. No breaking YAML or MCP changes.
+
+### Added
+- **Theme pack** — four new presets (`editorial`, `terminal`, `plex`,
+  `nord`) plus a `default` preset that reproduces the pre-v0.3 dark
+  navy + gold tokens byte-for-byte. Select with `theme.preset: <name>`.
+  Each preset ships a 1280×720 preview PNG under `docs/themes/`.
+- **`pf init --theme <preset>`** — scaffolds a deck pre-wired to a
+  preset (defaults to `preset: default` when `--theme` is omitted).
+- **MCP `list_themes()` tool** — returns `[{name, description,
+  screenshot_path}]` for every built-in and plugin-registered preset.
+- **Editable PPTX for the remaining 6 layouts** — `code` (syntax-
+  colored mono text via optional Pygments), `toc` (NAMED_SLIDE
+  hyperlinks per entry), `chart` (native python-pptx chart, double-
+  clickable data table), `map` (raster + right-edge editable marker
+  legend), `mermaid` (raster + diagram source in speaker notes),
+  `video` (add_movie for local mp4, hyperlinked poster for remote
+  URLs). All 16 built-in layouts now produce at least one editable
+  shape under `pf pptx --editable`.
+- **`pf pptx --strict`** — fail CI (exit 1) when any slide falls back
+  to a rasterized image. File still written for inspection. Prints
+  per-fallback slide/layout/reason to stderr.
+- **MAF integration spike (experimental, flag-gated)** — new
+  `video-maf` layout behind `theme.experimental.maf_video: true`.
+  When on and the `maf` binary is on PATH, the builder shells out to
+  `maf render` and embeds the resulting mp4 + vtt into the slide.
+  Off / missing binary degrades to a poster still with a build
+  warning. Cached renders keyed by sha256(manifest + maf_version +
+  env_digest) under `.pf-cache/maf/`. Full contract in
+  [`docs/maf-integration-contract.md`](docs/maf-integration-contract.md).
+
+### Changed
+- `_pptx_theme` now exposes `font_mono` (from `theme.fonts.mono`,
+  default IBM Plex Mono) and `secondary_accent` so editable
+  renderers can reach the same design tokens as the HTML side.
+- `export_pptx_editable` now returns `list[dict]` of fallback events
+  instead of `None` — callers that ignore the return value are
+  unaffected; `--strict` consumes the list.
+- `pf/pptx_native.py:LAYOUT_NAMES` grew to 17 (added `video-maf`).
+  An import-time drift guard asserts the tuple matches
+  `templates/layouts/*.html.j2` exactly.
+
+### Fixed
+- Light-theme typography vars (`--pf-font-heading` etc.) were only
+  emitted by the dark-branch of `generate_variables_css` — surfaced
+  by the theme pack's parametrized tests and refactored so both
+  branches share the typography block.
+
+### Notes
+- No breaking changes to YAML keys or existing MCP tool signatures.
+- Pygments is an optional dependency: install for per-token syntax
+  coloring in PPTX `code` layouts; uncolored runs otherwise.
+- Existing decks that omit `theme.preset` keep hitting the original
+  hard-coded fallback in `generate_variables_css` — verified by a
+  byte-identical render of `examples/presentation.yaml` pre- and
+  post-v0.3 under `theme.preset: default`.
+
 ## [0.2.1] — 2026-04-20
 
 Feature-level improvements accumulated on `main` since the `v0.2` tag. This release consolidates them under a single tag before the v0.3 milestone opens.
