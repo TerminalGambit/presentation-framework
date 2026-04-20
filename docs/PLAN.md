@@ -294,7 +294,7 @@ A new `video-maf` layout exists behind a `theme.experimental.maf_video: true` fe
   - **Ask human if**: never.
   - **Effort**: M
 
-- [ ] **T3.3** — `video-maf` layout template
+- [x] **T3.3** — `video-maf` layout template
   - **Creates/modifies**: `templates/layouts/video-maf.html.j2` (new)
   - **Depends on**: T3.1
   - **Description**: Template renders a `<video>` element with `<source>` pointing at the slide-relative mp4 path the builder will populate, plus a `<track kind="captions" srclang="en" src="..." default>` for the vtt. Caption shown below per existing video layout pattern. Honors theme primary background.
