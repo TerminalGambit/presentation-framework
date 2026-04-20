@@ -691,7 +691,7 @@ def _slide_has_editable_content(slide):
     return False
 
 
-_UNIMPLEMENTED_LAYOUTS = {"mermaid", "video"}
+_UNIMPLEMENTED_LAYOUTS = {"video"}
 
 
 def _layout_param(name):
@@ -717,6 +717,61 @@ def test_each_layout_editable(layout, tmp_path):
     assert _slide_has_editable_content(slide), (
         f"{layout}: no editable shape (text/chart/movie) in PPTX export"
     )
+
+
+class TestMermaidLayout:
+    """Native PPTX renderer for mermaid layout: rasterized diagram + source
+    embedded in the slide's notes pane (per T2.6)."""
+
+    def _make_slide(self):
+        from pf.pptx_native import _pptx_theme, SLIDE_WIDTH, SLIDE_HEIGHT
+        prs = PptxPresentation()
+        prs.slide_width = SLIDE_WIDTH
+        prs.slide_height = SLIDE_HEIGHT
+        slide = prs.slides.add_slide(prs.slide_layouts[6])
+        theme = _pptx_theme({"primary": "#1C2537", "accent": "#C4A962",
+                             "fonts": {"heading": "H", "subheading": "S",
+                                       "body": "B", "mono": "M"}})
+        return slide, theme
+
+    def test_mermaid_in_native_renderers(self):
+        from pf.pptx_native import NATIVE_RENDERERS
+        assert "mermaid" in NATIVE_RENDERERS
+
+    def test_mermaid_source_lands_in_notes(self):
+        from pf.pptx_native import NATIVE_RENDERERS
+        slide, theme = self._make_slide()
+        diagram = "graph TD; A-->B; B-->C"
+        NATIVE_RENDERERS["mermaid"](slide, {"title": "Flow", "diagram": diagram},
+                                     theme, slide_cfg={})
+        notes = slide.notes_slide.notes_text_frame.text
+        assert "--- mermaid source ---" in notes
+        assert diagram in notes
+
+    def test_mermaid_appends_under_existing_user_notes(self):
+        """If the slide already has speaker notes, the Mermaid source is
+        appended under the separator, not replacing."""
+        from pf.pptx_native import NATIVE_RENDERERS
+        slide, theme = self._make_slide()
+        diagram = "graph LR; A-->B"
+        user_notes = "Speaker: remember to click the slide to advance."
+        NATIVE_RENDERERS["mermaid"](
+            slide, {"diagram": diagram}, theme,
+            slide_cfg={"notes": user_notes},
+        )
+        notes = slide.notes_slide.notes_text_frame.text
+        assert user_notes in notes
+        assert "--- mermaid source ---" in notes
+        # User notes appear before the separator
+        assert notes.index(user_notes) < notes.index("--- mermaid source ---")
+
+    def test_mermaid_empty_diagram_leaves_notes_alone(self):
+        from pf.pptx_native import NATIVE_RENDERERS
+        slide, theme = self._make_slide()
+        NATIVE_RENDERERS["mermaid"](slide, {"title": "Nothing"}, theme, slide_cfg={})
+        # No notes_slide should have been created
+        assert not slide.has_notes_slide or \
+               not slide.notes_slide.notes_text_frame.text.strip()
 
 
 class TestMapLayout:

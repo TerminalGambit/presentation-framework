@@ -1110,6 +1110,56 @@ def _rasterize_slide(slide_file, pw_context):
             browser.close()
 
 
+def _render_mermaid(slide, data: dict, theme: dict, *,
+                    slide_file=None, pw_context=None, slide_cfg=None):
+    """Render the Mermaid layout: rasterized diagram image + Mermaid source
+    embedded in the slide's speaker-notes pane.
+
+    Mermaid is a browser-side JS library, so we can't convert diagrams to
+    native PowerPoint shapes. The plan (T2.6) accepts the image-rendered
+    diagram and uses the notes pane to keep the source editable for future
+    tooling passes ("edit source → re-render"). If the user supplied their
+    own ``slide.notes``, the Mermaid source is appended under a
+    ``--- mermaid source ---`` separator rather than replacing.
+    """
+    _add_bg(slide, theme["primary"])
+
+    if data.get("title"):
+        box_w = Inches(12)
+        txBox = slide.shapes.add_textbox(
+            (SLIDE_WIDTH - box_w) // 2, Inches(0.2), box_w, Inches(0.6)
+        )
+        _set_text(
+            txBox.text_frame, data["title"], theme["font_heading"],
+            24, theme["accent"], bold=True, alignment=PP_ALIGN.LEFT,
+        )
+
+    # Embed the rasterized diagram. We reserve the top 0.8" for the title
+    # band so the image doesn't cover it.
+    if slide_file is not None and slide_file.exists():
+        try:
+            img_bytes = _rasterize_slide(slide_file, pw_context)
+        except Exception:
+            img_bytes = None
+        if img_bytes:
+            slide.shapes.add_picture(
+                io.BytesIO(img_bytes),
+                Emu(0), Emu(0), SLIDE_WIDTH, SLIDE_HEIGHT,
+            )
+
+    diagram = data.get("diagram", "")
+    if diagram:
+        user_notes = ""
+        if slide_cfg and isinstance(slide_cfg.get("notes"), str):
+            user_notes = slide_cfg["notes"]
+        separator = "--- mermaid source ---"
+        if user_notes.strip():
+            combined = f"{user_notes}\n\n{separator}\n\n{diagram}"
+        else:
+            combined = f"{separator}\n\n{diagram}"
+        slide.notes_slide.notes_text_frame.text = combined
+
+
 def _render_toc(slide, data: dict, theme: dict, *, prs=None, slides_cfg=None, slide_index: int = 0):
     """Render table of contents: one editable text box per entry, each with
     a NAMED_SLIDE click_action hyperlink to the matching section slide.
@@ -1204,6 +1254,7 @@ NATIVE_RENDERERS = {
     "toc": _render_toc,
     "chart": _render_chart,
     "map": _render_map,
+    "mermaid": _render_mermaid,
 }
 
 
@@ -1315,14 +1366,22 @@ def export_pptx_editable(
                     extras["slide_file"] = slide_file
                 if "pw_context" in params:
                     extras["pw_context"] = pw_context
+                if "slide_cfg" in params:
+                    extras["slide_cfg"] = slide_cfg
                 renderer(slide, data, theme, **extras)
             else:
                 if slide_file.exists():
                     _render_image_fallback(slide, slide_file, context=pw_context)
 
-            # Speaker notes
+            # Speaker notes — only set the generic user-notes if the renderer
+            # didn't claim the notes pane (e.g. mermaid combines them itself).
             if slide_cfg.get("notes"):
-                slide.notes_slide.notes_text_frame.text = slide_cfg["notes"]
+                already_written = (
+                    slide.has_notes_slide
+                    and slide.notes_slide.notes_text_frame.text.strip()
+                )
+                if not already_written:
+                    slide.notes_slide.notes_text_frame.text = slide_cfg["notes"]
     finally:
         # Always clean up shared browser context
         if pw_context:
