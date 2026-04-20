@@ -1,0 +1,14 @@
+name: plex
+description: Claude Design-aligned neutral with the IBM Plex stack for stakeholder interop. Accent hex tuned (#4F46E5 indigo) so the contrast checker's accent-vs-body-text rule (1.5:1) is satisfied; the original Tailwind slate-800 #1F2937 sits too close to body text luminance.
+
+primary: "#F7F5F2"
+accent: "#4F46E5"
+secondary_accent: "#6B5BA2"
+
+fonts:
+  heading: "IBM Plex Sans"
+  subheading: "IBM Plex Sans"
+  body: "IBM Plex Sans"
+  mono: "IBM Plex Mono"
+
+style: minimal

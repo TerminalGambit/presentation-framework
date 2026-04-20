@@ -1,0 +1,14 @@
+name: nord
+description: Nord-inspired cool slate background with arctic blue accent and aurora green secondary.
+
+primary: "#2E3440"
+accent: "#88C0D0"
+secondary_accent: "#A3BE8C"
+
+fonts:
+  heading: "Inter"
+  subheading: "Inter"
+  body: "Inter"
+  mono: "JetBrains Mono"
+
+style: modern

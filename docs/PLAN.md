@@ -103,7 +103,7 @@ Same YAML + different `theme.preset` value produces visibly distinct first rende
   - **Ask human if**: never.
   - **Effort**: S
 
-- [ ] **T1.3** — `editorial` preset (warm off-white + plum + serif)
+- [x] **T1.3** — `editorial` preset (warm off-white + plum + serif)
   - **Creates/modifies**: `theme/presets/editorial.yaml`
   - **Depends on**: T1.2
   - **Description**: Magazine-style preset. Tokens: `primary: #FAF7F2` (warm off-white), `accent: #6B2737` (deep plum), `secondary_accent: #2A2A2A`, `fonts.heading: "Source Serif 4"`, `fonts.subheading: "Inter"`, `fonts.body: "Inter"`, `fonts.mono: "IBM Plex Mono"`, `style: minimal`. The light background triggers `_is_light` in builder.py:399 — verify `--pf-contrast-text` resolves to a dark color in the generated CSS. All fonts on Google Fonts (D1 default; license check satisfied by Google Fonts catalog — OFL).
@@ -111,7 +111,7 @@ Same YAML + different `theme.preset` value produces visibly distinct first rende
   - **Ask human if**: AH-G6 (font license uncertainty) — Source Serif 4 is OFL on Google Fonts, but verify before adding.
   - **Effort**: S
 
-- [ ] **T1.4** — `terminal` preset (near-black + phosphor green + JetBrains Mono)
+- [x] **T1.4** — `terminal` preset (near-black + phosphor green + JetBrains Mono)
   - **Creates/modifies**: `theme/presets/terminal.yaml`
   - **Depends on**: T1.2
   - **Description**: Tokens: `primary: #0D1117`, `accent: #4AF626` (phosphor green), `secondary_accent: #58A6FF`, `fonts.heading: "JetBrains Mono"`, `fonts.subheading: "JetBrains Mono"`, `fonts.body: "JetBrains Mono"`, `fonts.mono: "JetBrains Mono"`, `style: bold`. All four font slots use the same family — terminal aesthetic.
@@ -119,7 +119,7 @@ Same YAML + different `theme.preset` value produces visibly distinct first rende
   - **Ask human if**: never.
   - **Effort**: S
 
-- [ ] **T1.5** — `plex` preset (CD-interop neutral + IBM Plex stack)
+- [x] **T1.5** — `plex` preset (CD-interop neutral + IBM Plex stack)
   - **Creates/modifies**: `theme/presets/plex.yaml`
   - **Depends on**: T1.2
   - **Description**: Mirrors Claude Design's default stack for stakeholder interop. Tokens: `primary: #F7F5F2`, `accent: #1F2937`, `secondary_accent: #6B5BA2`, `fonts.heading: "IBM Plex Sans"`, `fonts.subheading: "IBM Plex Sans"`, `fonts.body: "IBM Plex Sans"`, `fonts.mono: "IBM Plex Mono"`, `style: minimal`. (The spec mentions IBM Plex Serif for pull quotes — keep `heading` as Plex Sans for the header partial; quote layout can pick up Plex Serif via a future per-layout font override, but that's out of scope here.)
@@ -127,7 +127,7 @@ Same YAML + different `theme.preset` value produces visibly distinct first rende
   - **Ask human if**: never.
   - **Effort**: S
 
-- [ ] **T1.6** — `nord` preset (cool slate + arctic blue)
+- [x] **T1.6** — `nord` preset (cool slate + arctic blue)
   - **Creates/modifies**: `theme/presets/nord.yaml`
   - **Depends on**: T1.2
   - **Description**: Tokens: `primary: #2E3440`, `accent: #88C0D0` (arctic blue), `secondary_accent: #A3BE8C` (aurora green), `fonts.heading: "Inter"`, `fonts.subheading: "Inter"`, `fonts.body: "Inter"`, `fonts.mono: "JetBrains Mono"`, `style: modern`.

@@ -1,0 +1,14 @@
+name: terminal
+description: Near-black background with terminal-green accent and JetBrains Mono everywhere. Accent hex tuned (#2EA043, GitHub green) so the contrast checker's accent-vs-body-text rule (1.5:1) is satisfied; the original phosphor #4AF626 is too close in luminance to default body text.
+
+primary: "#0D1117"
+accent: "#2EA043"
+secondary_accent: "#58A6FF"
+
+fonts:
+  heading: "JetBrains Mono"
+  subheading: "JetBrains Mono"
+  body: "JetBrains Mono"
+  mono: "JetBrains Mono"
+
+style: bold

@@ -1,0 +1,14 @@
+name: editorial
+description: Magazine-style — warm off-white background with deep plum accent and Source Serif headings.
+
+primary: "#FAF7F2"
+accent: "#6B2737"
+secondary_accent: "#2A2A2A"
+
+fonts:
+  heading: "Source Serif 4"
+  subheading: "Inter"
+  body: "Inter"
+  mono: "IBM Plex Mono"
+
+style: minimal
