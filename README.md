@@ -130,6 +130,37 @@ See `SKILL.md` for complete data shapes and examples for each layout.
 
 ## Theme Options
 
+### Theme Presets (v0.3+)
+
+Five curated presets ship with the framework. Set one with `theme.preset`
+to get a WCAG-AA-safe color palette + font stack in one line; omit it and
+the previous inline `primary`/`accent` keys still work.
+
+```yaml
+theme:
+  preset: editorial  # default | editorial | terminal | plex | nord
+```
+
+Previews: [`docs/themes/`](docs/themes/) (one 1280×720 PNG per preset).
+
+Scaffold a new deck pre-wired to a preset:
+
+```
+pf init my-deck --theme nord
+```
+
+You can still mix-and-match — `theme.preset` + a top-level override:
+
+```yaml
+theme:
+  preset: editorial
+  accent: "#1F2937"   # override just the accent; everything else comes from editorial
+```
+
+Overrides follow D3: user keys win, nested dicts (like `fonts`) merge
+recursively. See [CLAUDE.md](CLAUDE.md#common-mistakes) for the one
+gotcha.
+
 ### Style Presets
 ```yaml
 theme:
@@ -209,6 +240,52 @@ For deeper CSS changes, edit the files in `theme/`:
 - `variables.css` — Design tokens (colors, fonts, spacing)
 - `base.css` — Slide container, header, background patterns
 - `components.css` — Cards, stat boxes, tables, bars, pills, insights
+
+## PowerPoint Export (v0.3+)
+
+```
+pf pptx --editable -c presentation.yaml -o deck.pptx
+```
+
+All 16 built-in layouts now produce editable PowerPoint shapes — text
+boxes, native charts (double-click to edit data), movie shapes for
+local mp4s, TOC entries with slide-navigation hyperlinks, and Mermaid
+diagram source preserved in the speaker notes pane.
+
+Add `--strict` to fail CI when any slide falls back to a rasterized
+image (the file is still written for inspection):
+
+```
+pf pptx --editable --strict -c presentation.yaml -o deck.pptx
+```
+
+Requires `pip install presentation-framework[pptx]`.
+
+## MAF Video Spike (v0.3 experimental)
+
+The `video-maf` layout is a behind-a-feature-flag spike for integrating
+[MAF](https://github.com/) (Minimal Animation Framework) as a subprocess
+renderer for animated inserts. Off by default — opt-in with:
+
+```yaml
+theme:
+  experimental:
+    maf_video: true
+
+slides:
+  - layout: video-maf
+    data:
+      manifest_path: animations/explainer.maf.yaml
+      poster: animations/explainer-poster.png
+      caption: "How the scheduler preempts"
+```
+
+When the flag is off (or `maf` isn't on PATH) the slide renders the
+poster as a static still — no hard failures. Cached renders live under
+`.pf-cache/maf/<sha256>/`; a second build against the same manifest
+skips the subprocess. See
+[docs/maf-integration-contract.md](docs/maf-integration-contract.md)
+for the full interface.
 
 ## Adding Custom Layouts
 

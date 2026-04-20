@@ -55,6 +55,7 @@ You help users build branded HTML slide decks. Your primary workflow:
 6. **Wrong icon format in closing layout** — `closing` info_items use full FA classes (`"fa-brands fa-github"`), not just icon names
 7. **Forgetting metrics.json** — Build succeeds but `{{ metrics.x }}` appears as literal text
 8. **`pf` command not found** — The `pf` console script may not be on PATH in agent subshells. Use `python3 -m pf` as a reliable alternative.
+9. **Mixing `theme.preset` with `theme.primary`/`theme.accent` without understanding precedence (v0.3+)** — It's legal and often useful (e.g. `preset: editorial` + custom accent), but user keys win and dicts deep-merge (D3). If you want a pure preset render, omit the other theme keys entirely. If you want overrides, be explicit — the merged result is what ships.
 
 ## MCP Server
 
@@ -63,6 +64,7 @@ When available (`.mcp.json` configured), use these tools:
 - `validate_config(config_path)` — Validate YAML against schema
 - `check_contrast(primary, accent, secondary_accent)` — WCAG contrast check
 - `list_layouts()` — List available layouts with descriptions
+- `list_themes()` — List theme presets (v0.3+) — `[{name, description, screenshot_path}]`
 - `get_layout_example(layout_name)` — Get YAML data shape for a specific layout
 - `init_presentation(name, directory)` — Scaffold a new project
 
@@ -70,7 +72,8 @@ When available (`.mcp.json` configured), use these tools:
 
 - **Python 3.10+**: Click (CLI), Jinja2 (templates), PyYAML, jsonschema, watchdog (live-reload)
 - **Frontend**: CSS Grid/Flexbox, vanilla JS, optional KaTeX math, optional Plotly charts
-- **Optional**: Playwright (PDF/PPTX export), python-pptx (PowerPoint), FastMCP (MCP server)
+- **Optional**: Playwright (PDF/PPTX export), python-pptx (PowerPoint), FastMCP (MCP server), Pygments (syntax-colored `code` layout in PPTX)
+- **External subprocess (optional, v0.3+)**: `maf` binary for the `video-maf` spike layout. Off unless `theme.experimental.maf_video: true`; degrades to a poster still if the binary is missing.
 
 ## CLI Commands
 

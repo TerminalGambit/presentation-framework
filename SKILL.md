@@ -494,6 +494,49 @@ Any layout that accepts content blocks supports `type: html` for raw HTML:
 | `{{ metrics }}` with no metrics.json | Build succeeds but references appear as literal text |
 | Huge tables (10+ rows) | Tables overflow. Use 4-6 rows max, or split across sections. |
 
+## Agent Guidance — v0.3 Capabilities
+
+### Picking a theme preset
+
+Five built-in presets cover the common stakeholder flavors. Prefer
+setting `theme.preset` over inline `primary`/`accent` — it's one line,
+passes WCAG AA by construction, and has a ready-made font stack.
+
+| Preset      | When to pick                                              |
+|-------------|-----------------------------------------------------------|
+| `default`   | Backwards-compat with pre-v0.3 decks (dark navy + gold)   |
+| `editorial` | Magazine-style pitches; warm off-white + plum serif       |
+| `terminal`  | Dev-focused content; dark + phosphor green + JetBrains    |
+| `plex`      | Claude Design interop; IBM Plex stack on neutral beige    |
+| `nord`      | Cool/calm data presentations; slate + arctic blue         |
+
+Scaffold a new deck with `pf init <dir> --theme <preset>`. Call
+`list_themes()` (MCP) to enumerate presets with descriptions and the
+reference screenshots in `docs/themes/`.
+
+### Editable PowerPoint export (`--strict`)
+
+`pf pptx --editable` produces a deck where every layout has editable
+shapes (text, charts, movies, TOC hyperlinks). Add `--strict` to treat
+any image fallback as an error — useful in CI:
+
+```
+pf pptx --editable --strict -c presentation.yaml -o deck.pptx
+```
+
+The file is still written in `--strict` mode so the user can inspect
+what fell back; the process exits 1 after listing the fallback
+slide / layout / reason triples to stderr.
+
+### MAF video spike (`theme.experimental.maf_video`)
+
+Off by default. When enabled and the `maf` binary is on PATH, the
+`video-maf` layout shells out to `maf render` to produce an mp4 + srt
++ vtt embedded in the slide. Degrades gracefully (poster fallback,
+build warning) when the binary is missing. For details of the
+contract — including the cache key formula and the PPTX fallback
+shape — see [docs/maf-integration-contract.md](docs/maf-integration-contract.md).
+
 ## MCP Server Tools
 
 When used as an MCP server, the framework exposes these tools:
@@ -504,6 +547,7 @@ When used as an MCP server, the framework exposes these tools:
 | `validate_config(config_path)` | Validate YAML against JSON schema |
 | `check_contrast(primary, accent, secondary_accent)` | WCAG 2.1 contrast ratio check |
 | `list_layouts()` | List all layouts with descriptions |
+| `list_themes()` | List built-in theme presets with descriptions + screenshot paths (v0.3+) |
 | `get_layout_example(layout_name)` | Get YAML data shape for a specific layout |
 | `init_presentation(name, directory)` | Scaffold a new project |
 
