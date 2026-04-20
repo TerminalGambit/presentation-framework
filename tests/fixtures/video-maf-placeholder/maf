@@ -1,0 +1,82 @@
+#!/usr/bin/env bash
+# Placeholder `maf` binary used by the PF v0.3 integration test.
+#
+# Mimics the subset of `maf render` PF's builder hook (T3.4) shells out
+# to — see docs/maf-integration-contract.md §2 for the exact contract.
+#
+# Usage:
+#   maf render <manifest> --quiet --json --out <dir>
+#
+# Ignores --quiet (no-op since the stub is quiet by default), requires
+# --json and --out, hashes the manifest bytes, copies pre-baked artifacts
+# from expected/ next to this script into <dir>, and prints the
+# documented render_result JSON to stdout. Exits 0 on happy path, 2 on
+# missing manifest — matching contract §2 and §5.3.
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+EXPECTED_DIR="$SCRIPT_DIR/expected"
+
+if [[ "${1:-}" != "render" ]]; then
+  echo "stub maf: only 'render' subcommand is implemented" >&2
+  exit 2
+fi
+shift
+
+MANIFEST=""
+OUT_DIR=""
+WANT_JSON=0
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --json)    WANT_JSON=1; shift ;;
+    --quiet)   shift ;;
+    --out)     OUT_DIR="$2"; shift 2 ;;
+    --*)       shift ;;   # ignore unknown flags per §2 (forward-compat)
+    *)         if [[ -z "$MANIFEST" ]]; then MANIFEST="$1"; fi; shift ;;
+  esac
+done
+
+if [[ -z "$MANIFEST" ]]; then
+  echo "ERROR: no manifest path supplied" >&2
+  exit 2
+fi
+if [[ ! -f "$MANIFEST" ]]; then
+  echo "ERROR: manifest not found: $MANIFEST" >&2
+  exit 2
+fi
+if [[ "$WANT_JSON" -ne 1 ]]; then
+  echo "ERROR: --json is required (stub only speaks the JSON contract)" >&2
+  exit 2
+fi
+if [[ -z "$OUT_DIR" ]]; then
+  OUT_DIR="./maf-out"
+fi
+
+mkdir -p "$OUT_DIR"
+
+# Copy pre-baked artifacts
+cp "$EXPECTED_DIR/scene.mp4" "$OUT_DIR/scene.mp4"
+cp "$EXPECTED_DIR/scene.srt" "$OUT_DIR/scene.srt"
+cp "$EXPECTED_DIR/scene.vtt" "$OUT_DIR/scene.vtt"
+
+# Compute manifest sha256 — matches the cache-key manifest_bytes component
+MANIFEST_SHA=$(shasum -a 256 "$MANIFEST" | awk '{print $1}')
+
+# Emit the documented stdout JSON (contract §2.2). No trailing newline in
+# the payload is required; emit one for line-based tooling anyway.
+cat <<EOF
+{
+  "render_result": {
+    "manifest_sha256": "${MANIFEST_SHA}",
+    "maf_version": "0.1.0-stub",
+    "duration_seconds": 1.0,
+    "warnings": []
+  },
+  "artifacts": {
+    "mp4": "scene.mp4",
+    "srt": "scene.srt",
+    "vtt": "scene.vtt"
+  }
+}
+EOF

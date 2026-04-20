@@ -1,0 +1,13 @@
+{
+  "render_result": {
+    "manifest_sha256": "__REPLACED_BY_STUB__",
+    "maf_version": "0.1.0-stub",
+    "duration_seconds": 1.0,
+    "warnings": []
+  },
+  "artifacts": {
+    "mp4": "scene.mp4",
+    "srt": "scene.srt",
+    "vtt": "scene.vtt"
+  }
+}
