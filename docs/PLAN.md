@@ -135,7 +135,7 @@ Same YAML + different `theme.preset` value produces visibly distinct first rende
   - **Ask human if**: never.
   - **Effort**: S
 
-- [ ] **T1.7** — `pf init --theme <name>` flag
+- [x] **T1.7** — `pf init --theme <name>` flag
   - **Creates/modifies**: `pf/cli.py:init`
   - **Depends on**: T1.2
   - **Description**: Add `--theme` Click option to the `init` command. When set, write `theme: {preset: <name>}` into the scaffold's `presentation.yaml` instead of the current hard-coded `primary`/`accent`/`fonts` block. Validate the preset exists (use the same loader from T1.1) and emit a Click exception with the available list on miss. When unset, scaffold defaults to `theme: {preset: default}` going forward — same visual output as today.

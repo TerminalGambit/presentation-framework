@@ -18,7 +18,7 @@ from pathlib import Path
 import click
 import yaml
 
-from pf.builder import PresentationBuilder
+from pf.builder import PresentationBuilder, _list_presets, _load_preset
 from pf.registry import LayoutPlugin, PluginRegistry
 
 STARTER_CONFIG = {
@@ -75,8 +75,17 @@ def cli():
 
 @cli.command()
 @click.argument("name")
-def init(name: str):
+@click.option(
+    "--theme",
+    "theme_preset",
+    default="default",
+    help="Theme preset to scaffold with (use 'pf list-themes' or check theme/presets/).",
+)
+def init(name: str, theme_preset: str):
     """Scaffold a new presentation project."""
+    # Validate the requested preset exists before writing anything
+    _load_preset(theme_preset)  # raises ClickException with available list on miss
+
     project_dir = Path(name)
 
     if project_dir.exists():
@@ -86,9 +95,13 @@ def init(name: str):
     project_dir.mkdir(parents=True)
     (project_dir / "slides").mkdir()
 
+    # Build starter config with the chosen preset (replaces inline theme block)
+    starter = dict(STARTER_CONFIG)
+    starter["theme"] = {"preset": theme_preset}
+
     # Write starter config
     config_path = project_dir / "presentation.yaml"
-    config_path.write_text(yaml.dump(STARTER_CONFIG, default_flow_style=False, sort_keys=False), encoding="utf-8")
+    config_path.write_text(yaml.dump(starter, default_flow_style=False, sort_keys=False), encoding="utf-8")
 
     # Write starter metrics
     metrics_path = project_dir / "metrics.json"

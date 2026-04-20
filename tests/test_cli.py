@@ -160,3 +160,43 @@ def test_build_no_base_url_default():
         assert 'href="theme/variables.css"' in slide_html
         # No accidental CDN prefix
         assert "https://cdn.example.com" not in slide_html
+
+
+# ── pf init --theme <name> ──────────────────────────────────────────
+
+
+import pytest
+import yaml as _yaml
+
+
+@pytest.mark.parametrize("preset", ["default", "editorial", "terminal", "plex", "nord"])
+def test_init_with_theme_writes_preset_block(preset, tmp_path, monkeypatch):
+    """pf init <name> --theme <preset> scaffolds yaml with theme: {preset: <preset>}."""
+    monkeypatch.chdir(tmp_path)
+    runner = CliRunner()
+    result = runner.invoke(cli, ["init", "deck", "--theme", preset])
+    assert result.exit_code == 0, result.output
+    cfg = _yaml.safe_load((tmp_path / "deck" / "presentation.yaml").read_text())
+    assert cfg["theme"] == {"preset": preset}
+    assert "slides" in cfg and len(cfg["slides"]) >= 1
+
+
+def test_init_default_theme_is_default_preset(tmp_path, monkeypatch):
+    """pf init <name> with no --theme defaults to preset: default (was inline block)."""
+    monkeypatch.chdir(tmp_path)
+    runner = CliRunner()
+    result = runner.invoke(cli, ["init", "deck"])
+    assert result.exit_code == 0, result.output
+    cfg = _yaml.safe_load((tmp_path / "deck" / "presentation.yaml").read_text())
+    assert cfg["theme"] == {"preset": "default"}
+
+
+def test_init_unknown_theme_raises_with_available_list(tmp_path, monkeypatch):
+    """pf init <name> --theme <bad> exits non-zero and lists available presets."""
+    monkeypatch.chdir(tmp_path)
+    runner = CliRunner()
+    result = runner.invoke(cli, ["init", "deck", "--theme", "definitely-not-a-preset"])
+    assert result.exit_code != 0
+    assert "definitely-not-a-preset" in result.output
+    assert any(p in result.output for p in ("default", "editorial", "terminal", "plex", "nord"))
+    assert not (tmp_path / "deck").exists()
