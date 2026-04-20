@@ -186,7 +186,7 @@ Same YAML + different `theme.preset` value produces visibly distinct first rende
 
 ### Tasks
 
-- [ ] **T2.1** — Unify dispatch + per-layout editable-shape coverage test (RED first)
+- [x] **T2.1** — Unify dispatch + per-layout editable-shape coverage test (RED first)
   - **Creates/modifies**: `pf/pptx_native.py` (extract `LAYOUT_NAMES`, expose `iter_native_layouts()`), `tests/test_pptx_native.py` (new parametrized test)
   - **Depends on**: T0.4
   - **Description**: Pull the 16 layout names into a single `LAYOUT_NAMES = (...)` tuple at module top (sourced from `templates/layouts/*.html.j2` discovery, asserted at import time to match — drift breaks the build). Add a test that, for each layout, builds a one-slide fixture exercising that layout, exports `--editable`, opens the PPTX with `python-pptx`, and asserts the slide contains at least one shape that is not just an embedded picture (i.e., `shape.has_text_frame and shape.text_frame.text.strip()` is true on at least one shape, OR a chart/movie). Test starts RED for the six layouts not yet ported (`code`, `toc`, `chart`, `map`, `mermaid`, `video`) — that is the coverage gate driving T2.2–T2.7.

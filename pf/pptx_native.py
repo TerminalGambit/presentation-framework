@@ -21,6 +21,67 @@ SLIDE_WIDTH = Inches(13.333)
 SLIDE_HEIGHT = Inches(7.5)
 
 
+# ── Layout registry ──────────────────────────────────────────────
+#
+# Single source of truth for the 16 built-in layouts. Ordering matches
+# `templates/layouts/*.html.j2` alphabetically; NATIVE_RENDERERS (below)
+# is the editable-export dispatch table. The assert at import time
+# catches drift between the tuple and the templates directory — a new
+# layout file without a corresponding LAYOUT_NAMES entry is a bug.
+
+LAYOUT_NAMES: tuple[str, ...] = (
+    "chart",
+    "closing",
+    "code",
+    "data-table",
+    "image",
+    "map",
+    "mermaid",
+    "quote",
+    "section",
+    "stat-grid",
+    "three-column",
+    "timeline",
+    "title",
+    "toc",
+    "two-column",
+    "video",
+)
+
+
+def _discover_layout_names() -> tuple[str, ...]:
+    """Return the layout names discovered on disk under templates/layouts/."""
+    layouts_dir = Path(__file__).resolve().parent.parent / "templates" / "layouts"
+    if not layouts_dir.is_dir():
+        return ()
+    # Strip both .j2 and .html — file names are like 'chart.html.j2'
+    return tuple(sorted(p.name.removesuffix(".html.j2") for p in layouts_dir.glob("*.html.j2")))
+
+
+# Import-time guard: if someone adds/removes a layout template without
+# updating LAYOUT_NAMES, crash loudly at import so the next test run or
+# MCP tool call surfaces it immediately.
+_discovered = _discover_layout_names()
+if _discovered and _discovered != LAYOUT_NAMES:
+    raise RuntimeError(
+        "pptx_native.LAYOUT_NAMES is out of sync with templates/layouts/*.html.j2.\n"
+        f"  expected: {_discovered}\n"
+        f"  got:      {LAYOUT_NAMES}\n"
+        "Update LAYOUT_NAMES (and, if adding a new layout, NATIVE_RENDERERS) "
+        "in pf/pptx_native.py."
+    )
+
+
+def iter_native_layouts() -> tuple[str, ...]:
+    """Return the layouts that currently have a NATIVE_RENDERERS entry.
+
+    Layouts outside this tuple fall back to image rasterization in
+    export_pptx_editable (and fail under --strict).
+    """
+    # NATIVE_RENDERERS is defined lower in this module; compute at call time.
+    return tuple(sorted(NATIVE_RENDERERS.keys()))
+
+
 # ── Theme conversion ─────────────────────────────────────────────
 
 def _hex_to_rgb(hex_color: str) -> RGBColor:

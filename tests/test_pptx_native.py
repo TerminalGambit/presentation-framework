@@ -585,3 +585,144 @@ class TestTimelineLayout:
         }, theme)
         texts = [s.text_frame.text for s in slide.shapes if s.has_text_frame]
         assert any("Only" in t for t in texts)
+
+
+# ── T2.1 — per-layout editable-shape coverage ─────────────────────
+#
+# Builds a one-slide fixture exercising each LAYOUT_NAMES entry,
+# exports --editable, opens with python-pptx, asserts the slide
+# contains at least one shape that is not just a raster picture.
+# The 6 layouts not yet ported (chart, code, map, mermaid, toc, video)
+# are expected to fail until T2.2-T2.7 land — marked xfail(strict=True)
+# so when they start passing the test suite forces an unxfail.
+
+import json as _json
+import yaml as _yaml_t21
+
+from pf.pptx_native import LAYOUT_NAMES as _LAYOUT_NAMES_T21
+
+
+_LAYOUT_FIXTURES: dict[str, dict] = {
+    "title": {"title": "Test", "subtitle": "Sub", "tagline": "Tag"},
+    "section": {"title": "S", "subtitle": "Sub", "number": 1},
+    "quote": {"text": "An editable quote.", "attribution": "Author"},
+    "closing": {"title": "Thanks", "subtitle": "Q&A"},
+    "two-column": {
+        "title": "Two", "left": [{"type": "card", "title": "L", "text": "Left"}],
+        "right": [{"type": "card", "title": "R", "text": "Right"}],
+    },
+    "three-column": {
+        "title": "Three",
+        "columns": [
+            [{"type": "card", "title": "A", "text": "A1"}],
+            [{"type": "card", "title": "B", "text": "B1"}],
+            [{"type": "card", "title": "C", "text": "C1"}],
+        ],
+    },
+    "stat-grid": {
+        "title": "Stats",
+        "columns": [
+            [{"type": "stat-grid", "stats": [{"value": "1", "label": "x"}]}],
+            [{"type": "card", "header": "H", "items": ["a"]}],
+        ],
+    },
+    "data-table": {
+        "title": "Data",
+        "sections": [{
+            "section_title": "Sec",
+            "table": {"headers": ["A", "B"], "rows": [["1", "2"]]},
+        }],
+    },
+    "image": {"title": "Img", "image": "nonexistent.png", "caption": "Cap"},
+    "timeline": {
+        "title": "TL",
+        "steps": [{"icon": "bolt", "title": "S1", "description": "D1"}],
+    },
+    "code": {"title": "Code", "language": "python", "code": "x = 1"},
+    "toc": {"title": "TOC", "items": [{"title": "Item 1", "slide": 1}]},
+    "chart": {
+        "title": "Chart",
+        "chart": {"type": "bar", "x": ["A", "B"], "y": [1, 2]},
+    },
+    "map": {"title": "Map", "lat": 0, "lng": 0, "zoom": 5, "markers": []},
+    "mermaid": {"title": "Mermaid", "diagram": "graph TD; A-->B"},
+    "video": {"title": "Video", "url": "https://example.com/v.mp4"},
+}
+
+
+def _build_one_slide_pptx(layout, tmp_path):
+    """Build a single-slide deck for the given layout and return the .pptx path."""
+    from pf.builder import PresentationBuilder
+    from pf.pptx_native import export_pptx_editable
+
+    config = {
+        "meta": {"title": f"T-{layout}"},
+        "theme": {"primary": "#1C2537", "accent": "#C4A962", "charts": True,
+                  "fonts": {"heading": "Playfair Display", "subheading": "Montserrat", "body": "Lato"}},
+        "slides": [{"layout": layout, "data": _LAYOUT_FIXTURES[layout]}],
+    }
+    cfg_path = tmp_path / "presentation.yaml"
+    cfg_path.write_text(_yaml_t21.dump(config), encoding="utf-8")
+    metrics_path = tmp_path / "metrics.json"
+    metrics_path.write_text(_json.dumps({}), encoding="utf-8")
+
+    slides_dir = tmp_path / "slides"
+    builder = PresentationBuilder(config_path=str(cfg_path), metrics_path=str(metrics_path))
+    builder.build(output_dir=str(slides_dir))
+
+    out = tmp_path / "deck.pptx"
+    export_pptx_editable(config, str(slides_dir), str(out))
+    return out
+
+
+def _slide_has_editable_content(slide):
+    """Editable = at least one text frame with text, OR a chart, OR a movie."""
+    from pptx.enum.shapes import MSO_SHAPE_TYPE
+    for shape in slide.shapes:
+        if shape.has_text_frame and shape.text_frame.text.strip():
+            return True
+        if getattr(shape, "has_chart", False):
+            return True
+        if shape.shape_type == MSO_SHAPE_TYPE.MEDIA:
+            return True
+    return False
+
+
+_UNIMPLEMENTED_LAYOUTS = {"chart", "code", "map", "mermaid", "toc", "video"}
+
+
+def _layout_param(name):
+    if name in _UNIMPLEMENTED_LAYOUTS:
+        return pytest.param(
+            name,
+            marks=pytest.mark.xfail(
+                strict=True,
+                reason=f"{name}: native PPTX renderer pending (T2.2-T2.7)",
+            ),
+        )
+    return pytest.param(name)
+
+
+@pytest.mark.parametrize("layout", [_layout_param(n) for n in _LAYOUT_NAMES_T21])
+def test_each_layout_editable(layout, tmp_path):
+    """Every built-in layout must produce at least one editable shape in --editable mode."""
+    out = _build_one_slide_pptx(layout, tmp_path)
+    from pptx import Presentation as _P
+    prs = _P(out)
+    assert len(prs.slides) == 1
+    slide = prs.slides[0]
+    assert _slide_has_editable_content(slide), (
+        f"{layout}: no editable shape (text/chart/movie) in PPTX export"
+    )
+
+
+def test_layout_names_in_sync_with_templates():
+    """LAYOUT_NAMES tuple must match templates/layouts/*.html.j2 exactly."""
+    from pf.pptx_native import LAYOUT_NAMES, _discover_layout_names
+    assert LAYOUT_NAMES == _discover_layout_names()
+
+
+def test_iter_native_layouts_subset_of_layout_names():
+    """Every native renderer must correspond to a real layout name."""
+    from pf.pptx_native import LAYOUT_NAMES, iter_native_layouts
+    assert set(iter_native_layouts()).issubset(set(LAYOUT_NAMES))
