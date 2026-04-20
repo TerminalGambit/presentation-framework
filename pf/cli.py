@@ -273,12 +273,19 @@ def pdf(config: str, metrics: str, output: str, notes: bool):
 @click.option("--metrics", "-m", default="metrics.json", help="Path to metrics.json")
 @click.option("--output", "-o", default="presentation.pptx", help="Output PPTX path")
 @click.option("--editable", is_flag=True, default=False, help="Native text/shapes for simple layouts (editable in PowerPoint)")
-def pptx(config: str, metrics: str, output: str, editable: bool):
+@click.option("--strict", is_flag=True, default=False, help="With --editable: exit non-zero if any slide falls back to a rasterized image.")
+def pptx(config: str, metrics: str, output: str, editable: bool, strict: bool):
     """Export slides to PowerPoint (requires: pip install pf[pptx])."""
     config_path = Path(config)
     if not config_path.exists():
         click.echo(f"Error: config file '{config}' not found.", err=True)
         raise SystemExit(1)
+
+    if strict and not editable:
+        click.echo(
+            click.style("--strict only applies to --editable exports.", fg="yellow"),
+            err=True,
+        )
 
     try:
         if editable:
@@ -300,12 +307,32 @@ def pptx(config: str, metrics: str, output: str, editable: bool):
     click.echo(f"Exporting to PowerPoint ({mode})...")
     try:
         if editable:
-            export_pptx_editable(builder.config, str(out), output)
+            fallbacks = export_pptx_editable(builder.config, str(out), output) or []
         else:
             export_pptx(str(out), output, title=title)
+            fallbacks = []
         click.echo(f"PPTX exported → {output}")
     except Exception as e:
         click.echo(click.style(f"PPTX export failed: {e}", fg="red"), err=True)
+        raise SystemExit(1)
+
+    # --strict: the file is still written (so the user can inspect what fell
+    # back), but the CLI exits non-zero with a per-fallback summary. Per
+    # plan D4, this keeps the flag scriptable in CI without throwing away
+    # artifacts.
+    if strict and editable and fallbacks:
+        click.echo(
+            click.style(
+                f"--strict: {len(fallbacks)} fallback(s) detected in {output}",
+                fg="red",
+            ),
+            err=True,
+        )
+        for fb in fallbacks:
+            click.echo(
+                f"  slide {fb['slide_index'] + 1:02d} [{fb['layout']}]: {fb['reason']}",
+                err=True,
+            )
         raise SystemExit(1)
 
 

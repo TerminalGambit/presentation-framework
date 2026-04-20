@@ -895,7 +895,8 @@ def _apply_chart_theme(chart, theme: dict) -> None:
             pass
 
 
-def _render_chart(slide, data: dict, theme: dict):
+def _render_chart(slide, data: dict, theme: dict, *,
+                  slide_index: int = 0, fallbacks: list | None = None):
     """Render a native PowerPoint chart (double-clickable, editable data table).
 
     Consumes the same YAML shape as the HTML chart template:
@@ -946,9 +947,20 @@ def _render_chart(slide, data: dict, theme: dict):
     chart_h = SLIDE_HEIGHT - chart_y - Inches(0.5)
 
     if xl_type is None or (not labels and not series_defs and not values):
-        # Can't build a real chart — leave an editable caption. The coverage
-        # gate (T2.1) still passes on the text frame; T2.8 will treat this
-        # as a fallback and fail --strict.
+        # Can't build a real chart — leave an editable caption and log a
+        # fallback event so --strict can fail the build while the file is
+        # still written for inspection (D4).
+        reason = (
+            f"chart_type={chart_type_name!r} not supported"
+            if xl_type is None
+            else f"chart_type={chart_type_name!r} has no data"
+        )
+        if fallbacks is not None:
+            fallbacks.append({
+                "slide_index": slide_index,
+                "layout": "chart",
+                "reason": reason,
+            })
         txBox = slide.shapes.add_textbox(chart_x, chart_y, chart_w, Inches(1.2))
         _set_text(
             txBox.text_frame,
@@ -1411,14 +1423,24 @@ def export_pptx_editable(
     config: dict,
     slides_dir: str,
     output_path: str,
-):
+) -> list[dict]:
     """Export slides to an editable .pptx file.
 
-    Native text/shapes for supported layouts (section, quote, closing,
-    title, stat-grid, two-column, three-column). Image fallback via
-    Playwright for complex layouts. Uses a single shared browser context
-    across all image fallbacks to avoid spawning a browser per slide.
+    Native text/shapes are used when a layout has an entry in
+    NATIVE_RENDERERS; unknown layouts fall back to a Playwright screenshot
+    embedded as a picture — that's the "fallback" ``--strict`` mode treats
+    as a failure.
+
+    Uses a single shared browser context across image fallbacks to avoid
+    spawning a browser per slide.
+
+    Returns:
+        A list of fallback events, each shaped
+        ``{"slide_index": int, "layout": str, "reason": str}``. Empty when
+        every slide rendered natively — that's the happy path for
+        ``--strict``.
     """
+    fallbacks: list[dict] = []
     prs = Presentation()
     prs.slide_width = SLIDE_WIDTH
     prs.slide_height = SLIDE_HEIGHT
@@ -1471,8 +1493,15 @@ def export_pptx_editable(
                     extras["pw_context"] = pw_context
                 if "slide_cfg" in params:
                     extras["slide_cfg"] = slide_cfg
+                if "fallbacks" in params:
+                    extras["fallbacks"] = fallbacks
                 renderer(slide, data, theme, **extras)
             else:
+                fallbacks.append({
+                    "slide_index": i,
+                    "layout": layout,
+                    "reason": "no native renderer registered — rendered as screenshot",
+                })
                 if slide_file.exists():
                     _render_image_fallback(slide, slide_file, context=pw_context)
 
@@ -1495,3 +1524,4 @@ def export_pptx_editable(
             pw_manager.stop()
 
     prs.save(output_path)
+    return fallbacks

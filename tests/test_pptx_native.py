@@ -1130,6 +1130,126 @@ class TestTocLayout:
         assert hits[0].click_action.target_slide is target
 
 
+class TestStrictFallbacks:
+    """T2.8 — export_pptx_editable returns a list of fallback events, and
+    the `pf pptx --editable --strict` CLI exits non-zero when that list is
+    non-empty (the file is still written first, per D4)."""
+
+    def _write_config(self, tmp_path, slides):
+        config = {
+            "meta": {"title": "T"},
+            "theme": {"primary": "#1C2537", "accent": "#C4A962",
+                      "fonts": {"heading": "H", "subheading": "S",
+                                "body": "B", "mono": "M"}},
+            "slides": slides,
+        }
+        cfg = tmp_path / "presentation.yaml"
+        cfg.write_text(_yaml_t21.dump(config), encoding="utf-8")
+        met = tmp_path / "metrics.json"
+        met.write_text(_json.dumps({}), encoding="utf-8")
+        return config, cfg, met
+
+    def test_happy_path_returns_empty_fallbacks(self, tmp_path):
+        from pf.pptx_native import export_pptx_editable
+        from pf.builder import PresentationBuilder
+        config, cfg, met = self._write_config(tmp_path, [
+            {"layout": "section", "data": {"title": "S"}},
+            {"layout": "closing", "data": {"title": "End"}},
+        ])
+        b = PresentationBuilder(config_path=str(cfg), metrics_path=str(met))
+        import contextlib, io as _io
+        with contextlib.redirect_stdout(_io.StringIO()):
+            out_dir = b.build(output_dir=str(tmp_path / "slides"))
+        fallbacks = export_pptx_editable(b.config, str(out_dir), str(tmp_path / "out.pptx"))
+        assert fallbacks == []
+
+    def test_missing_renderer_tracked_as_fallback(self, tmp_path, monkeypatch):
+        """Drop `closing` out of NATIVE_RENDERERS — export should still
+        write the file and record a fallback event for slide 1."""
+        from pf.pptx_native import export_pptx_editable
+        import pf.pptx_native as M
+        from pf.builder import PresentationBuilder
+        config, cfg, met = self._write_config(tmp_path, [
+            {"layout": "section", "data": {"title": "S"}},
+            {"layout": "closing", "data": {"title": "End"}},
+        ])
+        b = PresentationBuilder(config_path=str(cfg), metrics_path=str(met))
+        import contextlib, io as _io
+        with contextlib.redirect_stdout(_io.StringIO()):
+            out_dir = b.build(output_dir=str(tmp_path / "slides"))
+
+        patched = {k: v for k, v in M.NATIVE_RENDERERS.items() if k != "closing"}
+        monkeypatch.setattr(M, "NATIVE_RENDERERS", patched)
+
+        out_pptx = tmp_path / "out.pptx"
+        fallbacks = export_pptx_editable(b.config, str(out_dir), str(out_pptx))
+        assert out_pptx.exists(), "file should be written even when fallbacks occur"
+        assert len(fallbacks) == 1
+        fb = fallbacks[0]
+        assert fb["slide_index"] == 1
+        assert fb["layout"] == "closing"
+        assert "native renderer" in fb["reason"]
+
+    def test_chart_unknown_type_tracked_as_fallback(self):
+        """Unknown chart_type renders a placeholder textbox but records a
+        fallback event via the dispatched `fallbacks` list kwarg."""
+        from pf.pptx_native import _render_chart, _pptx_theme, SLIDE_WIDTH, SLIDE_HEIGHT
+        prs = PptxPresentation()
+        prs.slide_width = SLIDE_WIDTH
+        prs.slide_height = SLIDE_HEIGHT
+        slide = prs.slides.add_slide(prs.slide_layouts[6])
+        theme = _pptx_theme({"primary": "#1C2537", "accent": "#C4A962",
+                             "fonts": {"heading": "H", "subheading": "S",
+                                       "body": "B", "mono": "M"}})
+        fbs: list = []
+        _render_chart(slide, {"chart_type": "treemap", "labels": ["A"], "values": [1]},
+                      theme, slide_index=3, fallbacks=fbs)
+        assert len(fbs) == 1
+        assert fbs[0]["slide_index"] == 3
+        assert fbs[0]["layout"] == "chart"
+        assert "treemap" in fbs[0]["reason"]
+
+    def test_cli_strict_exits_one_on_fallback(self, tmp_path, monkeypatch):
+        """End-to-end: `pf pptx --editable --strict` exits 1 when a
+        fallback is recorded, and the file is still written."""
+        from click.testing import CliRunner
+        from pf.cli import cli
+        import pf.pptx_native as M
+
+        config = {
+            "meta": {"title": "T"},
+            "theme": {"primary": "#1C2537", "accent": "#C4A962",
+                      "fonts": {"heading": "H", "subheading": "S",
+                                "body": "B", "mono": "M"}},
+            "slides": [
+                {"layout": "section", "data": {"title": "S"}},
+                {"layout": "closing", "data": {"title": "End"}},
+            ],
+        }
+        cfg = tmp_path / "presentation.yaml"
+        cfg.write_text(_yaml_t21.dump(config), encoding="utf-8")
+        met = tmp_path / "metrics.json"
+        met.write_text(_json.dumps({}), encoding="utf-8")
+        out_pptx = tmp_path / "out.pptx"
+
+        # Drop `closing` so strict has something to fail on
+        patched = {k: v for k, v in M.NATIVE_RENDERERS.items() if k != "closing"}
+        monkeypatch.setattr(M, "NATIVE_RENDERERS", patched)
+
+        runner = CliRunner()
+        result = runner.invoke(cli, [
+            "pptx",
+            "--config", str(cfg),
+            "--metrics", str(met),
+            "--output", str(out_pptx),
+            "--editable", "--strict",
+        ])
+        assert result.exit_code == 1
+        assert out_pptx.exists()
+        assert "fallback" in (result.output + (result.stderr_bytes.decode() if result.stderr_bytes else "")).lower() \
+               or "closing" in result.output.lower()
+
+
 def test_layout_names_in_sync_with_templates():
     """LAYOUT_NAMES tuple must match templates/layouts/*.html.j2 exactly."""
     from pf.pptx_native import LAYOUT_NAMES, _discover_layout_names
