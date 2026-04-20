@@ -318,7 +318,7 @@ A new `video-maf` layout exists behind a `theme.experimental.maf_video: true` fe
   - **Ask human if**: never.
   - **Effort**: M
 
-- [ ] **T3.6** — End-to-end integration test with stub binary
+- [x] **T3.6** — End-to-end integration test with stub binary
   - **Creates/modifies**: `tests/test_video_maf.py`
   - **Depends on**: T3.5
   - **Description**: One test that builds a one-slide presentation YAML with `theme.experimental.maf_video: true` and a `video-maf` slide pointing at the stub manifest, monkeypatches `PATH` to include `tests/fixtures/video-maf-placeholder/`, runs `PresentationBuilder().build()`, asserts the output mp4 + srt + vtt are present and the `<video>` tag in the slide HTML references them. Then runs build a second time and asserts cache hit (no subprocess call on the second run).
