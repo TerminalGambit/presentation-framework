@@ -159,7 +159,7 @@ Same YAML + different `theme.preset` value produces visibly distinct first rende
   - **Ask human if**: never.
   - **Effort**: M
 
-- [ ] **T1.10** — Theme test suite
+- [x] **T1.10** — Theme test suite
   - **Creates/modifies**: `tests/test_themes.py` (new)
   - **Depends on**: T1.1, T1.3, T1.4, T1.5, T1.6, T1.7, T1.8, T1.9
   - **Description**: One file that for each preset (parametrized) asserts: (a) the preset YAML loads, (b) all required CSS custom properties (`--pf-primary`, `--pf-accent`, `--pf-text`, `--pf-contrast-text`, `--pf-font-heading`, `--pf-font-subheading`, `--pf-font-body`, `--pf-font-mono`) appear in the generated CSS, (c) `check_contrast` returns no warnings on `examples/presentation.yaml`, (d) `screenshot_path` from `list_themes` exists on disk. Also one negative test: `pf build` with a non-existent preset raises with a helpful message listing available presets.

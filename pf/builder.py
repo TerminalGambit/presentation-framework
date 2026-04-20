@@ -452,6 +452,7 @@ class PresentationBuilder:
         font_heading = fonts.get("heading", "Playfair Display")
         font_subheading = fonts.get("subheading", "Montserrat")
         font_body = fonts.get("body", "Lato")
+        font_mono = fonts.get("mono", "IBM Plex Mono")
 
         # Read the stock variables.css as a base, then replace the :root block
         stock = (THEME_DIR / "variables.css").read_text(encoding="utf-8")
@@ -485,7 +486,20 @@ class PresentationBuilder:
   --pf-card-bg-hover: rgba({ar}, {ag}, {ab}, 0.06);
   --pf-card-border:   rgba({ar}, {ag}, {ab}, 0.2);
   --pf-dark-bg:       rgba(0, 0, 0, 0.03);
-  --pf-darker-bg:     rgba(0, 0, 0, 0.05);"""
+  --pf-darker-bg:     rgba(0, 0, 0, 0.05);
+
+  /* Category accent colors */
+  --pf-cat-art:       #e74c3c;
+  --pf-cat-watches:   #f1c40f;
+  --pf-cat-vehicles:  #e67e22;
+  --pf-cat-marine:    #3498db;
+  --pf-cat-aviation:  #9b59b6;
+  --pf-cat-realestate:#2ecc71;
+
+  /* Semantic colors */
+  --pf-success:       #2ecc71;
+  --pf-danger:        #e74c3c;
+  --pf-info:          #3498db;"""
         else:
             custom_root = f""":root {{
   /* ── Colors (generated — DARK theme) ────────────────────── */
@@ -526,11 +540,30 @@ class PresentationBuilder:
   --pf-danger:        #e74c3c;
   --pf-info:          #3498db;
 
+  /* Category accent colors */
+  --pf-cat-art:       #e74c3c;
+  --pf-cat-watches:   #f1c40f;
+  --pf-cat-vehicles:  #e67e22;
+  --pf-cat-marine:    #3498db;
+  --pf-cat-aviation:  #9b59b6;
+  --pf-cat-realestate:#2ecc71;
+
+  /* Semantic colors */
+  --pf-success:       #2ecc71;
+  --pf-danger:        #e74c3c;
+  --pf-info:          #3498db;"""
+
+        # Typography, secondary accent, and style preset apply to both
+        # light and dark — keep them outside the if/else so the LIGHT
+        # branch doesn't drop --pf-font-* and downstream layouts fall back
+        # to unstyled defaults (regression fix surfaced by T1.10).
+        custom_root += f"""
+
   /* ── Typography (generated from presentation.yaml) ──────── */
   --pf-font-heading:    '{font_heading}', serif;
   --pf-font-subheading: '{font_subheading}', sans-serif;
   --pf-font-body:       '{font_body}', sans-serif;
-  --pf-font-mono:       'IBM Plex Mono', monospace;
+  --pf-font-mono:       '{font_mono}', monospace;
 
   /* ── Secondary Accent (generated) ──────────────────────── */
   --pf-secondary-accent:        {secondary};
