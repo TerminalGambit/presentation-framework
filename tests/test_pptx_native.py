@@ -688,7 +688,7 @@ def _slide_has_editable_content(slide):
     return False
 
 
-_UNIMPLEMENTED_LAYOUTS = {"chart", "map", "mermaid", "toc", "video"}
+_UNIMPLEMENTED_LAYOUTS = {"chart", "map", "mermaid", "video"}
 
 
 def _layout_param(name):
@@ -714,6 +714,105 @@ def test_each_layout_editable(layout, tmp_path):
     assert _slide_has_editable_content(slide), (
         f"{layout}: no editable shape (text/chart/movie) in PPTX export"
     )
+
+
+class TestTocLayout:
+    """Native PPTX renderer for toc layout with NAMED_SLIDE hyperlinks."""
+
+    def test_toc_in_native_renderers(self):
+        from pf.pptx_native import NATIVE_RENDERERS
+        assert "toc" in NATIVE_RENDERERS
+
+    def test_toc_renders_entries_and_hyperlinks(self, tmp_path):
+        """Each entry should be a text box with click_action.target_slide set,
+        resulting in PP_ACTION.NAMED_SLIDE (PowerPoint's 'hyperlink to slide')."""
+        from pf.pptx_native import export_pptx_editable
+        from pf.builder import PresentationBuilder
+        from pptx.enum.action import PP_ACTION
+
+        config = {
+            "meta": {"title": "Deck"},
+            "theme": {
+                "primary": "#1C2537", "accent": "#C4A962",
+                "fonts": {"heading": "Playfair Display", "subheading": "Montserrat",
+                          "body": "Lato", "mono": "IBM Plex Mono"},
+            },
+            "slides": [
+                {"layout": "toc", "data": {"title": "Contents", "items": [
+                    {"number": 1, "title": "Intro"},
+                    {"number": 2, "title": "Results"},
+                ]}},
+                {"layout": "section", "data": {"number": 1, "title": "Intro"}},
+                {"layout": "section", "data": {"number": 2, "title": "Results"}},
+            ],
+        }
+        cfg_path = tmp_path / "presentation.yaml"
+        cfg_path.write_text(_yaml_t21.dump(config), encoding="utf-8")
+        metrics_path = tmp_path / "metrics.json"
+        metrics_path.write_text(_json.dumps({}), encoding="utf-8")
+
+        builder = PresentationBuilder(config_path=str(cfg_path), metrics_path=str(metrics_path))
+        import contextlib, io as _io
+        with contextlib.redirect_stdout(_io.StringIO()):
+            slides_dir = builder.build(output_dir=str(tmp_path / "slides"))
+        out_pptx = tmp_path / "out.pptx"
+        export_pptx_editable(builder.config, str(slides_dir), str(out_pptx))
+
+        prs = PptxPresentation(str(out_pptx))
+        toc_slide = prs.slides[0]
+        # Every shape with non-empty text should correspond to a TOC entry or the title
+        entry_shapes = [
+            s for s in toc_slide.shapes
+            if s.has_text_frame and s.text_frame.text.strip()
+            and "Intro" in s.text_frame.text or "Results" in s.text_frame.text
+        ]
+        assert len(entry_shapes) >= 2, "expected at least two TOC entry shapes"
+        # At least one of the entry shapes must have a NAMED_SLIDE click_action
+        named_slide_hits = [
+            s for s in entry_shapes
+            if s.click_action.action == PP_ACTION.NAMED_SLIDE
+        ]
+        assert named_slide_hits, "no entries carry a NAMED_SLIDE hyperlink"
+
+    def test_toc_explicit_slide_index_respected(self):
+        """Direct _render_toc call: an item with `slide: N` (1-based) hyperlinks
+        to prs.slides[N-1], ignoring the section-matching fallback.
+
+        (The full builder pipeline clobbers user-supplied `items` via
+        `slide_cfg.setdefault("data", {})["items"] = _generate_toc(slides)` in
+        builder.py, so this path is only reachable when a caller invokes
+        _render_toc / export_pptx_editable on a hand-assembled config — the
+        exact use case this test exercises.)"""
+        from pf.pptx_native import _render_toc, _pptx_theme, SLIDE_WIDTH, SLIDE_HEIGHT
+        from pptx.enum.action import PP_ACTION
+
+        prs = PptxPresentation()
+        prs.slide_width = SLIDE_WIDTH
+        prs.slide_height = SLIDE_HEIGHT
+        blank = prs.slide_layouts[6]
+        toc = prs.slides.add_slide(blank)
+        _ = prs.slides.add_slide(blank)      # slide 2
+        target = prs.slides.add_slide(blank)  # slide 3 (closing)
+
+        theme = _pptx_theme({"primary": "#1C2537", "accent": "#C4A962",
+                             "fonts": {"heading": "H", "subheading": "S",
+                                       "body": "B", "mono": "M"}})
+        data = {"items": [{"title": "Jump to closing", "slide": 3}]}
+        slides_cfg = [
+            {"layout": "toc", "data": data},
+            {"layout": "section", "data": {"number": 1, "title": "X"}},
+            {"layout": "closing", "data": {"title": "Bye"}},
+        ]
+        _render_toc(toc, data, theme, prs=prs, slides_cfg=slides_cfg, slide_index=0)
+
+        hits = [
+            s for s in toc.shapes
+            if s.has_text_frame and "Jump to closing" in s.text_frame.text
+            and s.click_action.action == PP_ACTION.NAMED_SLIDE
+        ]
+        assert hits, "explicit slide-index entry did not produce a NAMED_SLIDE hyperlink"
+        # Sanity: target should actually be the third slide, not the second
+        assert hits[0].click_action.target_slide is target
 
 
 def test_layout_names_in_sync_with_templates():

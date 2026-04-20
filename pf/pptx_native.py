@@ -7,6 +7,7 @@ python-pptx text boxes and shapes. Complex layouts fall back to
 image-based rendering via Playwright.
 """
 
+import inspect
 import io
 from pathlib import Path
 
@@ -836,6 +837,83 @@ def _populate_code_frame(text_frame, code: str, language: str, font_mono: str):
             run.font.color.rgb = color if color is not None else default_color
 
 
+def _render_toc(slide, data: dict, theme: dict, *, prs=None, slides_cfg=None, slide_index: int = 0):
+    """Render table of contents: one editable text box per entry, each with
+    a NAMED_SLIDE click_action hyperlink to the matching section slide.
+
+    Entry → target slide resolution:
+      1. If the entry has an explicit ``slide`` field (1-based per YAML
+         convention), use it.
+      2. Otherwise, map the nth TOC entry to the nth ``section``-layout slide
+         in ``slides_cfg`` — this matches the behavior of
+         ``PresentationBuilder._generate_toc``.
+    """
+    _add_bg(slide, theme["primary"])
+    center_x = SLIDE_WIDTH // 2
+
+    # Slide title (via header partial in HTML; rendered as native text here)
+    if data.get("title"):
+        box_w = Inches(12)
+        txBox = slide.shapes.add_textbox(
+            center_x - box_w // 2, Inches(0.3), box_w, Inches(0.8)
+        )
+        _set_text(
+            txBox.text_frame, data["title"], theme["font_heading"],
+            36, theme["accent"], bold=True, alignment=PP_ALIGN.LEFT,
+        )
+
+    items = data.get("items") or []
+    if not items:
+        return
+
+    # Sequential section-slide indices for fallback mapping
+    section_indices: list[int] = []
+    if slides_cfg:
+        section_indices = [
+            i for i, sc in enumerate(slides_cfg) if sc.get("layout") == "section"
+        ]
+
+    # Vertical layout of TOC entries
+    entry_h = Inches(0.55)
+    entry_gap = Inches(0.1)
+    total_h = len(items) * entry_h + max(0, len(items) - 1) * entry_gap
+    y_start = max(Inches(1.4), (SLIDE_HEIGHT - total_h) // 2)
+    entry_w = Inches(10)
+    x_start = center_x - entry_w // 2
+
+    for idx, item in enumerate(items):
+        y = y_start + idx * (entry_h + entry_gap)
+        txBox = slide.shapes.add_textbox(x_start, y, entry_w, entry_h)
+        tf = txBox.text_frame
+        tf.word_wrap = True
+
+        number = item.get("number")
+        if number is None:
+            number_str = f"{idx + 1:02d}"
+        elif isinstance(number, int):
+            number_str = f"{number:02d}"
+        else:
+            number_str = str(number)
+        title = item.get("title", "")
+        text = f"{number_str} — {title}" if title else number_str
+        _set_text(
+            tf, text, theme["font_subheading"],
+            20, theme["white"], bold=False, alignment=PP_ALIGN.LEFT,
+        )
+
+        # Resolve hyperlink target
+        if prs is None:
+            continue
+        target_idx: int | None = None
+        raw = item.get("slide")
+        if isinstance(raw, int) and raw >= 1:
+            target_idx = raw - 1
+        elif idx < len(section_indices):
+            target_idx = section_indices[idx]
+        if target_idx is not None and 0 <= target_idx < len(prs.slides):
+            txBox.click_action.target_slide = prs.slides[target_idx]
+
+
 # ── Layout dispatch ──────────────────────────────────────────────
 
 NATIVE_RENDERERS = {
@@ -850,6 +928,7 @@ NATIVE_RENDERERS = {
     "image": _render_image,
     "timeline": _render_timeline,
     "code": _render_code,
+    "toc": _render_toc,
 }
 
 
@@ -933,14 +1012,30 @@ def export_pptx_editable(
         pass  # Playwright unavailable — image fallback will skip gracefully
 
     try:
+        # Two-pass so renderers (e.g. TOC) can reference forward-indexed slides
+        # via prs.slides[N] when they run — otherwise a TOC slide at position 0
+        # can't link to a section slide that hasn't been added yet.
+        slide_objs = [prs.slides.add_slide(blank_layout) for _ in slides_cfg]
+
         for i, slide_cfg in enumerate(slides_cfg):
             layout = slide_cfg.get("layout", "two-column")
             data = slide_cfg.get("data", {})
-            slide = prs.slides.add_slide(blank_layout)
+            slide = slide_objs[i]
 
             renderer = NATIVE_RENDERERS.get(layout)
             if renderer:
-                renderer(slide, data, theme)
+                # Only pass context kwargs the renderer actually declares, so
+                # existing renderers with signature (slide, data, theme) stay
+                # untouched while TOC (and future renderers) can opt in.
+                params = inspect.signature(renderer).parameters
+                extras = {}
+                if "prs" in params:
+                    extras["prs"] = prs
+                if "slides_cfg" in params:
+                    extras["slides_cfg"] = slides_cfg
+                if "slide_index" in params:
+                    extras["slide_index"] = i
+                renderer(slide, data, theme, **extras)
             else:
                 slide_file = slides_path / f"slide_{i + 1:02d}.html"
                 if slide_file.exists():
