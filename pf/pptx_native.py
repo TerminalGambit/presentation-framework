@@ -94,7 +94,7 @@ def _hex_to_rgb(hex_color: str) -> RGBColor:
 def _pptx_theme(theme_cfg: dict) -> dict:
     """Convert presentation.yaml theme to python-pptx primitives."""
     fonts = theme_cfg.get("fonts", {})
-    return {
+    result = {
         "primary": _hex_to_rgb(theme_cfg.get("primary", "#1C2537")),
         "accent": _hex_to_rgb(theme_cfg.get("accent", "#C4A962")),
         "white": RGBColor(0xFF, 0xFF, 0xFF),
@@ -104,6 +104,9 @@ def _pptx_theme(theme_cfg: dict) -> dict:
         "font_body": fonts.get("body", "Lato"),
         "font_mono": fonts.get("mono", "IBM Plex Mono"),
     }
+    if theme_cfg.get("secondary_accent"):
+        result["secondary_accent"] = _hex_to_rgb(theme_cfg["secondary_accent"])
+    return result
 
 
 def _set_text(text_frame, text, font_name, font_size_pt, color, bold=False, alignment=PP_ALIGN.CENTER):
@@ -837,6 +840,162 @@ def _populate_code_frame(text_frame, code: str, language: str, font_mono: str):
             run.font.color.rgb = color if color is not None else default_color
 
 
+# ── Chart type mapping (T2.4, D5) ────────────────────────────────
+#
+# Plotly's `type: bar` renders vertical by default (a "column chart" in
+# PowerPoint's terminology). For visual parity we map "bar" to
+# COLUMN_CLUSTERED even though the plan text says BAR_CLUSTERED —
+# BAR_CLUSTERED is horizontal in Excel/PowerPoint and would surprise
+# existing decks that already use `chart_type: bar`. "bar-horizontal"
+# is exposed as an explicit opt-in. Bedrock plan mapping (line, pie,
+# donut/doughnut, scatter, area) is unchanged.
+
+def _xl_chart_type(name: str):
+    """Resolve a YAML chart_type string to a python-pptx XL_CHART_TYPE or None."""
+    from pptx.enum.chart import XL_CHART_TYPE
+    mapping = {
+        "bar": XL_CHART_TYPE.COLUMN_CLUSTERED,        # Plotly default: vertical
+        "column": XL_CHART_TYPE.COLUMN_CLUSTERED,
+        "bar-horizontal": XL_CHART_TYPE.BAR_CLUSTERED,
+        "line": XL_CHART_TYPE.LINE,
+        "pie": XL_CHART_TYPE.PIE,
+        "donut": XL_CHART_TYPE.DOUGHNUT,
+        "doughnut": XL_CHART_TYPE.DOUGHNUT,
+        "scatter": XL_CHART_TYPE.XY_SCATTER,
+        "area": XL_CHART_TYPE.AREA,
+    }
+    return mapping.get((name or "").lower())
+
+
+def _apply_chart_theme(chart, theme: dict) -> None:
+    """Color each series with accent → secondary_accent → accent → …
+
+    Uses both fill (for bar/column/area/pie/donut) and line (for line/scatter)
+    properties — whichever API the series type doesn't support raises, so we
+    swallow the exception and move on rather than type-sniffing.
+    """
+    palette = [theme["accent"]]
+    if theme.get("secondary_accent"):
+        palette.append(theme["secondary_accent"])
+
+    try:
+        series_list = list(chart.series)
+    except Exception:
+        return
+    for i, series in enumerate(series_list):
+        color = palette[i % len(palette)]
+        try:
+            series.format.fill.solid()
+            series.format.fill.fore_color.rgb = color
+        except Exception:
+            pass
+        try:
+            series.format.line.color.rgb = color
+        except Exception:
+            pass
+
+
+def _render_chart(slide, data: dict, theme: dict):
+    """Render a native PowerPoint chart (double-clickable, editable data table).
+
+    Consumes the same YAML shape as the HTML chart template:
+      - ``chart_type``: bar | column | line | pie | donut | scatter | area
+      - ``labels``: list of category names (x-axis)
+      - ``values``: list of numbers (single-series) — OR —
+      - ``series``: list of ``{name, values}`` dicts (multi-series)
+      - ``title``, ``subtitle``: optional header text
+
+    Unknown types or empty data render a captioned placeholder text box so
+    the slide still has an editable shape; T2.8's --strict tracking will
+    surface this as a fallback event.
+    """
+    _add_bg(slide, theme["primary"])
+    center_x = SLIDE_WIDTH // 2
+
+    # Title
+    top = Inches(0.3)
+    if data.get("title"):
+        box_w = Inches(12)
+        txBox = slide.shapes.add_textbox(center_x - box_w // 2, top, box_w, Inches(0.7))
+        _set_text(
+            txBox.text_frame, data["title"], theme["font_heading"],
+            32, theme["accent"], bold=True, alignment=PP_ALIGN.LEFT,
+        )
+        top = Inches(1.0)
+
+    # Subtitle (optional)
+    if data.get("subtitle"):
+        box_w = Inches(12)
+        txBox = slide.shapes.add_textbox(center_x - box_w // 2, top, box_w, Inches(0.5))
+        _set_text(
+            txBox.text_frame, data["subtitle"], theme["font_body"],
+            14, theme["text_muted"], alignment=PP_ALIGN.LEFT,
+        )
+        top += Inches(0.55)
+
+    chart_type_name = (data.get("chart_type") or "bar").lower()
+    xl_type = _xl_chart_type(chart_type_name)
+
+    labels = data.get("labels") or []
+    values = data.get("values") or []
+    series_defs = data.get("series") or []
+
+    chart_x = Inches(0.5)
+    chart_y = top + Inches(0.2)
+    chart_w = SLIDE_WIDTH - Inches(1.0)
+    chart_h = SLIDE_HEIGHT - chart_y - Inches(0.5)
+
+    if xl_type is None or (not labels and not series_defs and not values):
+        # Can't build a real chart — leave an editable caption. The coverage
+        # gate (T2.1) still passes on the text frame; T2.8 will treat this
+        # as a fallback and fail --strict.
+        txBox = slide.shapes.add_textbox(chart_x, chart_y, chart_w, Inches(1.2))
+        _set_text(
+            txBox.text_frame,
+            f"[Chart: {chart_type_name or 'unknown'} — unrenderable in native PPTX]",
+            theme["font_body"], 16, theme["text_muted"], alignment=PP_ALIGN.CENTER,
+        )
+        return
+
+    from pptx.chart.data import CategoryChartData, XyChartData
+    from pptx.enum.chart import XL_CHART_TYPE
+
+    if xl_type == XL_CHART_TYPE.XY_SCATTER:
+        chart_data = XyChartData()
+        if series_defs:
+            for s in series_defs:
+                name = s.get("name", "Series")
+                pts = s.get("xy")
+                if pts is None:
+                    pts = list(zip(s.get("x", []), s.get("y", [])))
+                series = chart_data.add_series(name)
+                for pt in pts:
+                    try:
+                        series.add_data_point(float(pt[0]), float(pt[1]))
+                    except (TypeError, ValueError, IndexError):
+                        continue
+        elif labels and values:
+            series = chart_data.add_series(data.get("name", "Series"))
+            for x, y in zip(labels, values):
+                try:
+                    series.add_data_point(float(x), float(y))
+                except (TypeError, ValueError):
+                    continue
+    else:
+        chart_data = CategoryChartData()
+        chart_data.categories = [str(x) for x in labels] or [""]
+        if series_defs:
+            for s in series_defs:
+                chart_data.add_series(s.get("name", "Series"), s.get("values", []))
+        else:
+            chart_data.add_series(data.get("name", "Series"), values)
+
+    chart_shape = slide.shapes.add_chart(
+        xl_type, chart_x, chart_y, chart_w, chart_h, chart_data
+    )
+    _apply_chart_theme(chart_shape.chart, theme)
+
+
 def _render_toc(slide, data: dict, theme: dict, *, prs=None, slides_cfg=None, slide_index: int = 0):
     """Render table of contents: one editable text box per entry, each with
     a NAMED_SLIDE click_action hyperlink to the matching section slide.
@@ -929,6 +1088,7 @@ NATIVE_RENDERERS = {
     "timeline": _render_timeline,
     "code": _render_code,
     "toc": _render_toc,
+    "chart": _render_chart,
 }
 
 

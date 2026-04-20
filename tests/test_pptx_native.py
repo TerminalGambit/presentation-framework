@@ -642,7 +642,9 @@ _LAYOUT_FIXTURES: dict[str, dict] = {
     "toc": {"title": "TOC", "items": [{"title": "Item 1", "slide": 1}]},
     "chart": {
         "title": "Chart",
-        "chart": {"type": "bar", "x": ["A", "B"], "y": [1, 2]},
+        "chart_type": "bar",
+        "labels": ["A", "B"],
+        "values": [1, 2],
     },
     "map": {"title": "Map", "lat": 0, "lng": 0, "zoom": 5, "markers": []},
     "mermaid": {"title": "Mermaid", "diagram": "graph TD; A-->B"},
@@ -688,7 +690,7 @@ def _slide_has_editable_content(slide):
     return False
 
 
-_UNIMPLEMENTED_LAYOUTS = {"chart", "map", "mermaid", "video"}
+_UNIMPLEMENTED_LAYOUTS = {"map", "mermaid", "video"}
 
 
 def _layout_param(name):
@@ -714,6 +716,138 @@ def test_each_layout_editable(layout, tmp_path):
     assert _slide_has_editable_content(slide), (
         f"{layout}: no editable shape (text/chart/movie) in PPTX export"
     )
+
+
+class TestChartLayout:
+    """Native PPTX renderer for chart layout — uses python-pptx charts so the
+    result is double-click-editable in PowerPoint."""
+
+    def _make_slide(self):
+        from pf.pptx_native import _pptx_theme, SLIDE_WIDTH, SLIDE_HEIGHT
+        prs = PptxPresentation()
+        prs.slide_width = SLIDE_WIDTH
+        prs.slide_height = SLIDE_HEIGHT
+        slide = prs.slides.add_slide(prs.slide_layouts[6])
+        theme = _pptx_theme({"primary": "#1C2537", "accent": "#C4A962",
+                             "secondary_accent": "#6B5BA2",
+                             "fonts": {"heading": "H", "subheading": "S",
+                                       "body": "B", "mono": "M"}})
+        return slide, theme
+
+    def test_chart_in_native_renderers(self):
+        from pf.pptx_native import NATIVE_RENDERERS
+        assert "chart" in NATIVE_RENDERERS
+
+    def test_chart_type_mapping(self):
+        """bar → COLUMN_CLUSTERED (Plotly default is vertical); other types
+        match the plan's D5 table directly."""
+        from pf.pptx_native import _xl_chart_type
+        from pptx.enum.chart import XL_CHART_TYPE
+        assert _xl_chart_type("bar") == XL_CHART_TYPE.COLUMN_CLUSTERED
+        assert _xl_chart_type("column") == XL_CHART_TYPE.COLUMN_CLUSTERED
+        assert _xl_chart_type("bar-horizontal") == XL_CHART_TYPE.BAR_CLUSTERED
+        assert _xl_chart_type("line") == XL_CHART_TYPE.LINE
+        assert _xl_chart_type("pie") == XL_CHART_TYPE.PIE
+        assert _xl_chart_type("donut") == XL_CHART_TYPE.DOUGHNUT
+        assert _xl_chart_type("doughnut") == XL_CHART_TYPE.DOUGHNUT
+        assert _xl_chart_type("scatter") == XL_CHART_TYPE.XY_SCATTER
+        assert _xl_chart_type("area") == XL_CHART_TYPE.AREA
+        assert _xl_chart_type("") is None
+        assert _xl_chart_type("treemap") is None
+
+    def test_chart_single_series_renders_native_chart(self):
+        from pf.pptx_native import NATIVE_RENDERERS
+        slide, theme = self._make_slide()
+        NATIVE_RENDERERS["chart"](slide, {
+            "title": "Revenue",
+            "chart_type": "bar",
+            "labels": ["Q1", "Q2", "Q3"],
+            "values": [100, 200, 300],
+        }, theme)
+        charts = [s for s in slide.shapes if getattr(s, "has_chart", False)]
+        assert len(charts) == 1, "expected one native chart shape"
+        assert len(list(charts[0].chart.series)) == 1
+
+    def test_chart_multi_series_renders(self):
+        from pf.pptx_native import NATIVE_RENDERERS
+        slide, theme = self._make_slide()
+        NATIVE_RENDERERS["chart"](slide, {
+            "chart_type": "line",
+            "labels": ["2023", "2024", "2025"],
+            "series": [
+                {"name": "Product A", "values": [10, 20, 30]},
+                {"name": "Product B", "values": [15, 18, 22]},
+            ],
+        }, theme)
+        charts = [s for s in slide.shapes if getattr(s, "has_chart", False)]
+        assert len(charts) == 1
+        series = list(charts[0].chart.series)
+        assert len(series) == 2
+        assert series[0].name == "Product A"
+        assert series[1].name == "Product B"
+
+    def test_chart_scatter_uses_xy_data(self):
+        """scatter → one of the XY_SCATTER variants (python-pptx may read back
+        the type as XY_SCATTER_LINES rather than the XY_SCATTER we created
+        with — it normalizes from the underlying XML)."""
+        from pf.pptx_native import NATIVE_RENDERERS
+        from pptx.enum.chart import XL_CHART_TYPE
+        slide, theme = self._make_slide()
+        NATIVE_RENDERERS["chart"](slide, {
+            "chart_type": "scatter",
+            "labels": [1, 2, 3, 4],
+            "values": [10, 20, 15, 25],
+        }, theme)
+        charts = [s for s in slide.shapes if getattr(s, "has_chart", False)]
+        assert len(charts) == 1
+        scatter_variants = {
+            XL_CHART_TYPE.XY_SCATTER,
+            XL_CHART_TYPE.XY_SCATTER_LINES,
+            XL_CHART_TYPE.XY_SCATTER_LINES_NO_MARKERS,
+            XL_CHART_TYPE.XY_SCATTER_SMOOTH,
+            XL_CHART_TYPE.XY_SCATTER_SMOOTH_NO_MARKERS,
+        }
+        assert charts[0].chart.chart_type in scatter_variants
+
+    def test_chart_unknown_type_falls_back_to_text_placeholder(self):
+        """Unknown chart types shouldn't crash — they render a text placeholder
+        so the slide still has an editable shape. T2.8's --strict will treat
+        this as a fallback event."""
+        from pf.pptx_native import NATIVE_RENDERERS
+        slide, theme = self._make_slide()
+        NATIVE_RENDERERS["chart"](slide, {
+            "title": "Weird",
+            "chart_type": "treemap",
+            "labels": ["A"],
+            "values": [1],
+        }, theme)
+        charts = [s for s in slide.shapes if getattr(s, "has_chart", False)]
+        assert charts == [], "unknown type must not produce a native chart"
+        texts = [s.text_frame.text for s in slide.shapes if s.has_text_frame]
+        assert any("treemap" in t for t in texts)
+
+    def test_chart_applies_accent_color(self):
+        """First series should be painted with theme.accent; second with
+        theme.secondary_accent when present."""
+        from pf.pptx_native import NATIVE_RENDERERS
+        slide, theme = self._make_slide()
+        NATIVE_RENDERERS["chart"](slide, {
+            "chart_type": "column",
+            "labels": ["A", "B"],
+            "series": [
+                {"name": "S1", "values": [1, 2]},
+                {"name": "S2", "values": [3, 4]},
+            ],
+        }, theme)
+        charts = [s for s in slide.shapes if getattr(s, "has_chart", False)]
+        assert len(charts) == 1
+        s1, s2 = list(charts[0].chart.series)
+        # Fill fore_color may not roundtrip on every series type, but at least
+        # one color API should report the accent for S1 after _apply_chart_theme.
+        c1 = s1.format.fill.fore_color.rgb
+        c2 = s2.format.fill.fore_color.rgb
+        assert c1 == theme["accent"]
+        assert c2 == theme["secondary_accent"]
 
 
 class TestTocLayout:
