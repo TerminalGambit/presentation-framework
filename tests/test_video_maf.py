@@ -211,3 +211,34 @@ class TestHappyPathWithStub:
         assert "<video" in html
         assert mp4_rel in html
         assert "<track" in html
+
+
+class TestEndToEndCaching:
+    """T3.6 — second build against a populated .pf-cache/maf/ cache hits
+    the cache and skips the subprocess entirely (contract §3)."""
+
+    def test_second_build_hits_cache_no_subprocess(self, tmp_path, monkeypatch):
+        # First build: real subprocess against the stub binary
+        monkeypatch.setenv("PATH", f"{FIXTURE_DIR}{os.pathsep}{os.environ['PATH']}")
+        cfg_path, metrics_path, _ = _write_deck(tmp_path, flag_on=True)
+        builder1, slides_dir1 = _build(tmp_path, cfg_path, metrics_path)
+        assert builder1.config["slides"][0]["data"]["_maf_state"] == "rendered"
+        cache_key = builder1.config["slides"][0]["data"]["_maf_cache_key"]
+        cache_dir = tmp_path / ".pf-cache" / "maf" / cache_key
+        assert (cache_dir / "scene.mp4").exists(), "first build should populate cache"
+        assert (cache_dir / "render_result.json").exists()
+
+        # Second build: boobytrap subprocess.run so any call fails the test.
+        # A true cache hit must never invoke it.
+        def fail(*a, **kw):  # pragma: no cover
+            raise AssertionError("subprocess.run should NOT fire on a cache hit")
+        monkeypatch.setattr("subprocess.run", fail)
+
+        # Second builder instance, same config, same cache directory
+        builder2, slides_dir2 = _build(tmp_path, cfg_path, metrics_path)
+        data2 = builder2.config["slides"][0]["data"]
+        assert data2["_maf_state"] == "rendered"
+        assert data2["_maf_cache_key"] == cache_key
+        # Artifacts still exist in the new slides dir (copied from cache)
+        mp4_rel = data2["_mp4_path"]
+        assert (slides_dir2 / mp4_rel).exists()
