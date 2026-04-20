@@ -210,7 +210,7 @@ Same YAML + different `theme.preset` value produces visibly distinct first rende
   - **Ask human if**: never.
   - **Effort**: M
 
-- [ ] **T2.4** — Editable `chart` layout via native pptx charts
+- [x] **T2.4** — Editable `chart` layout via native pptx charts
   - **Creates/modifies**: `pf/pptx_native.py` (`_render_chart`)
   - **Depends on**: T2.1
   - **Description**: Map the YAML `chart.type` to `XL_CHART_TYPE` per D5: `bar→BAR_CLUSTERED`, `line→LINE`, `pie→PIE`, `donut→DOUGHNUT`, `scatter→XY_SCATTER`, `area→AREA`. Build `pptx.chart.data.CategoryChartData` (or `XyChartData` for scatter) from the YAML series, place via `slide.shapes.add_chart()`. Theme color: apply accent to the first series, secondary_accent to the second, then category accents. Plotly-only features (annotations, log axes, secondary y-axis, custom hover) emit a builder warning but the chart still renders with the supported subset. If chart type is unknown, fall back to image and (in `--strict`) fail.
