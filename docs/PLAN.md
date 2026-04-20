@@ -151,7 +151,7 @@ Same YAML + different `theme.preset` value produces visibly distinct first rende
   - **Ask human if**: AH-G1 if any change to `list_layouts` or other existing tool surfaces while wiring this in.
   - **Effort**: S
 
-- [ ] **T1.9** — Per-preset screenshots
+- [x] **T1.9** — Per-preset screenshots
   - **Creates/modifies**: `docs/themes/default.png`, `docs/themes/editorial.png`, `docs/themes/terminal.png`, `docs/themes/plex.png`, `docs/themes/nord.png`, `scripts/generate_theme_screenshots.py` (new)
   - **Depends on**: T1.3, T1.4, T1.5, T1.6
   - **Description**: One-off Python script that, for each preset, builds `examples/presentation.yaml` into a tmpdir with that preset overlaid, opens `slide_01.html` in Playwright at 1280×720, screenshots it, and writes to `docs/themes/<preset>.png`. The script is committed (so screenshots can be regenerated), the screenshots are committed (so `list_themes` returns paths to real files). Use the same Playwright shared-context pattern as `pf/pptx_native.py:export_pptx_editable`.
