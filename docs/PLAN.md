@@ -361,7 +361,7 @@ v0.3.0 cut: docs updated, CHANGELOG + release note shipped, version bumped, suit
   - **Ask human if**: never.
   - **Effort**: S
 
-- [ ] **T4.2** — Release notes + CHANGELOG
+- [x] **T4.2** — Release notes + CHANGELOG
   - **Creates/modifies**: `docs/release-notes/v0.3.0.md` (new), `CHANGELOG.md` (prepend `[0.3.0]` block)
   - **Depends on**: T4.1
   - **Description**: Release note covers: theme pack (4 new presets + `default` rename), `pf init --theme`, `list_themes` MCP tool, full PPTX editable parity + `--strict` flag, MAF integration spike (flag-gated, stub-tested, contract frozen). CHANGELOG entry summarizes Added/Changed/Fixed sections in the format established by `[0.2.1]`.
