@@ -318,7 +318,8 @@ class PresentationBuilder:
 
     # ── MAF Integration (Phase 3 spike, flag-gated) ──────────────
 
-    def _build_maf_video(self, slide_cfg: dict, index: int, output_dir: Path) -> None:
+    def _build_maf_video(self, slide_cfg: dict, index: int, output_dir: Path,
+                          warnings_out: list | None = None) -> None:
         """Resolve the MAF-rendered artifacts for a ``video-maf`` slide and
         inject slide-relative paths into ``slide_cfg["data"]``.
 
@@ -403,8 +404,8 @@ class PresentationBuilder:
                 f"slide {index + 1} (video-maf): maf binary not on PATH; "
                 f"rendering poster fallback"
             )
-            self._warnings = getattr(self, "_warnings", [])
-            self._warnings.append(warning)
+            if warnings_out is not None:
+                warnings_out.append(warning)
             click.echo(click.style(f"  ⚠ {warning}", fg="yellow"))
             return
         else:
@@ -421,8 +422,8 @@ class PresentationBuilder:
             except subprocess.TimeoutExpired:
                 data["_maf_state"] = "renderer-error"
                 msg = f"slide {index + 1} (video-maf): maf render timed out after 300s"
-                self._warnings = getattr(self, "_warnings", [])
-                self._warnings.append(msg)
+                if warnings_out is not None:
+                    warnings_out.append(msg)
                 click.echo(click.style(f"  ⚠ {msg}", fg="yellow"))
                 return
             if proc.returncode != 0:
@@ -433,8 +434,8 @@ class PresentationBuilder:
                     f"slide {index + 1} (video-maf): maf render exited "
                     f"{proc.returncode}: {stderr_preview}"
                 )
-                self._warnings = getattr(self, "_warnings", [])
-                self._warnings.append(msg)
+                if warnings_out is not None:
+                    warnings_out.append(msg)
                 click.echo(click.style(f"  ⚠ {msg}", fg="yellow"))
                 return
             try:
@@ -442,8 +443,8 @@ class PresentationBuilder:
             except json.JSONDecodeError:
                 data["_maf_state"] = "renderer-error"
                 msg = f"slide {index + 1} (video-maf): maf stdout was not valid JSON"
-                self._warnings = getattr(self, "_warnings", [])
-                self._warnings.append(msg)
+                if warnings_out is not None:
+                    warnings_out.append(msg)
                 click.echo(click.style(f"  ⚠ {msg}", fg="yellow"))
                 return
             result_json.write_text(
@@ -458,8 +459,8 @@ class PresentationBuilder:
         if not mp4_src.exists():
             data["_maf_state"] = "renderer-error"
             msg = f"slide {index + 1} (video-maf): mp4 artifact missing at {mp4_src}"
-            self._warnings = getattr(self, "_warnings", [])
-            self._warnings.append(msg)
+            if warnings_out is not None:
+                warnings_out.append(msg)
             click.echo(click.style(f"  ⚠ {msg}", fg="yellow"))
             return
 
@@ -917,7 +918,7 @@ class PresentationBuilder:
             # so the template has the resolved _mp4_path etc. already
             # populated in data.
             if layout == "video-maf":
-                self._build_maf_video(slide_cfg, i, out)
+                self._build_maf_video(slide_cfg, i, out, warnings_out=warnings)
 
             warning = LayoutAnalyzer.analyze_slide(slide_cfg, i)
             if warning:

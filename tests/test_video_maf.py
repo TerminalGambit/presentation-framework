@@ -100,6 +100,96 @@ class TestFlagGate:
         assert "Stub clip" in slide_html  # caption still rendered
 
 
+class TestDegradation:
+    """T3.5 — three graceful-degradation paths. Flag on and a video-maf
+    slide, but the environment prevents a clean render; the build must
+    still succeed (exit 0) with a warning and the template still produces
+    an HTML slide via the poster fallback path."""
+
+    def test_maf_not_on_path_degrades_to_poster(self, tmp_path, monkeypatch):
+        """§5.1 — shutil.which("maf") returns None → warn + poster fallback."""
+        # Strip PATH so nothing named `maf` resolves
+        monkeypatch.setenv("PATH", "/no/such/path")
+        cfg_path, metrics_path, _ = _write_deck(tmp_path, flag_on=True)
+
+        # Boobytrap: subprocess.run must never be called when binary is missing.
+        def fail_run(*a, **kw):  # pragma: no cover
+            raise AssertionError("subprocess.run should not run when maf is absent")
+        monkeypatch.setattr("subprocess.run", fail_run)
+
+        builder, slides_dir = _build(tmp_path, cfg_path, metrics_path)
+        data = builder.config["slides"][0]["data"]
+        assert data.get("_maf_state") == "cold-cache-no-binary"
+        assert "_mp4_path" not in data
+        html = (slides_dir / "slide_01.html").read_text(encoding="utf-8")
+        assert "<video" not in html
+        assert any("maf binary" in w for w in getattr(builder, "_warnings", [])), (
+            "a build warning should be recorded explaining the fallback"
+        )
+
+    def test_maf_nonzero_exit_degrades_with_stderr_preview(self, tmp_path, monkeypatch):
+        """§5.2 — maf render exits non-zero → warn + poster fallback, exit 0."""
+        # Install a fake maf that always exits 5 with a known stderr line
+        bin_dir = tmp_path / "fakebin"
+        bin_dir.mkdir()
+        bad_maf = bin_dir / "maf"
+        bad_maf.write_text(
+            "#!/usr/bin/env bash\necho 'ERROR: render failed intentionally' >&2\nexit 5\n"
+        )
+        bad_maf.chmod(0o755)
+        monkeypatch.setenv("PATH", f"{bin_dir}{os.pathsep}{os.environ['PATH']}")
+
+        cfg_path, metrics_path, _ = _write_deck(tmp_path, flag_on=True)
+        builder, slides_dir = _build(tmp_path, cfg_path, metrics_path)
+        data = builder.config["slides"][0]["data"]
+        assert data.get("_maf_state") == "renderer-error"
+        assert any("exited 5" in w for w in builder._warnings), (
+            "warning should include the non-zero exit code"
+        )
+        assert any("render failed" in w for w in builder._warnings), (
+            "stderr preview should be included in the warning"
+        )
+        html = (slides_dir / "slide_01.html").read_text(encoding="utf-8")
+        assert "<video" not in html  # degraded to poster fallback
+
+    def test_missing_manifest_fails_fast(self, tmp_path, monkeypatch):
+        """§5.3 — manifest missing is a spec error; Click exception, not a
+        warning. Build does not produce slide output."""
+        import click
+        # Put the stub on PATH so the only failure is the bogus manifest_path
+        monkeypatch.setenv("PATH", f"{FIXTURE_DIR}{os.pathsep}{os.environ['PATH']}")
+
+        # Write a deck that references a manifest that doesn't exist
+        theme_cfg = {
+            "primary": "#1C2537", "accent": "#C4A962",
+            "fonts": {"heading": "PD", "subheading": "M", "body": "L", "mono": "IPM"},
+            "experimental": {"maf_video": True},
+        }
+        config = {
+            "meta": {"title": "Missing manifest"},
+            "theme": theme_cfg,
+            "slides": [
+                {"layout": "video-maf", "data": {
+                    "title": "Scene",
+                    "manifest_path": "does-not-exist.maf.yaml",
+                    "caption": "Will fail",
+                }},
+            ],
+        }
+        cfg = tmp_path / "presentation.yaml"
+        cfg.write_text(yaml.safe_dump(config, sort_keys=False), encoding="utf-8")
+        met = tmp_path / "metrics.json"
+        met.write_text("{}")
+
+        from pf.builder import PresentationBuilder
+        with contextlib.chdir(tmp_path):
+            builder = PresentationBuilder(config_path=str(cfg), metrics_path=str(met))
+            with pytest.raises(click.ClickException) as excinfo:
+                with contextlib.redirect_stdout(io.StringIO()):
+                    builder.build(output_dir=str(tmp_path / "slides"))
+        assert "manifest_path not found" in str(excinfo.value.message)
+
+
 class TestHappyPathWithStub:
     """T3.4 — flag on + stub binary on PATH → slide renders a real <video>
     with the embedded mp4 path."""
