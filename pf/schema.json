@@ -32,6 +32,12 @@
             "subheading": {"type": "string"},
             "body": {"type": "string"}
           }
+        },
+        "experimental": {
+          "type": "object",
+          "properties": {
+            "maf_video": {"type": "boolean"}
+          }
         }
       }
     },

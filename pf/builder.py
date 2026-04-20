@@ -316,6 +316,189 @@ class PresentationBuilder:
             data["_video_id"] = ""
             data["_thumbnail"] = data.get("poster", "")
 
+    # ── MAF Integration (Phase 3 spike, flag-gated) ──────────────
+
+    def _build_maf_video(self, slide_cfg: dict, index: int, output_dir: Path) -> None:
+        """Resolve the MAF-rendered artifacts for a ``video-maf`` slide and
+        inject slide-relative paths into ``slide_cfg["data"]``.
+
+        Entry-point gate: returns a no-op if
+        ``theme.experimental.maf_video`` is not true, OR the slide's layout
+        is not ``video-maf``. In those cases ``data._maf_state`` is set
+        to ``"flag-off"`` so the template renders the poster path without
+        spawning a subprocess.
+
+        See ``docs/maf-integration-contract.md`` for the full contract;
+        this method is the PF-side implementation of §§2–5.
+        """
+        import hashlib
+        import platform
+        import shutil as _shutil
+        import subprocess
+        import sys
+
+        layout = slide_cfg.get("layout", "")
+        if layout != "video-maf":
+            return
+        theme_cfg = self.config.get("theme", {})
+        flag_on = bool(theme_cfg.get("experimental", {}).get("maf_video"))
+        data = slide_cfg.setdefault("data", {})
+        if not flag_on:
+            data["_maf_state"] = "flag-off"
+            return
+
+        # Resolve manifest — either a path on disk or an inline spec we
+        # serialize before hashing.
+        manifest_path_raw = data.get("manifest_path")
+        inline_spec = data.get("inline_spec")
+        if manifest_path_raw and inline_spec:
+            raise click.ClickException(
+                f"slide {index + 1} (video-maf): manifest_path and inline_spec are mutually "
+                f"exclusive; pick one (contract §1)"
+            )
+        if not manifest_path_raw and not inline_spec:
+            raise click.ClickException(
+                f"slide {index + 1} (video-maf): one of manifest_path or inline_spec is required"
+            )
+
+        # manifest_path is resolved relative to the presentation YAML's dir
+        base_dir = Path(self.config_path).parent if getattr(self, "config_path", None) else Path.cwd()
+        if manifest_path_raw:
+            manifest_path = (base_dir / manifest_path_raw).resolve()
+            if not manifest_path.exists():
+                # Contract §5.3 — manifest missing is a spec error, fail fast.
+                raise click.ClickException(
+                    f"slide {index + 1} (video-maf): manifest_path not found: {manifest_path}"
+                )
+            manifest_bytes = manifest_path.read_bytes()
+            manifest_for_subprocess = str(manifest_path)
+        else:
+            manifest_bytes = yaml.safe_dump(inline_spec, sort_keys=True).encode("utf-8")
+            # Write to a cache-adjacent tempfile so MAF can read from disk.
+            import tempfile
+            tmp = tempfile.NamedTemporaryFile(
+                prefix="maf-inline-", suffix=".yaml", delete=False
+            )
+            tmp.write(manifest_bytes)
+            tmp.close()
+            manifest_for_subprocess = tmp.name
+
+        cache_key = self._maf_cache_key(manifest_bytes, maf_version="")
+
+        cache_root = Path(".pf-cache") / "maf" / cache_key
+        mp4 = cache_root / "scene.mp4"
+        srt = cache_root / "scene.srt"
+        vtt = cache_root / "scene.vtt"
+        result_json = cache_root / "render_result.json"
+
+        maf_binary = _shutil.which("maf")
+        cache_hit = mp4.exists() and result_json.exists()
+
+        if cache_hit:
+            render_result = json.loads(result_json.read_text(encoding="utf-8"))
+        elif maf_binary is None:
+            # Degrade per contract §5.1 — no subprocess, no crash.
+            data["_maf_state"] = "cold-cache-no-binary"
+            warning = (
+                f"slide {index + 1} (video-maf): maf binary not on PATH; "
+                f"rendering poster fallback"
+            )
+            self._warnings = getattr(self, "_warnings", [])
+            self._warnings.append(warning)
+            click.echo(click.style(f"  ⚠ {warning}", fg="yellow"))
+            return
+        else:
+            cache_root.mkdir(parents=True, exist_ok=True)
+            try:
+                proc = subprocess.run(
+                    [maf_binary, "render", manifest_for_subprocess,
+                     "--quiet", "--json", "--out", str(cache_root)],
+                    capture_output=True,
+                    text=True,
+                    timeout=300,
+                    check=False,
+                )
+            except subprocess.TimeoutExpired:
+                data["_maf_state"] = "renderer-error"
+                msg = f"slide {index + 1} (video-maf): maf render timed out after 300s"
+                self._warnings = getattr(self, "_warnings", [])
+                self._warnings.append(msg)
+                click.echo(click.style(f"  ⚠ {msg}", fg="yellow"))
+                return
+            if proc.returncode != 0:
+                # §5.2 — non-zero exit degrades with stderr preview.
+                stderr_preview = (proc.stderr or "").strip()[:200]
+                data["_maf_state"] = "renderer-error"
+                msg = (
+                    f"slide {index + 1} (video-maf): maf render exited "
+                    f"{proc.returncode}: {stderr_preview}"
+                )
+                self._warnings = getattr(self, "_warnings", [])
+                self._warnings.append(msg)
+                click.echo(click.style(f"  ⚠ {msg}", fg="yellow"))
+                return
+            try:
+                render_result = json.loads(proc.stdout)
+            except json.JSONDecodeError:
+                data["_maf_state"] = "renderer-error"
+                msg = f"slide {index + 1} (video-maf): maf stdout was not valid JSON"
+                self._warnings = getattr(self, "_warnings", [])
+                self._warnings.append(msg)
+                click.echo(click.style(f"  ⚠ {msg}", fg="yellow"))
+                return
+            result_json.write_text(
+                json.dumps(render_result, indent=2), encoding="utf-8"
+            )
+
+        artifacts = render_result.get("artifacts", {})
+        mp4_src = cache_root / artifacts.get("mp4", "scene.mp4")
+        srt_src = cache_root / artifacts.get("srt", "scene.srt") if artifacts.get("srt") else None
+        vtt_src = cache_root / artifacts.get("vtt", "scene.vtt") if artifacts.get("vtt") else None
+
+        if not mp4_src.exists():
+            data["_maf_state"] = "renderer-error"
+            msg = f"slide {index + 1} (video-maf): mp4 artifact missing at {mp4_src}"
+            self._warnings = getattr(self, "_warnings", [])
+            self._warnings.append(msg)
+            click.echo(click.style(f"  ⚠ {msg}", fg="yellow"))
+            return
+
+        # Copy artifacts alongside the slide HTML. They live in a per-slide
+        # subdirectory so the paths in the rendered HTML stay relative and
+        # portable when the slides folder is zipped.
+        slide_asset_dir = output_dir / "assets" / f"slide_{index + 1:02d}_maf"
+        slide_asset_dir.mkdir(parents=True, exist_ok=True)
+        _shutil.copy2(mp4_src, slide_asset_dir / "scene.mp4")
+        data["_mp4_path"] = f"assets/slide_{index + 1:02d}_maf/scene.mp4"
+        if srt_src and srt_src.exists():
+            _shutil.copy2(srt_src, slide_asset_dir / "scene.srt")
+            data["_srt_path"] = f"assets/slide_{index + 1:02d}_maf/scene.srt"
+        if vtt_src and vtt_src.exists():
+            _shutil.copy2(vtt_src, slide_asset_dir / "scene.vtt")
+            data["_vtt_path"] = f"assets/slide_{index + 1:02d}_maf/scene.vtt"
+        data["_maf_state"] = "rendered"
+        data["_maf_cache_key"] = cache_key
+
+    def _maf_cache_key(self, manifest_bytes: bytes, maf_version: str = "") -> str:
+        """Compute the cache key per contract §3.
+
+        The cold-run path passes ``maf_version=""`` and may be re-keyed once
+        the subprocess returns a real version; v0.3 spike keeps the cold
+        key stable by using the empty string for the version component
+        regardless — the cache dir then holds a copy of render_result.json
+        for future re-validation.
+        """
+        import hashlib
+        import platform
+        import sys
+        plat = f"{platform.system().lower()}-{platform.machine().lower()}".encode("utf-8")
+        pyver = f"{sys.version_info.major}.{sys.version_info.minor}".encode("utf-8")
+        salt = os.environ.get("MAF_CACHE_SALT", "").encode("utf-8")
+        env_digest = hashlib.sha256(plat + b"\x00" + pyver + b"\x00" + salt).digest()
+        return hashlib.sha256(
+            manifest_bytes + b"\x00" + maf_version.encode("utf-8") + b"\x00" + env_digest
+        ).hexdigest()
+
     # ── Rendering ───────────────────────────────────────────────
 
     def render_slide(
@@ -728,6 +911,13 @@ class PresentationBuilder:
             )
             if layout == "video" or has_video_block:
                 self._preprocess_video(slide_cfg)
+
+            # MAF integration spike — flag-gated, no-op when layout != video-maf
+            # or theme.experimental.maf_video is falsey. Runs before render
+            # so the template has the resolved _mp4_path etc. already
+            # populated in data.
+            if layout == "video-maf":
+                self._build_maf_video(slide_cfg, i, out)
 
             warning = LayoutAnalyzer.analyze_slide(slide_cfg, i)
             if warning:

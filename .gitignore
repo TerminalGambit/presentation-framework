@@ -4,3 +4,5 @@ __pycache__/
 *.egg-info/
 data/
 demo/*/slides/
+.autonomous-build/
+.pf-cache/
