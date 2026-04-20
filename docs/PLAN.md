@@ -226,7 +226,7 @@ Same YAML + different `theme.preset` value produces visibly distinct first rende
   - **Ask human if**: the existing `map` layout's data shape doesn't carry per-marker position info — surface that gap before fabricating one.
   - **Effort**: M
 
-- [ ] **T2.6** — `mermaid` layout: image + source in slide notes
+- [x] **T2.6** — `mermaid` layout: image + source in slide notes
   - **Creates/modifies**: `pf/pptx_native.py` (`_render_mermaid`)
   - **Depends on**: T2.1
   - **Description**: Keep image rendering (Mermaid → SVG → PNG via existing path or Playwright capture), but populate the slide's `notes_text_frame` with the Mermaid source so a future tooling pass can regenerate the diagram from the deck. If the slide already has speaker notes, append the Mermaid source under a `--- mermaid source ---` separator rather than replacing.
