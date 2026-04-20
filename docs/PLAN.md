@@ -310,7 +310,7 @@ A new `video-maf` layout exists behind a `theme.experimental.maf_video: true` fe
   - **Ask human if**: AH-G2 — if subprocess invocation requires a new dep (it should not; `subprocess` is stdlib).
   - **Effort**: L
 
-- [ ] **T3.5** — Graceful degradation paths
+- [x] **T3.5** — Graceful degradation paths
   - **Creates/modifies**: `pf/builder.py` (extend T3.4's method)
   - **Depends on**: T3.4
   - **Description**: Three degradations: (1) flag on + `maf` not on PATH → emit a build warning (via `_warnings` list, same channel as overflow), render the layout's `poster` image as a static slide with the caption, exit 0. (2) flag on + `maf` on PATH but exits non-zero → emit warning with the exit code, render poster fallback, exit 0 (i.e., a broken MAF does not break the deck build — only `--strict` mode would). (3) flag on + manifest path missing → fail-fast (Click exception) since this is a spec error not an environment one.
