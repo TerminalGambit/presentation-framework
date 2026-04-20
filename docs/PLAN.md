@@ -353,7 +353,7 @@ v0.3.0 cut: docs updated, CHANGELOG + release note shipped, version bumped, suit
 
 ### Tasks
 
-- [ ] **T4.1** — Update README, SKILL, CLAUDE for new capabilities
+- [x] **T4.1** — Update README, SKILL, CLAUDE for new capabilities
   - **Creates/modifies**: `README.md`, `SKILL.md`, `CLAUDE.md`
   - **Depends on**: T1.10, T2.9, T3.6
   - **Description**: Add short sections to each: README — `--theme` flag + preset gallery (link to `docs/themes/`); SKILL.md — agent guidance for picking a preset, calling `list_themes`, using `--strict` PPTX, invoking the `video-maf` flag; CLAUDE.md — under "Common Mistakes" add: don't use `theme.preset` and `theme.primary` simultaneously without understanding D3 precedence; under "Tech Stack" mention the optional MAF subprocess.
