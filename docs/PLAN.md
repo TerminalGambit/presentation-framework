@@ -234,7 +234,7 @@ Same YAML + different `theme.preset` value produces visibly distinct first rende
   - **Ask human if**: never.
   - **Effort**: S
 
-- [ ] **T2.7** — Editable `video` layout via `add_movie` + poster fallback
+- [x] **T2.7** — Editable `video` layout via `add_movie` + poster fallback
   - **Creates/modifies**: `pf/pptx_native.py` (`_render_video`)
   - **Depends on**: T2.1
   - **Description**: If `data.video` (or whatever the video layout's path key is — check `templates/layouts/video.html.j2`) points to a local file, embed via `slide.shapes.add_movie()` with the poster image as the preview. If the path is remote (`http://`/`https://`) or missing, render the poster image + a "Video: <caption>" editable text box + a clickable hyperlink to the URL.
