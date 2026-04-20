@@ -242,7 +242,7 @@ Same YAML + different `theme.preset` value produces visibly distinct first rende
   - **Ask human if**: never.
   - **Effort**: M
 
-- [ ] **T2.8** — `pf pptx --strict` flag
+- [x] **T2.8** — `pf pptx --strict` flag
   - **Creates/modifies**: `pf/cli.py:pptx`, `pf/pptx_native.py:export_pptx_editable` (collect fallback events, return them)
   - **Depends on**: T2.7
   - **Description**: Add `--strict` Click flag (only meaningful with `--editable`). `export_pptx_editable` returns a list of `(slide_index, layout, reason)` for any image fallback that occurred. CLI: in strict mode, if the list is non-empty, print each fallback reason and `raise SystemExit(1)` after the file is still written (so the user can inspect what fell back). Per D4, fallback in strict mode is a hard error (not a warning), implemented via exit code on the CLI.
