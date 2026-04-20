@@ -131,8 +131,13 @@ def build(config: str, metrics: str, output: str, open_browser: bool, base_url: 
     builder = PresentationBuilder(config_path=config, metrics_path=metrics)
     out = builder.build(output_dir=output, base_url=base_url)
 
-    # Print layout warnings
+    # Print layout warnings. Entries may be dicts (LayoutAnalyzer overflow
+    # warnings with slide_index/layout/column/estimated_px/etc.) or plain
+    # strings (MAF degradation warnings, already echoed at emission time).
+    # Skip strings here to avoid TypeError on dict-shaped access.
     for w in getattr(builder, '_warnings', []):
+        if not isinstance(w, dict):
+            continue
         idx = w["slide_index"] + 1
         layout = w["layout"]
         col = w["column"]

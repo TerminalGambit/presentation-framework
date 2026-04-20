@@ -213,6 +213,41 @@ class TestHappyPathWithStub:
         assert "<track" in html
 
 
+class TestCliIntegration:
+    """Regression: `pf build` on a MAF slide where the binary is missing
+    must not crash the CLI. The MAF degradation warnings are plain
+    strings appended to builder._warnings; the CLI's post-build display
+    loop is dict-shaped (overflow warnings) and must tolerate strings."""
+
+    def test_cli_build_survives_maf_string_warning(self, tmp_path, monkeypatch):
+        from click.testing import CliRunner
+        from pf.cli import cli
+
+        # Strip PATH so `maf` is not resolvable → triggers the string-warning path
+        monkeypatch.setenv("PATH", "/no/such/dir")
+        # Copy the stub manifest into a tmp deck
+        manifest_src = FIXTURE_DIR / "manifest.maf.yaml"
+        manifest_dst = tmp_path / "manifest.maf.yaml"
+        manifest_dst.write_bytes(manifest_src.read_bytes())
+        cfg_path, metrics_path, _ = _write_deck(tmp_path, flag_on=True)
+
+        runner = CliRunner()
+        with contextlib.chdir(tmp_path):
+            result = runner.invoke(cli, [
+                "build",
+                "--config", str(cfg_path),
+                "--metrics", str(metrics_path),
+                "--output", str(tmp_path / "slides"),
+            ])
+        assert result.exit_code == 0, (
+            f"pf build crashed on a MAF degradation warning: "
+            f"exit={result.exit_code}, exc={result.exception}\noutput={result.output}"
+        )
+        assert "maf binary not on PATH" in result.output
+        # Slide still written in degraded form
+        assert (tmp_path / "slides" / "slide_01.html").exists()
+
+
 class TestEndToEndCaching:
     """T3.6 — second build against a populated .pf-cache/maf/ cache hits
     the cache and skips the subprocess entirely (contract §3)."""
