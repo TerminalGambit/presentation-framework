@@ -646,7 +646,8 @@ _LAYOUT_FIXTURES: dict[str, dict] = {
         "labels": ["A", "B"],
         "values": [1, 2],
     },
-    "map": {"title": "Map", "lat": 0, "lng": 0, "zoom": 5, "markers": []},
+    "map": {"title": "Map", "lat": 0, "lng": 0, "zoom": 5,
+             "markers": [{"lat": 0, "lng": 0, "label": "Origin"}]},
     "mermaid": {"title": "Mermaid", "diagram": "graph TD; A-->B"},
     "video": {"title": "Video", "url": "https://example.com/v.mp4"},
 }
@@ -690,7 +691,7 @@ def _slide_has_editable_content(slide):
     return False
 
 
-_UNIMPLEMENTED_LAYOUTS = {"map", "mermaid", "video"}
+_UNIMPLEMENTED_LAYOUTS = {"mermaid", "video"}
 
 
 def _layout_param(name):
@@ -716,6 +717,63 @@ def test_each_layout_editable(layout, tmp_path):
     assert _slide_has_editable_content(slide), (
         f"{layout}: no editable shape (text/chart/movie) in PPTX export"
     )
+
+
+class TestMapLayout:
+    """Native PPTX renderer for map layout: rasterized map + editable legend
+    listing the markers. The map data shape carries lat/lng per marker, not
+    slide pixel coordinates, so the plan (T2.5) specifies a right-edge
+    legend fallback — this test exercises it without invoking Playwright."""
+
+    def _make_slide(self):
+        from pf.pptx_native import _pptx_theme, SLIDE_WIDTH, SLIDE_HEIGHT
+        prs = PptxPresentation()
+        prs.slide_width = SLIDE_WIDTH
+        prs.slide_height = SLIDE_HEIGHT
+        slide = prs.slides.add_slide(prs.slide_layouts[6])
+        theme = _pptx_theme({"primary": "#1C2537", "accent": "#C4A962",
+                             "fonts": {"heading": "H", "subheading": "S",
+                                       "body": "B", "mono": "M"}})
+        return slide, theme
+
+    def test_map_in_native_renderers(self):
+        from pf.pptx_native import NATIVE_RENDERERS
+        assert "map" in NATIVE_RENDERERS
+
+    def test_map_renders_editable_legend_per_marker(self):
+        """Without a slide_file the renderer skips rasterization but still
+        emits legend entries — each marker label becomes an editable text box."""
+        from pf.pptx_native import NATIVE_RENDERERS
+        slide, theme = self._make_slide()
+        NATIVE_RENDERERS["map"](slide, {
+            "title": "Locations",
+            "lat": 0, "lng": 0, "zoom": 5,
+            "markers": [
+                {"lat": 37.77, "lng": -122.42, "label": "SF HQ"},
+                {"lat": 40.71, "lng": -74.00, "label": "NYC"},
+            ],
+        }, theme)
+        texts = [s.text_frame.text for s in slide.shapes if s.has_text_frame]
+        assert any("SF HQ" in t for t in texts)
+        assert any("NYC" in t for t in texts)
+
+    def test_map_legend_falls_back_to_coords_when_label_missing(self):
+        from pf.pptx_native import NATIVE_RENDERERS
+        slide, theme = self._make_slide()
+        NATIVE_RENDERERS["map"](slide, {
+            "markers": [{"lat": 51.5, "lng": -0.1}],
+        }, theme)
+        texts = [s.text_frame.text for s in slide.shapes if s.has_text_frame]
+        assert any("51.5" in t and "-0.1" in t for t in texts), (
+            "marker with no label should show lat, lng as legend text"
+        )
+
+    def test_map_no_markers_still_renders(self):
+        from pf.pptx_native import NATIVE_RENDERERS
+        slide, theme = self._make_slide()
+        NATIVE_RENDERERS["map"](slide, {"title": "Empty", "markers": []}, theme)
+        # At minimum: title + background
+        assert len(slide.shapes) >= 1
 
 
 class TestChartLayout:

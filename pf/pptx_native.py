@@ -996,6 +996,120 @@ def _render_chart(slide, data: dict, theme: dict):
     _apply_chart_theme(chart_shape.chart, theme)
 
 
+def _render_map(slide, data: dict, theme: dict, *, slide_file=None, pw_context=None):
+    """Render the map layout: rasterized map image on the left, editable legend
+    with one text box per marker on the right.
+
+    Leaflet is a live JS widget rendered in a browser — we can't round-trip it
+    to native PowerPoint shapes. The plan (T2.5) accepts this: embed the
+    Playwright-rendered screenshot for the visual, then surface the markers
+    (``data.markers[]`` with lat/lng/label) as a right-edge legend so each
+    annotation stays editable.
+    """
+    _add_bg(slide, theme["primary"])
+
+    markers = data.get("markers") or []
+
+    # Map image on the left ~75% of the slide; legend gets the right ~25%
+    # when there are markers, otherwise the image takes the full width.
+    has_legend = bool(markers)
+    map_w = Inches(9.5) if has_legend else SLIDE_WIDTH
+    legend_x = map_w + Inches(0.1) if has_legend else None
+    legend_w = SLIDE_WIDTH - (legend_x or Emu(0)) - Inches(0.2) if has_legend else Emu(0)
+
+    # Title (rendered before the image so it shows over the dark panel, not
+    # over the map itself — the slide_file render already includes it in
+    # the raster but PPTX viewers can't edit pixels).
+    title_h = Inches(0.5)
+    if data.get("title"):
+        txBox = slide.shapes.add_textbox(Inches(0.3), Inches(0.15), map_w - Inches(0.6), title_h)
+        _set_text(
+            txBox.text_frame, data["title"], theme["font_heading"],
+            24, theme["accent"], bold=True, alignment=PP_ALIGN.LEFT,
+        )
+
+    # Rasterize the map slide and embed. If Playwright isn't available, skip
+    # the image and let the legend carry the slide.
+    if slide_file is not None and slide_file.exists():
+        try:
+            img_bytes = _rasterize_slide(slide_file, pw_context)
+        except Exception:
+            img_bytes = None
+        if img_bytes:
+            # Crop to map area: embed at full map_w width, scale height to
+            # keep aspect ratio. The HTML-rendered map fills the whole slide,
+            # so scaling to slide_height is OK here too.
+            slide.shapes.add_picture(
+                io.BytesIO(img_bytes),
+                Emu(0), Emu(0), map_w, SLIDE_HEIGHT,
+            )
+
+    # Editable legend on the right
+    if has_legend:
+        legend_y = Inches(0.15)
+        # Panel background so the legend reads cleanly over the theme primary
+        _add_rect(slide, legend_x, Emu(0), legend_w + Inches(0.2), SLIDE_HEIGHT,
+                  _hex_to_rgb("#1a2236"))
+        # Legend header
+        txBox = slide.shapes.add_textbox(legend_x + Inches(0.1), legend_y,
+                                          legend_w, Inches(0.5))
+        _set_text(
+            txBox.text_frame, "Markers", theme["font_subheading"],
+            16, theme["accent"], bold=True, alignment=PP_ALIGN.LEFT,
+        )
+        legend_y += Inches(0.55)
+        entry_h = Inches(0.55)
+        for m in markers:
+            label = m.get("label") or f"{m.get('lat', '?')}, {m.get('lng', '?')}"
+            if legend_y + entry_h > SLIDE_HEIGHT - Inches(0.2):
+                break
+            txBox = slide.shapes.add_textbox(legend_x + Inches(0.1), legend_y,
+                                              legend_w, entry_h)
+            tf = txBox.text_frame
+            tf.word_wrap = True
+            _set_text(
+                tf, f"• {label}", theme["font_body"],
+                12, theme["white"], alignment=PP_ALIGN.LEFT,
+            )
+            legend_y += entry_h + Inches(0.05)
+
+
+def _rasterize_slide(slide_file, pw_context):
+    """Screenshot a slide HTML file. Uses a shared Playwright context when
+    provided; otherwise spawns its own. Returns PNG bytes or None.
+    """
+    if pw_context is not None:
+        page = pw_context.new_page()
+        try:
+            page.goto(f"file://{slide_file.resolve()}")
+            page.wait_for_load_state("networkidle")
+            try:
+                page.wait_for_selector("[data-pf-ready]", timeout=10000)
+            except Exception:
+                pass
+            return page.screenshot(full_page=False)
+        finally:
+            page.close()
+
+    try:
+        from playwright.sync_api import sync_playwright
+    except ImportError:
+        return None
+    with sync_playwright() as p:
+        browser = p.chromium.launch()
+        try:
+            page = browser.new_page(viewport={"width": 1280, "height": 720})
+            page.goto(f"file://{slide_file.resolve()}")
+            page.wait_for_load_state("networkidle")
+            try:
+                page.wait_for_selector("[data-pf-ready]", timeout=10000)
+            except Exception:
+                pass
+            return page.screenshot(full_page=False)
+        finally:
+            browser.close()
+
+
 def _render_toc(slide, data: dict, theme: dict, *, prs=None, slides_cfg=None, slide_index: int = 0):
     """Render table of contents: one editable text box per entry, each with
     a NAMED_SLIDE click_action hyperlink to the matching section slide.
@@ -1089,6 +1203,7 @@ NATIVE_RENDERERS = {
     "code": _render_code,
     "toc": _render_toc,
     "chart": _render_chart,
+    "map": _render_map,
 }
 
 
@@ -1181,12 +1296,13 @@ def export_pptx_editable(
             layout = slide_cfg.get("layout", "two-column")
             data = slide_cfg.get("data", {})
             slide = slide_objs[i]
+            slide_file = slides_path / f"slide_{i + 1:02d}.html"
 
             renderer = NATIVE_RENDERERS.get(layout)
             if renderer:
                 # Only pass context kwargs the renderer actually declares, so
                 # existing renderers with signature (slide, data, theme) stay
-                # untouched while TOC (and future renderers) can opt in.
+                # untouched while TOC / map / video can opt in to extras.
                 params = inspect.signature(renderer).parameters
                 extras = {}
                 if "prs" in params:
@@ -1195,9 +1311,12 @@ def export_pptx_editable(
                     extras["slides_cfg"] = slides_cfg
                 if "slide_index" in params:
                     extras["slide_index"] = i
+                if "slide_file" in params:
+                    extras["slide_file"] = slide_file
+                if "pw_context" in params:
+                    extras["pw_context"] = pw_context
                 renderer(slide, data, theme, **extras)
             else:
-                slide_file = slides_path / f"slide_{i + 1:02d}.html"
                 if slide_file.exists():
                     _render_image_fallback(slide, slide_file, context=pw_context)
 
