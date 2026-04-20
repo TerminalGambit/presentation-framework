@@ -218,7 +218,7 @@ Same YAML + different `theme.preset` value produces visibly distinct first rende
   - **Ask human if**: a chart in `examples/presentation.yaml` uses a Plotly feature that loses meaningful information when downgraded.
   - **Effort**: L
 
-- [ ] **T2.5** — Editable annotations on `map` layout
+- [x] **T2.5** — Editable annotations on `map` layout
   - **Creates/modifies**: `pf/pptx_native.py` (`_render_map`)
   - **Depends on**: T2.1
   - **Description**: Embed the rendered map image (current behavior — render once via Playwright into a static PNG, then `add_picture`), then on top, walk `data.markers[]` (or whatever the map layout's annotation list is in the schema) and add one editable text box per annotation positioned at the marker's projected (x,y). Marker x,y come from the map layout's data; if absolute pixel positions aren't available, position annotations along the slide's right edge as an editable legend.
