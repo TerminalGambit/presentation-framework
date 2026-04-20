@@ -302,7 +302,7 @@ A new `video-maf` layout exists behind a `theme.experimental.maf_video: true` fe
   - **Ask human if**: never.
   - **Effort**: S
 
-- [ ] **T3.4** — Builder hook: subprocess + caching, behind feature flag
+- [x] **T3.4** — Builder hook: subprocess + caching, behind feature flag
   - **Creates/modifies**: `pf/builder.py` (new method `_build_maf_video(slide_cfg)` invoked from `render_slide`), `pf/schema.json` (`theme.experimental.maf_video: bool`)
   - **Depends on**: T3.2, T3.3
   - **Description**: When `theme.experimental.maf_video` is true AND a slide's `layout == "video-maf"`, the builder: (a) computes the cache key per T3.1's formula, (b) checks `.pf-cache/maf/<key>/` — if present, reuses; (c) if absent and `maf` is on PATH, runs `subprocess.run(["maf", "render", manifest_path, "--quiet", "--json", "--out", cache_dir])` with a 5-minute timeout, (d) parses the JSON, copies the mp4/srt/vtt to the slide output dir, (e) hands the resolved paths to the template via `data`. When the flag is false, this code path is **not entered** — verified by an entry-point check at the top of the method that's tested with the flag both on and off.
