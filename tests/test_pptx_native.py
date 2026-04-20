@@ -650,6 +650,11 @@ _LAYOUT_FIXTURES: dict[str, dict] = {
              "markers": [{"lat": 0, "lng": 0, "label": "Origin"}]},
     "mermaid": {"title": "Mermaid", "diagram": "graph TD; A-->B"},
     "video": {"title": "Video", "url": "https://example.com/v.mp4"},
+    "video-maf": {
+        "title": "MAF Spike",
+        "manifest_path": "manifest.maf.yaml",
+        "caption": "MAF-rendered video",
+    },
 }
 
 
@@ -691,7 +696,7 @@ def _slide_has_editable_content(slide):
     return False
 
 
-_UNIMPLEMENTED_LAYOUTS: set[str] = set()
+_UNIMPLEMENTED_LAYOUTS: set[str] = {"video-maf"}  # removed by T3.7
 
 
 def _layout_param(name):

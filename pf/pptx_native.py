@@ -47,6 +47,7 @@ LAYOUT_NAMES: tuple[str, ...] = (
     "toc",
     "two-column",
     "video",
+    "video-maf",
 )
 
 

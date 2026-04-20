@@ -1,0 +1,57 @@
+{% extends "base.html.j2" %}
+
+{#
+  video-maf layout (v0.3 spike; feature-flag behind theme.experimental.maf_video).
+  See docs/maf-integration-contract.md §1 for the YAML contract.
+
+  Builder (pf/builder.py, T3.4) resolves the MAF artifacts and injects
+  slide-relative paths into `data` as:
+    - _mp4_path  (required when the render succeeded)
+    - _vtt_path  (optional — preferred caption track)
+    - _srt_path  (optional — used when .vtt is absent)
+    - _maf_state  ∈ {"rendered", "cold-cache-no-binary",
+                     "renderer-error", "flag-off"}
+
+  When _mp4_path is present the template renders a native <video> element
+  with a <track> captions layer. Otherwise it renders the poster image
+  (or a dark placeholder) plus the caption text — keeping the slide
+  structurally intact per the degradation contract in §5.
+#}
+
+{% block content %}
+{% include "partials/header.html.j2" %}
+
+<div class="pf-video-fullslide pf-video-maf">
+  {% if slide.data._mp4_path %}
+    <video class="pf-video-native" controls preload="metadata"
+           {% if slide.data.poster %}poster="{{ slide.data.poster }}"{% endif %}>
+      <source src="{{ slide.data._mp4_path }}" type="video/mp4"/>
+      {% if slide.data._vtt_path %}
+      <track kind="captions" srclang="en" src="{{ slide.data._vtt_path }}" default/>
+      {% elif slide.data._srt_path %}
+      <track kind="captions" srclang="en" src="{{ slide.data._srt_path }}" default/>
+      {% endif %}
+      Your browser does not support the video tag.
+    </video>
+  {% else %}
+    <div class="pf-video-placeholder pf-video-maf-placeholder">
+      {% if slide.data.poster %}
+      <img src="{{ slide.data.poster }}" alt="{{ slide.data.caption | default('MAF video') }}"
+           class="pf-video-thumbnail"/>
+      {% endif %}
+      <div class="pf-video-label">
+        {% if slide.data._maf_state == "flag-off" %}
+          MAF video (feature flag off)
+        {% elif slide.data._maf_state == "cold-cache-no-binary" %}
+          MAF video (renderer unavailable — poster fallback)
+        {% else %}
+          MAF video
+        {% endif %}
+      </div>
+    </div>
+  {% endif %}
+  {% if slide.data.caption %}
+  <div class="pf-video-caption">{{ slide.data.caption }}</div>
+  {% endif %}
+</div>
+{% endblock %}
