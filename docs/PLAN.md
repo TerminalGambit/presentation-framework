@@ -369,7 +369,7 @@ v0.3.0 cut: docs updated, CHANGELOG + release note shipped, version bumped, suit
   - **Ask human if**: never.
   - **Effort**: S
 
-- [ ] **T4.3** — Version bump + suite + tag (gated)
+- [x] **T4.3** — Version bump + suite + tag (gated)
   - **Creates/modifies**: `setup.py` (version → `0.3.0`)
   - **Depends on**: T4.2
   - **Description**: Bump version, run `pytest -q` (must be green), run `tox` or equivalent across Python 3.10/3.11/3.12 if available locally, run `pf build` on `examples/`, `demo/`, `slides/`, `tsbc-moe-deck/` and visually confirm no regressions under `theme.preset: default`. Then **stop and ask** Jack to confirm the tag — do not run `git tag v0.3.0` autonomously.
