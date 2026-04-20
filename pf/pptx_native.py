@@ -101,6 +101,7 @@ def _pptx_theme(theme_cfg: dict) -> dict:
         "font_heading": fonts.get("heading", "Playfair Display"),
         "font_subheading": fonts.get("subheading", "Montserrat"),
         "font_body": fonts.get("body", "Lato"),
+        "font_mono": fonts.get("mono", "IBM Plex Mono"),
     }
 
 
@@ -669,6 +670,172 @@ def _render_timeline(slide, data: dict, theme: dict):
         txBox.text_frame.word_wrap = True
 
 
+def _pygments_token_color(token_type) -> RGBColor | None:
+    """Return a GitHub-dark-inspired color for a Pygments token type, or None.
+
+    Walks the token's type hierarchy (Name.Function → Name → Token) so that
+    sub-types inherit the closest registered color. `None` means "use default".
+    """
+    try:
+        from pygments.token import Token
+    except ImportError:
+        return None
+
+    # Colors tuned against the #1a2236 code-block background used below.
+    table = {
+        Token.Comment: RGBColor(0x8B, 0x94, 0x9E),
+        Token.Keyword: RGBColor(0xFF, 0x7B, 0x72),
+        Token.Name.Function: RGBColor(0xD2, 0xA8, 0xFF),
+        Token.Name.Class: RGBColor(0xFF, 0xA6, 0x57),
+        Token.Name.Builtin: RGBColor(0x79, 0xC0, 0xFF),
+        Token.Name.Decorator: RGBColor(0xD2, 0xA8, 0xFF),
+        Token.String: RGBColor(0xA5, 0xD6, 0xFF),
+        Token.Number: RGBColor(0x79, 0xC0, 0xFF),
+        Token.Operator: RGBColor(0xFF, 0x7B, 0x72),
+        Token.Punctuation: RGBColor(0xE6, 0xED, 0xF3),
+    }
+    node = token_type
+    while node is not None:
+        if node in table:
+            return table[node]
+        node = node.parent
+    return None
+
+
+def _lex_code(code: str, language: str):
+    """Return a list of (token_type, text) tuples. None if Pygments unavailable.
+
+    Unknown languages fall back to `TextLexer`, which emits one Token.Text
+    span — the caller will just render one uncolored run.
+    """
+    try:
+        from pygments import lex
+        from pygments.lexers import get_lexer_by_name
+        from pygments.lexers.special import TextLexer
+        from pygments.util import ClassNotFound
+    except ImportError:
+        return None
+    try:
+        lexer = get_lexer_by_name(language) if language else TextLexer()
+    except ClassNotFound:
+        lexer = TextLexer()
+    return list(lex(code, lexer))
+
+
+def _render_code(slide, data: dict, theme: dict):
+    """Render code: title + single mono text box with source, optional caption.
+
+    Uses Pygments for per-token colors when available; falls back to a single
+    uncolored run otherwise (Pygments is an optional dependency — see
+    docs/PLAN.md T2.2, AH-G2).
+    """
+    _add_bg(slide, theme["primary"])
+    center_x = SLIDE_WIDTH // 2
+
+    # Title (rendered as native text so editors can retitle the slide)
+    if data.get("title"):
+        box_w = Inches(12)
+        txBox = slide.shapes.add_textbox(
+            center_x - box_w // 2, Inches(0.3), box_w, Inches(0.7)
+        )
+        _set_text(
+            txBox.text_frame, data["title"], theme["font_heading"],
+            28, theme["accent"], bold=True, alignment=PP_ALIGN.LEFT,
+        )
+
+    has_caption = bool(data.get("caption"))
+    code_x = Inches(0.5)
+    code_y = Inches(1.15)
+    code_w = SLIDE_WIDTH - Inches(1.0)
+    code_h = Inches(5.3) if has_caption else Inches(5.9)
+
+    # Dark code-block background (distinct from theme primary so the box reads
+    # as a terminal/editor pane on any preset)
+    _add_rect(slide, code_x, code_y, code_w, code_h, _hex_to_rgb("#1a2236"))
+
+    # Code text box — single editable shape with per-token runs
+    pad = Inches(0.25)
+    txBox = slide.shapes.add_textbox(
+        code_x + pad, code_y + pad, code_w - pad * 2, code_h - pad * 2
+    )
+    tf = txBox.text_frame
+    tf.word_wrap = True
+    _populate_code_frame(
+        tf,
+        code=data.get("code", ""),
+        language=data.get("language", ""),
+        font_mono=theme["font_mono"],
+    )
+
+    # Caption (optional)
+    if has_caption:
+        cap_y = code_y + code_h + Inches(0.12)
+        txBox = slide.shapes.add_textbox(code_x, cap_y, code_w, Inches(0.4))
+        _set_text(
+            txBox.text_frame, data["caption"], theme["font_body"],
+            12, theme["text_muted"], alignment=PP_ALIGN.LEFT,
+        )
+
+
+def _populate_code_frame(text_frame, code: str, language: str, font_mono: str):
+    """Fill a text_frame with the code, one paragraph per line, colored runs.
+
+    Falls back to a single uncolored run if Pygments is unavailable or the
+    language lexer can't be resolved.
+    """
+    default_color = RGBColor(0xE6, 0xED, 0xF3)
+    font_size = Pt(14)
+
+    text_frame.clear()
+    # Remove the auto-created empty paragraph; we'll add paragraphs per line
+    # below to preserve explicit blank lines in the source.
+
+    tokens = _lex_code(code, language)
+    if tokens is None:
+        # No Pygments — single run, newlines handled as separate paragraphs
+        lines = code.splitlines() or [""]
+        for i, line in enumerate(lines):
+            p = text_frame.paragraphs[0] if i == 0 else text_frame.add_paragraph()
+            p.alignment = PP_ALIGN.LEFT
+            run = p.add_run()
+            run.text = line
+            run.font.name = font_mono
+            run.font.size = font_size
+            run.font.color.rgb = default_color
+        return
+
+    # Split token stream into per-line (token_type, text) segments so each
+    # source line becomes its own paragraph. Preserves blank lines.
+    line_segments: list[list[tuple]] = [[]]
+    for token_type, text in tokens:
+        if not text:
+            continue
+        parts = text.split("\n")
+        for idx, part in enumerate(parts):
+            if part:
+                line_segments[-1].append((token_type, part))
+            if idx < len(parts) - 1:
+                line_segments.append([])
+
+    for i, segments in enumerate(line_segments):
+        p = text_frame.paragraphs[0] if i == 0 else text_frame.add_paragraph()
+        p.alignment = PP_ALIGN.LEFT
+        if not segments:
+            # Blank line — add a zero-width run so the paragraph occupies vertical space
+            run = p.add_run()
+            run.text = ""
+            run.font.name = font_mono
+            run.font.size = font_size
+            continue
+        for token_type, text in segments:
+            run = p.add_run()
+            run.text = text
+            run.font.name = font_mono
+            run.font.size = font_size
+            color = _pygments_token_color(token_type)
+            run.font.color.rgb = color if color is not None else default_color
+
+
 # ── Layout dispatch ──────────────────────────────────────────────
 
 NATIVE_RENDERERS = {
@@ -682,6 +849,7 @@ NATIVE_RENDERERS = {
     "data-table": _render_data_table,
     "image": _render_image,
     "timeline": _render_timeline,
+    "code": _render_code,
 }
 
 

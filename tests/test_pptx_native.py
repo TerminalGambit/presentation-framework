@@ -688,7 +688,7 @@ def _slide_has_editable_content(slide):
     return False
 
 
-_UNIMPLEMENTED_LAYOUTS = {"chart", "code", "map", "mermaid", "toc", "video"}
+_UNIMPLEMENTED_LAYOUTS = {"chart", "map", "mermaid", "toc", "video"}
 
 
 def _layout_param(name):
