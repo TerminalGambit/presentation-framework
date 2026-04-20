@@ -696,7 +696,7 @@ def _slide_has_editable_content(slide):
     return False
 
 
-_UNIMPLEMENTED_LAYOUTS: set[str] = {"video-maf"}  # removed by T3.7
+_UNIMPLEMENTED_LAYOUTS: set[str] = set()
 
 
 def _layout_param(name):
@@ -722,6 +722,94 @@ def test_each_layout_editable(layout, tmp_path):
     assert _slide_has_editable_content(slide), (
         f"{layout}: no editable shape (text/chart/movie) in PPTX export"
     )
+
+
+class TestVideoMafLayout:
+    """T3.7 — PPTX fallback for the video-maf spike layout. Happy path
+    embeds the cached mp4 via add_movie; cold-cache or flag-off paths
+    emit a poster + captioned hyperlink and a --strict fallback event."""
+
+    def _make_slide(self):
+        from pf.pptx_native import _pptx_theme, SLIDE_WIDTH, SLIDE_HEIGHT
+        prs = PptxPresentation()
+        prs.slide_width = SLIDE_WIDTH
+        prs.slide_height = SLIDE_HEIGHT
+        slide = prs.slides.add_slide(prs.slide_layouts[6])
+        theme = _pptx_theme({"primary": "#1C2537", "accent": "#C4A962",
+                             "fonts": {"heading": "H", "subheading": "S",
+                                       "body": "B", "mono": "M"}})
+        return slide, theme
+
+    def test_video_maf_in_native_renderers(self):
+        from pf.pptx_native import NATIVE_RENDERERS
+        assert "video-maf" in NATIVE_RENDERERS
+
+    def test_rendered_state_embeds_movie(self, tmp_path):
+        """When _maf_state == 'rendered' and the mp4 exists on disk, the
+        slide should carry a MEDIA shape (add_movie) — no fallback event."""
+        from pf.pptx_native import NATIVE_RENDERERS
+        from pptx.enum.shapes import MSO_SHAPE_TYPE
+        # Fake slide asset layout: slide_file lives next to assets/
+        slides_dir = tmp_path / "slides"
+        mp4_dir = slides_dir / "assets" / "slide_01_maf"
+        mp4_dir.mkdir(parents=True)
+        mp4_path = mp4_dir / "scene.mp4"
+        # Minimal fake mp4 — python-pptx accepts bytes with an ftyp atom
+        mp4_path.write_bytes(b"\x00\x00\x00\x20ftypmp42")
+        slide_file = slides_dir / "slide_01.html"
+        slide_file.write_text("<html></html>")
+
+        slide, theme = self._make_slide()
+        fbs: list = []
+        NATIVE_RENDERERS["video-maf"](slide, {
+            "title": "Scene",
+            "caption": "A rendered clip",
+            "_mp4_path": "assets/slide_01_maf/scene.mp4",
+            "_maf_state": "rendered",
+        }, theme, slide_file=slide_file, fallbacks=fbs, slide_index=0)
+
+        media = [s for s in slide.shapes if s.shape_type == MSO_SHAPE_TYPE.MEDIA]
+        assert media, "rendered mp4 must embed as a MEDIA shape"
+        assert fbs == [], "rendered state should NOT record a fallback event"
+
+    def test_cold_cache_no_binary_records_fallback(self):
+        """_maf_state == cold-cache-no-binary → poster fallback with a
+        hyperlink to manifest_path + a --strict fallback event."""
+        from pf.pptx_native import NATIVE_RENDERERS
+        from pptx.enum.action import PP_ACTION
+        slide, theme = self._make_slide()
+        fbs: list = []
+        NATIVE_RENDERERS["video-maf"](slide, {
+            "title": "Scene",
+            "caption": "Unrenderable",
+            "manifest_path": "maf/scene.maf.yaml",
+            "_maf_state": "cold-cache-no-binary",
+        }, theme, slide_file=None, fallbacks=fbs, slide_index=2)
+
+        # Hyperlink text box exists with the manifest_path
+        hl_shapes = [
+            s for s in slide.shapes
+            if s.has_text_frame and s.click_action.action == PP_ACTION.HYPERLINK
+        ]
+        assert hl_shapes, "cold-cache fallback must produce a hyperlink text box"
+        # Fallback event recorded for --strict
+        assert len(fbs) == 1
+        assert fbs[0]["slide_index"] == 2
+        assert fbs[0]["layout"] == "video-maf"
+        assert "maf unavailable" in fbs[0]["reason"]
+
+    def test_flag_off_records_fallback(self):
+        from pf.pptx_native import NATIVE_RENDERERS
+        slide, theme = self._make_slide()
+        fbs: list = []
+        NATIVE_RENDERERS["video-maf"](slide, {
+            "title": "Dormant",
+            "caption": "Flag off",
+            "manifest_path": "x.yaml",
+            "_maf_state": "flag-off",
+        }, theme, fallbacks=fbs, slide_index=5)
+        assert len(fbs) == 1
+        assert "flag off" in fbs[0]["reason"]
 
 
 class TestVideoLayout:

@@ -1225,6 +1225,152 @@ def _render_video(slide, data: dict, theme: dict):
         )
 
 
+def _render_video_maf(slide, data: dict, theme: dict, *,
+                      slide_file=None, fallbacks: list | None = None,
+                      slide_index: int = 0):
+    """Render the MAF spike layout in PPTX. Per contract §4 and SPEC §7.4,
+    the only editability is the caption text box; the mp4 embeds as an
+    opaque MEDIA shape on the happy path, or as a poster picture plus a
+    hyperlinked "▶ MAF video: caption" text shape on the cold-cache
+    fallback.
+
+    Data shape expected (populated by pf.builder._build_maf_video):
+      - _mp4_path     slide-relative mp4 path (when _maf_state == "rendered")
+      - _vtt_path     slide-relative vtt path (optional)
+      - _srt_path     slide-relative srt path (optional)
+      - _maf_state    rendered | flag-off | cold-cache-no-binary | renderer-error
+      - poster        local image path (optional; shown on fallback)
+      - caption       caption text (always rendered below the video/placeholder)
+      - manifest_path fallback hyperlink target (contract §4)
+    """
+    _add_bg(slide, theme["primary"])
+    center_x = SLIDE_WIDTH // 2
+
+    # Title
+    top = Inches(0.25)
+    title_h = Inches(0.7)
+    if data.get("title"):
+        box_w = Inches(12)
+        txBox = slide.shapes.add_textbox(
+            center_x - box_w // 2, top, box_w, title_h
+        )
+        _set_text(
+            txBox.text_frame, data["title"], theme["font_heading"],
+            28, theme["accent"], bold=True, alignment=PP_ALIGN.LEFT,
+        )
+        top += title_h + Inches(0.1)
+
+    caption = data.get("caption", "")
+    has_caption = bool(caption)
+    frame_x = Inches(1.5)
+    frame_w = Inches(10.3)
+    frame_y = top + Inches(0.1)
+    available_h = SLIDE_HEIGHT - frame_y - Inches(0.3)
+    frame_h = available_h - (Inches(0.7) if has_caption else Emu(0))
+
+    maf_state = data.get("_maf_state")
+    mp4_rel = data.get("_mp4_path")
+
+    # Happy path: try to embed the cached mp4 via add_movie
+    embedded = False
+    if maf_state == "rendered" and mp4_rel and slide_file is not None:
+        try:
+            mp4_abs = (slide_file.parent / mp4_rel).resolve()
+            if mp4_abs.exists():
+                poster = data.get("poster")
+                poster_abs = None
+                if poster and not str(poster).startswith("http"):
+                    candidate = (slide_file.parent / poster).resolve()
+                    if not candidate.exists():
+                        # Fall back to the manifest-relative poster resolution
+                        candidate = Path(poster).resolve()
+                    if candidate.exists():
+                        poster_abs = str(candidate)
+                slide.shapes.add_movie(
+                    str(mp4_abs), frame_x, frame_y, frame_w, frame_h,
+                    poster_frame_image=poster_abs,
+                )
+                embedded = True
+        except Exception:
+            embedded = False
+
+    if not embedded:
+        # Fallback: poster image (when local) + editable caption text + hyperlink
+        poster = data.get("poster")
+        poster_embedded = False
+        if poster and not str(poster).startswith("http"):
+            try:
+                poster_path = Path(poster)
+                if not poster_path.is_absolute() and slide_file is not None:
+                    # Resolve relative to the presentation dir (poster paths
+                    # in YAML are user-authored paths, not build-generated
+                    # slide-relative paths).
+                    candidate = (slide_file.parent / poster).resolve()
+                    if candidate.exists():
+                        poster_path = candidate
+                if poster_path.exists():
+                    slide.shapes.add_picture(
+                        str(poster_path), frame_x, frame_y, frame_w, frame_h
+                    )
+                    poster_embedded = True
+            except Exception:
+                poster_embedded = False
+        if not poster_embedded:
+            _add_rect(slide, frame_x, frame_y, frame_w, frame_h,
+                      _hex_to_rgb("#1a2236"))
+
+        # Editable caption + hyperlink to manifest (contract §4 fallback path)
+        label_h = Inches(0.7)
+        label_y = frame_y + frame_h - label_h - Inches(0.2)
+        state_hint = {
+            "flag-off": "flag off",
+            "cold-cache-no-binary": "renderer unavailable",
+            "renderer-error": "render failed",
+        }.get(maf_state, "")
+        if state_hint:
+            label_text = f"▶ MAF video ({state_hint}): {caption}" if caption else f"▶ MAF video ({state_hint})"
+        else:
+            label_text = f"▶ MAF video: {caption}" if caption else "▶ MAF video"
+        txBox = slide.shapes.add_textbox(
+            frame_x + Inches(0.4), label_y, frame_w - Inches(0.8), label_h
+        )
+        _set_text(
+            txBox.text_frame, label_text, theme["font_heading"],
+            18, theme["white"], bold=True, alignment=PP_ALIGN.CENTER,
+        )
+        target = data.get("manifest_path") or ""
+        if target:
+            try:
+                txBox.click_action.hyperlink.address = target
+            except Exception:
+                pass
+
+        # Record the fallback event so --strict treats this as an error,
+        # matching the contract's §4 strict-mode clause.
+        if fallbacks is not None and maf_state != "rendered":
+            reason = {
+                "flag-off": "maf_video flag off; poster fallback",
+                "cold-cache-no-binary": "maf unavailable; rendered poster fallback",
+                "renderer-error": "maf render failed; poster fallback",
+            }.get(maf_state, f"maf state {maf_state!r}; poster fallback")
+            fallbacks.append({
+                "slide_index": slide_index,
+                "layout": "video-maf",
+                "reason": reason,
+            })
+
+    # Caption below the frame (always editable)
+    if has_caption:
+        cap_y = frame_y + frame_h + Inches(0.15)
+        txBox = slide.shapes.add_textbox(
+            frame_x, cap_y, frame_w, Inches(0.6)
+        )
+        _set_text(
+            txBox.text_frame, caption, theme["font_body"],
+            14, theme["text_muted"], alignment=PP_ALIGN.CENTER,
+        )
+
+
 def _render_mermaid(slide, data: dict, theme: dict, *,
                     slide_file=None, pw_context=None, slide_cfg=None):
     """Render the Mermaid layout: rasterized diagram image + Mermaid source
@@ -1371,6 +1517,7 @@ NATIVE_RENDERERS = {
     "map": _render_map,
     "mermaid": _render_mermaid,
     "video": _render_video,
+    "video-maf": _render_video_maf,
 }
 
 
