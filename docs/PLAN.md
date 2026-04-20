@@ -250,7 +250,7 @@ Same YAML + different `theme.preset` value produces visibly distinct first rende
   - **Ask human if**: never.
   - **Effort**: S
 
-- [ ] **T2.9** — QA verification artifact
+- [x] **T2.9** — QA verification artifact
   - **Creates/modifies**: `docs/plans/2026-04-20-pptx-editable-verification.md` (new)
   - **Depends on**: T2.8
   - **Description**: Markdown checklist documenting: built `examples/presentation.yaml` with `--editable --strict`, opened in PowerPoint (or Keynote), confirmed each of the 16 slides has editable primary text. Embed one screenshot per layout (kept inline as a relative `docs/plans/imgs/pptx-edit-<layout>.png`). This is the spec §6.4 manual-check artifact.
