@@ -2,6 +2,41 @@
 
 All notable changes to presentation-framework are documented here. This project follows semantic versioning.
 
+## [0.3.1] — 2026-04-21
+
+Serve-path polish. v0.3.0 decks viewed in a browser logged `/__reload:
+404` on every page load because the navigator unconditionally injected
+an SSE live-reload client, and `pf serve --watch` stalled concurrent
+CSS / video / caption fetches because its single-threaded HTTPServer
+blocked behind the open SSE connection. Surfaced during the v0.3.0
+demo; no API or data-format changes.
+
+### Fixed
+- `templates/present.html.j2` now gates the `/__reload` EventSource on
+  a new `live_reload` Jinja variable. Default `pf build` produces a
+  deck with no reload client — serves cleanly under any HTTP server
+  (plain `python3 -m http.server`, nginx, GitHub Pages) with no console
+  noise.
+- `pf serve --watch` now threads `live_reload=True` into the builder on
+  every (re)build, so the SSE auto-refresh behavior is preserved inside
+  the watch loop.
+- `pf serve` swaps `http.server.HTTPServer` → `ThreadingHTTPServer`
+  so the long-lived `/__reload` SSE connection no longer starves
+  concurrent asset requests.
+
+### Added
+- `PresentationBuilder.build(..., live_reload=False)` kwarg — lets any
+  caller (including `pf serve` and tests) control injection explicitly.
+- `PresentationBuilder.render_navigator(..., live_reload=False)` kwarg.
+- Two regression tests in `tests/test_serve.py::TestLiveReloadInjection`
+  assert plain build has no `__reload` / `EventSource`, and
+  `live_reload=True` emits them.
+
+### Notes
+- No breaking changes. Existing `pf serve --watch` workflow is
+  identical from the user's perspective.
+- Suite: 580 passed (up from 578 in v0.3.0's last commit).
+
 ## [0.3.0] — 2026-04-20
 
 Post-CD-audit milestone: a curated theme pack, editable-PPTX parity

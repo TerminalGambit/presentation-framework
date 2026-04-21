@@ -553,8 +553,16 @@ class PresentationBuilder:
 
     def render_navigator(self, slide_files: list[str], slide_titles: list[str],
                          slide_transitions: list[str] | None = None,
-                         slide_notes: list[str] | None = None) -> str:
-        """Render the present.html navigator shell."""
+                         slide_notes: list[str] | None = None,
+                         live_reload: bool = False) -> str:
+        """Render the present.html navigator shell.
+
+        ``live_reload=True`` injects the ``/__reload`` SSE client into the
+        navigator. Default is False so a plain ``pf build`` produces a
+        deck that can be served by any HTTP server (or opened over file://)
+        without logging 404s for an endpoint only ``pf serve --watch``
+        implements.
+        """
         template = self.env.get_template("present.html.j2")
         meta = self.config.get("meta", {})
         theme = self._resolve_preset(self.config.get("theme", {}))
@@ -575,6 +583,7 @@ class PresentationBuilder:
             notes_json=json.dumps(notes),
             total=len(slide_files),
             transition_style=transition_style,
+            live_reload=live_reload,
         )
 
     # ── Theme Generation ───────────────────────────────────────
@@ -832,7 +841,8 @@ class PresentationBuilder:
 
     # ── Full Build ──────────────────────────────────────────────
 
-    def build(self, output_dir: str = "slides", base_url: str | None = None) -> Path:
+    def build(self, output_dir: str = "slides", base_url: str | None = None,
+              live_reload: bool = False) -> Path:
         """
         Full build pipeline:
         1. Load config + metrics
@@ -986,7 +996,10 @@ class PresentationBuilder:
                     shutil.copy2(img_path, dest)
 
         # Render and write navigator
-        nav_html = self.render_navigator(slide_files, slide_titles, slide_transitions, slide_notes)
+        nav_html = self.render_navigator(
+            slide_files, slide_titles, slide_transitions, slide_notes,
+            live_reload=live_reload,
+        )
         (out / "present.html").write_text(nav_html, encoding="utf-8")
 
         # Copy theme CSS files (base + components)

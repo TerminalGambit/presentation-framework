@@ -924,11 +924,13 @@ resetUITimer();
 // Request current slide from any existing window
 if (_bc) bcSend({ type: 'sync-request' });
 
-// Live-reload via SSE
+{% if live_reload %}
+// Live-reload via SSE — only emitted when `pf serve --watch` built this deck.
 if (window.location.protocol !== 'file:') {
   const evtSource = new EventSource('/__reload');
   evtSource.onmessage = function() { location.reload(); };
 }
+{% endif %}
 </script>
 </body>
 </html>

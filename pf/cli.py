@@ -209,13 +209,23 @@ def serve(directory: str, port: int, watch: bool, config: str, metrics: str):
         from watchdog.observers import Observer
         from watchdog.events import FileSystemEventHandler
 
+        # Do an initial rebuild with live_reload=True so the served navigator
+        # contains the /__reload SSE client immediately (instead of only after
+        # the first on_modified event). Skipped silently if the build fails —
+        # the user will see the error on the next edit.
+        try:
+            PresentationBuilder(config_path=config, metrics_path=metrics) \
+                .build(output_dir=directory, live_reload=True)
+        except Exception as e:
+            click.echo(click.style(f"  \u2717 Initial rebuild failed: {e}", fg="red"))
+
         class RebuildHandler(FileSystemEventHandler):
             def on_modified(self, event):
                 if event.src_path.endswith(('.yaml', '.json', '.j2', '.css')):
                     click.echo(click.style("  \u21bb Change detected, rebuilding...", fg="cyan"))
                     try:
                         b = PresentationBuilder(config_path=config, metrics_path=metrics)
-                        b.build(output_dir=directory)
+                        b.build(output_dir=directory, live_reload=True)
                         reload_event.set()
                         click.echo(click.style("  \u2713 Rebuilt successfully", fg="green"))
                     except Exception as e:
@@ -230,7 +240,10 @@ def serve(directory: str, port: int, watch: bool, config: str, metrics: str):
     click.echo(f"Open http://localhost:{port}/present.html to present.")
     click.echo("Press Ctrl+C to stop.\n")
 
-    server = http.server.HTTPServer(("", port), ReloadHandler)
+    # ThreadingHTTPServer so the long-lived /__reload SSE connection doesn't
+    # block concurrent asset fetches (CSS, video, captions) on the single
+    # request thread — pre-v0.3.1 `pf serve --watch` stalled under load.
+    server = http.server.ThreadingHTTPServer(("", port), ReloadHandler)
     try:
         server.serve_forever()
     except KeyboardInterrupt:
