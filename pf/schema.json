@@ -24,6 +24,7 @@
         "math": {"type": "boolean"},
         "charts": {"type": "boolean"},
         "animations": {"type": "boolean"},
+        "show_attribution": {"type": "boolean"},
         "transition_style": {"type": "string", "enum": ["fade", "wipe", "none"]},
         "fonts": {
           "type": "object",

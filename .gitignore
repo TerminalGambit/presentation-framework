@@ -1,8 +1,36 @@
-.worktrees/
+# Build artifacts
+build/
+dist/
+*.egg-info/
 __pycache__/
 *.pyc
-*.egg-info/
-data/
-demo/*/slides/
+
+# OS / editor
+.DS_Store
+*.swp
+
+# Internal planning, experiments, agent working areas
+.planning/
+.superpowers/
 .autonomous-build/
 .pf-cache/
+.worktrees/
+.claude/worktrees/
+demo-regen/
+data/
+
+# Generated slide outputs (regenerate from source)
+slides/
+demo/slides/
+demo/verify-slides/
+examples/slides/
+demo/*/slides/
+demo/*.pptx
+
+# Internal work-in-progress documentation
+docs/plans/
+docs/release-notes/presenter-view.md
+docs/superpowers/
+
+# Local MCP / tooling config
+.mcp.json

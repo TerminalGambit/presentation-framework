@@ -133,6 +133,30 @@
     <aside class="notes">{{ slide.notes }}</aside>
     {% endif %}
   </div>
+  {% if theme.show_attribution | default(true) %}
+  <div class="pf-attribution" aria-hidden="false">
+    <a href="https://github.com/TerminalGambit/presentation-framework" target="_blank" rel="noopener">built with presentation-framework</a>
+  </div>
+  <style>
+    .pf-attribution {
+      position: fixed;
+      bottom: 6px;
+      left: 10px;
+      z-index: 9998;
+      font-size: 10px;
+      line-height: 1;
+      opacity: 0.3;
+      font-family: var(--pf-font-body, system-ui, sans-serif);
+      transition: opacity 0.2s;
+    }
+    .pf-attribution:hover { opacity: 0.85; }
+    .pf-attribution a {
+      color: inherit;
+      text-decoration: none;
+      border-bottom: 1px dashed currentColor;
+    }
+  </style>
+  {% endif %}
   <button class="pf-hc-toggle" aria-label="Toggle high-contrast mode" title="Toggle high-contrast mode (H)">
     <i class="fa-solid fa-circle-half-stroke"></i>
   </button>
